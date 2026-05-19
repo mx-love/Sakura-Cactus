@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Sakura Cactus">
+  <rect width="64" height="64" rx="14" fill="#fff7fa"/>
+  <path d="M32 50c-8 0-14-6-14-14V22c0-7 5-12 12-12h4c7 0 12 5 12 12v14c0 8-6 14-14 14Z" fill="#a8d8c1"/>
+  <path d="M24 27h16M24 35h16M32 14v34" stroke="#3b3034" stroke-width="3" stroke-linecap="round" opacity=".45"/>
+  <circle cx="24" cy="16" r="6" fill="#f7b8c8"/>
+  <circle cx="40" cy="16" r="6" fill="#f7b8c8"/>
+</svg>
