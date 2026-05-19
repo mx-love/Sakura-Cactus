@@ -1,0 +1,31 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { SignOutButton } from '@/components/admin/SignOutButton';
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
+
+const user = await getCurrentAdminUser(Astro);
+
+if (!user) {
+  return Astro.redirect('/admin/login');
+}
+---
+
+<SiteLayout title="Admin | Sakura Cactus">
+  <section class="min-h-screen bg-[var(--color-bg)] px-6 py-10 text-[var(--color-text)]">
+    <div class="mx-auto max-w-4xl space-y-6">
+      <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
+        <p class="text-sm text-[var(--color-muted)]">Signed in as</p>
+        <h1 class="mt-1 text-2xl font-semibold">{user.displayName ?? user.username}</h1>
+      </div>
+      <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
+        <h2 class="text-lg font-semibold">Dashboard</h2>
+        <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+          Admin authentication is active. Post management starts in the next stage.
+        </p>
+        <div class="mt-5">
+          <SignOutButton client:load />
+        </div>
+      </div>
+    </div>
+  </section>
+</SiteLayout>

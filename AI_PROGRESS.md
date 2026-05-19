@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 2: D1 database migrations.
+Stage 3: admin authentication.
 
 ## Completed
 
@@ -22,10 +22,22 @@ Stage 2: D1 database migrations.
 - [x] Added migration package scripts.
 - [x] Verified local D1 migration execution.
 - [x] Verified the expected local tables exist.
+- [x] Implemented PBKDF2 password hashing.
+- [x] Implemented create-admin script.
+- [x] Implemented D1 sessions read/write.
+- [x] Implemented `/api/auth/login`.
+- [x] Implemented `/api/auth/logout`.
+- [x] Implemented `/api/auth/me`.
+- [x] Implemented HttpOnly Secure SameSite=Lax session cookie.
+- [x] Implemented `/admin/login`.
+- [x] Implemented `/admin` placeholder page.
+- [x] Protected `/admin/*` with server-side middleware.
+- [x] Protected `/api/admin/*` with server-side middleware.
+- [x] Disabled Cloudflare adapter auto KV session by configuring a non-KV Astro session driver; Sakura Cactus admin auth uses D1 sessions.
 
 ## Pending
 
-- [ ] Stage 3: add admin authentication.
+- [ ] Stage 4: add post management.
 
 ## Known Issues
 
@@ -33,9 +45,10 @@ Stage 2: D1 database migrations.
 - In this sandbox, Astro telemetry and Wrangler config paths need environment variables during verification:
   - `ASTRO_TELEMETRY_DISABLED=1`
   - `XDG_CONFIG_HOME=D:\code\Sakura Cactus\.wrangler-config`
-- The Cloudflare adapter currently logs that it enables a `SESSION` KV binding by default. Sakura Cactus auth must still use D1 sessions in stage 3.
 - Wrangler D1/R2 IDs are placeholders and must be replaced before remote deployment.
 - Local migration verification depends on Wrangler accepting the placeholder D1 database configuration; production requires replacing IDs first.
+- `SESSION_SECRET` is required for local and production login. It must be set in `.dev.vars` locally or Cloudflare secrets remotely.
+- `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migration/create-admin against that config or use `pnpm dev`.
 
 ## Last Verified Commands
 
@@ -80,6 +93,23 @@ tags
 users
 ```
 
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+```powershell
+pnpm.cmd admin:create -- --help
+```
+
+Manual local auth verification with Wrangler preview confirmed:
+
+```txt
+POST /api/auth/login -> 200 OK
+Set-Cookie includes HttpOnly; Secure; SameSite=Lax
+GET /api/auth/me with Cookie header -> ok true
+GET /api/admin/health without Cookie -> 401
+```
+
 ## Next Step
 
-Stage 3: add admin authentication.
+Stage 4: add post management.

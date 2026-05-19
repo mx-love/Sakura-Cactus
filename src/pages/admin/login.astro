@@ -1,0 +1,18 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { LoginForm } from '@/components/admin/LoginForm';
+
+const next = Astro.url.searchParams.get('next') ?? '/admin';
+---
+
+<SiteLayout title="Admin Login | Sakura Cactus">
+  <section class="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-6 py-12 text-[var(--color-text)]">
+    <div class="w-full max-w-sm rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
+      <div class="mb-6 space-y-2">
+        <h1 class="text-2xl font-semibold">Admin Login</h1>
+        <p class="text-sm leading-6 text-[var(--color-muted)]">Sign in to manage Sakura Cactus.</p>
+      </div>
+      <LoginForm client:load next={next} />
+    </div>
+  </section>
+</SiteLayout>

@@ -13,7 +13,8 @@
     "check": "astro check",
     "db:migration:create": "wrangler d1 migrations create sakura_blog_prod",
     "db:migration:apply:local": "wrangler d1 migrations apply sakura_blog_prod --local",
-    "db:migration:apply:prod": "wrangler d1 migrations apply sakura_blog_prod --remote"
+    "db:migration:apply:prod": "wrangler d1 migrations apply sakura_blog_prod --remote",
+    "admin:create": "node --experimental-strip-types scripts/create-admin.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "latest",
