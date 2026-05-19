@@ -2,7 +2,7 @@
 
 ## P0
 
-- [ ] Stage 2: add D1 schema and migrations.
+- [x] Stage 2: add D1 schema and migrations.
 - [ ] Stage 3: add admin authentication.
 - [ ] Stage 4: add post management.
 

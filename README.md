@@ -11,7 +11,7 @@ The project keeps code and content separate:
 
 ## Current Stage
 
-Stage 1: project skeleton.
+Stage 2: D1 database migrations.
 
 Implemented:
 
@@ -22,10 +22,10 @@ Implemented:
 - Basic homepage
 - `/api/health`
 - Initial Wrangler bindings for D1 and R2
+- D1 initial migration schema
 
 Not implemented yet:
 
-- D1 migrations
 - Admin authentication
 - Post management
 - R2 upload and `/i/:token`
@@ -36,6 +36,7 @@ Not implemented yet:
 pnpm install
 pnpm dev
 pnpm build
+pnpm db:migration:apply:local
 pnpm preview
 ```
 
@@ -47,6 +48,13 @@ If Astro or Wrangler tries to write config outside the workspace during local ve
 $env:ASTRO_TELEMETRY_DISABLED='1'
 $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
 pnpm.cmd build
+```
+
+Apply D1 migrations locally:
+
+```powershell
+$env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
+pnpm.cmd db:migration:apply:local
 ```
 
 ## Security Notes
