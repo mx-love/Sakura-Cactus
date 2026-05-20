@@ -1,5 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { countUsers } from '@/features/auth/user.repo';
+import { getDb } from '@/lib/db';
 import { jsonError } from '@/lib/response';
 
 function isAdminPage(pathname: string): boolean {
@@ -8,6 +10,10 @@ function isAdminPage(pathname: string): boolean {
 
 function isAdminLoginPage(pathname: string): boolean {
   return pathname === '/admin/login' || pathname === '/admin/login/';
+}
+
+function isAdminSetupPage(pathname: string): boolean {
+  return pathname === '/admin/setup' || pathname === '/admin/setup/';
 }
 
 function isAdminApi(pathname: string): boolean {
@@ -28,6 +34,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (isAdminPage(pathname)) {
+    if (isAdminSetupPage(pathname)) {
+      const userCount = await countUsers(getDb(context));
+
+      if (userCount > 0) {
+        return context.redirect('/admin/login');
+      }
+
+      return next();
+    }
+
     const user = await getCurrentAdminUser(context);
 
     if (isAdminLoginPage(pathname)) {

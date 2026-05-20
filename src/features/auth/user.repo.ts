@@ -3,6 +3,7 @@ import { nowIso } from '@/lib/db';
 import { createRandomId } from './crypto.service';
 
 export interface CreateUserInput {
+  email: string | null;
   username: string;
   displayName: string | null;
   passwordHash: string;
@@ -16,7 +17,7 @@ export async function countUsers(db: D1Database): Promise<number> {
 export async function findUserByUsername(db: D1Database, username: string): Promise<UserRow | null> {
   return db
     .prepare(
-      `SELECT id, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
+      `SELECT id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
        FROM users
        WHERE username = ?
        LIMIT 1`
@@ -25,10 +26,22 @@ export async function findUserByUsername(db: D1Database, username: string): Prom
     .first<UserRow>();
 }
 
+export async function findUserByAccount(db: D1Database, account: string): Promise<UserRow | null> {
+  return db
+    .prepare(
+      `SELECT id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
+       FROM users
+       WHERE username = ? OR email = ?
+       LIMIT 1`
+    )
+    .bind(account, account.toLowerCase())
+    .first<UserRow>();
+}
+
 export async function findUserById(db: D1Database, id: string): Promise<UserRow | null> {
   return db
     .prepare(
-      `SELECT id, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
+      `SELECT id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
        FROM users
        WHERE id = ?
        LIMIT 1`
@@ -41,6 +54,7 @@ export async function createAdminUser(db: D1Database, input: CreateUserInput): P
   const now = nowIso();
   const user: UserRow = {
     id: createRandomId('u'),
+    email: input.email,
     username: input.username,
     display_name: input.displayName,
     password_hash: input.passwordHash,
@@ -54,11 +68,12 @@ export async function createAdminUser(db: D1Database, input: CreateUserInput): P
   await db
     .prepare(
       `INSERT INTO users (
-        id, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       user.id,
+      user.email,
       user.username,
       user.display_name,
       user.password_hash,

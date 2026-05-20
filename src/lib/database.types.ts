@@ -8,6 +8,7 @@ export type SettingType = 'string' | 'number' | 'boolean' | 'json';
 
 export interface UserRow {
   id: string;
+  email: string | null;
   username: string;
   display_name: string | null;
   password_hash: string;

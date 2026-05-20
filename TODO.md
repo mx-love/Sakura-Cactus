@@ -4,6 +4,7 @@
 
 - [x] Stage 2: add D1 schema and migrations.
 - [x] Stage 3: add admin authentication.
+- [x] Stage 3.5: add first-admin setup flow.
 - [ ] Stage 4: add post management.
 
 ## P1

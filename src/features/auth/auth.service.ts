@@ -6,10 +6,11 @@ import { SESSION_COOKIE_NAME, SESSION_TOKEN_BYTES, SESSION_TTL_SECONDS } from '.
 import { createRandomToken, sha256Base64Url } from './crypto.service';
 import { verifyPassword } from './password.service';
 import { createSession, findActiveSessionByTokenHash, revokeSessionByTokenHash } from './session.repo';
-import { findUserByUsername, updateLastLogin } from './user.repo';
+import { findUserByAccount, updateLastLogin } from './user.repo';
 
 export interface PublicAdminUser {
   id: string;
+  email: string | null;
   username: string;
   displayName: string | null;
   role: 'admin';
@@ -23,6 +24,7 @@ export interface LoginResult {
 export function toPublicAdminUser(user: UserRow): PublicAdminUser {
   return {
     id: user.id,
+    email: user.email,
     username: user.username,
     displayName: user.display_name,
     role: 'admin'
@@ -96,9 +98,9 @@ export async function hashClientIp(request: Request, secret: string): Promise<st
   return sha256Base64Url(`${secret}.${ip}`);
 }
 
-export async function loginAdmin(context: APIContext, username: string, password: string): Promise<LoginResult | null> {
+export async function loginAdmin(context: APIContext, account: string, password: string): Promise<LoginResult | null> {
   const db = getDb(context);
-  const user = await findUserByUsername(db, username);
+  const user = await findUserByAccount(db, account);
 
   if (!user || user.status !== 'active') {
     return null;

@@ -5,7 +5,7 @@ import { loginAdmin } from '@/features/auth/auth.service';
 export const prerender = false;
 
 const invalidCredentialsResponse = () =>
-  jsonError('INVALID_CREDENTIALS', 'Invalid username or password.', { status: 401 });
+  jsonError('INVALID_CREDENTIALS', 'Invalid account or password.', { status: 401 });
 
 export const POST: APIRoute = async (context) => {
   let body: unknown;
@@ -20,14 +20,15 @@ export const POST: APIRoute = async (context) => {
     return invalidCredentialsResponse();
   }
 
-  const { username, password } = body as Record<string, unknown>;
+  const { account, username, password } = body as Record<string, unknown>;
+  const loginAccount = typeof account === 'string' ? account : username;
 
-  if (typeof username !== 'string' || typeof password !== 'string') {
+  if (typeof loginAccount !== 'string' || typeof password !== 'string') {
     return invalidCredentialsResponse();
   }
 
   try {
-    const result = await loginAdmin(context, username.trim(), password);
+    const result = await loginAdmin(context, loginAccount.trim(), password);
 
     if (!result) {
       return invalidCredentialsResponse();

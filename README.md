@@ -11,7 +11,7 @@ The project keeps code and content separate:
 
 ## Current Stage
 
-Stage 3: admin authentication.
+Stage 3.5: admin setup and login strategy.
 
 Implemented:
 
@@ -27,8 +27,11 @@ Implemented:
 - D1-backed sessions
 - HttpOnly Secure SameSite=Lax session cookie
 - `/admin/login` and `/admin`
-- `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`
+- `/admin/setup`
+- `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/setup`
 - Server-side protection for `/admin/*` and `/api/admin/*`
+- First-admin setup guarded by `SETUP_TOKEN`
+- Login with username or email
 
 Not implemented yet:
 
@@ -42,7 +45,6 @@ pnpm install
 pnpm dev
 pnpm build
 pnpm db:migration:apply:local
-pnpm admin:create -- --local
 pnpm preview
 ```
 
@@ -63,29 +65,47 @@ $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
 pnpm.cmd db:migration:apply:local
 ```
 
-Create the first local administrator:
+Create the first local administrator through the setup page:
 
 ```powershell
 $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
-pnpm.cmd admin:create -- --local --username admin
+pnpm.cmd db:migration:apply:local
 ```
 
-For production, set Cloudflare secrets first and run against remote D1:
+Create `.dev.vars` locally:
+
+```txt
+SESSION_SECRET="replace-with-at-least-32-random-characters"
+SETUP_TOKEN="replace-with-one-time-random-setup-token"
+```
+
+Then start the app and open `/admin/setup`.
+
+The setup page is available only while the `users` table is empty. After the first administrator is created, `/admin/setup` redirects to `/admin/login`.
+
+`scripts/create-admin.ts` is retained as a backup maintenance tool:
+
+```powershell
+pnpm.cmd admin:create -- --local --email admin@example.com --username admin
+```
+
+For production, set Cloudflare secrets first and apply migrations against remote D1:
 
 ```bash
-pnpm admin:create -- --remote --username admin
+pnpm db:migration:apply:prod
 ```
 
-Required secret:
+Required secrets:
 
 ```txt
 SESSION_SECRET
+SETUP_TOKEN
 ```
 
-`SESSION_SECRET` must be at least 32 characters. For local development, put it in `.dev.vars`; do not commit that file.
+`SESSION_SECRET` must be at least 32 characters. `SETUP_TOKEN` should be a one-time random value. For local development, put them in `.dev.vars`; do not commit that file.
 
 ## Security Notes
 
 Do not commit `.env`, `.dev.vars`, Cloudflare API tokens, R2 access keys, session secrets, Turnstile secrets, or administrator passwords.
 
-Admin authentication stores only password hashes and session token hashes in D1. The browser receives only an HttpOnly, Secure, SameSite=Lax cookie.
+Admin authentication stores only password hashes and session token hashes in D1. The browser receives only an HttpOnly, Secure, SameSite=Lax cookie. Setup requires a server-side `SETUP_TOKEN` and is disabled after the first user exists.

@@ -9,6 +9,7 @@ const TEXT_ENCODER = new TextEncoder();
 
 interface Options {
   database: string;
+  email: string | null;
   username: string | null;
   displayName: string | null;
   password: string | null;
@@ -22,6 +23,7 @@ interface Options {
 function parseArgs(argv: string[]): Options {
   const options: Options = {
     database: 'sakura_blog_prod',
+    email: null,
     username: null,
     displayName: null,
     password: process.env.SAKURA_ADMIN_PASSWORD ?? null,
@@ -38,6 +40,9 @@ function parseArgs(argv: string[]): Options {
 
     if (arg === '--database' && next) {
       options.database = next;
+      i += 1;
+    } else if (arg === '--email' && next) {
+      options.email = next;
       i += 1;
     } else if (arg === '--username' && next) {
       options.username = next;
@@ -80,6 +85,7 @@ Usage:
 
 Options:
   --database <name>       D1 database name or binding. Default: sakura_blog_prod
+  --email <email>         Optional admin email for email login.
   --username <username>   Admin username. Prompted if omitted.
   --display-name <name>   Optional display name. Prompted if omitted.
   --password <password>   Admin password. Prefer SAKURA_ADMIN_PASSWORD or prompt.
@@ -181,6 +187,8 @@ async function main(): Promise<void> {
 
   try {
     const username = (options.username ?? (await rl.question('Username: '))).trim();
+    const emailInput = options.email ?? (await rl.question('Email (optional): '));
+    const email = emailInput.trim().toLowerCase() || null;
     const displayNameInput = options.displayName ?? (await rl.question('Display name (optional): '));
     const displayName = displayNameInput.trim() || null;
     const password = options.password ?? (await rl.question('Password: '));
@@ -216,9 +224,10 @@ async function main(): Promise<void> {
     const passwordHash = await hashPassword(password);
     const userId = createRandomId('u');
     const sql = `INSERT INTO users (
-      id, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
+      id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
     ) VALUES (
       ${sqlString(userId)},
+      ${sqlString(email)},
       ${sqlString(username)},
       ${sqlString(displayName)},
       ${sqlString(passwordHash)},

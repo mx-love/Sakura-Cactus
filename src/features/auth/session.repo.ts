@@ -68,6 +68,7 @@ export async function findActiveSessionByTokenHash(
         sessions.created_at AS session_created_at,
         sessions.revoked_at AS session_revoked_at,
         users.id AS user_id,
+        users.email AS user_email,
         users.username AS user_username,
         users.display_name AS user_display_name,
         users.password_hash AS user_password_hash,
@@ -104,6 +105,7 @@ export async function findActiveSessionByTokenHash(
     },
     user: {
       id: row.user_id ?? '',
+      email: row.user_email,
       username: row.user_username ?? '',
       display_name: row.user_display_name,
       password_hash: row.user_password_hash ?? '',

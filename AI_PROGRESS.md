@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 3: admin authentication.
+Stage 3.5: admin setup and login strategy.
 
 ## Completed
 
@@ -34,6 +34,15 @@ Stage 3: admin authentication.
 - [x] Protected `/admin/*` with server-side middleware.
 - [x] Protected `/api/admin/*` with server-side middleware.
 - [x] Disabled Cloudflare adapter auto KV session by configuring a non-KV Astro session driver; Sakura Cactus admin auth uses D1 sessions.
+- [x] Added `migrations/0002_add_user_email.sql`.
+- [x] Added `/admin/setup`.
+- [x] Added `POST /api/auth/setup`.
+- [x] Setup is available only while `users` is empty.
+- [x] Setup requires server-side `SETUP_TOKEN`.
+- [x] Login page now uses `account + password`.
+- [x] Login supports username or email.
+- [x] Kept `scripts/create-admin.ts` as a backup maintenance tool and added optional email support.
+- [x] Documented Cloudflare Access as an outer protection layer.
 
 ## Pending
 
@@ -48,6 +57,7 @@ Stage 3: admin authentication.
 - Wrangler D1/R2 IDs are placeholders and must be replaced before remote deployment.
 - Local migration verification depends on Wrangler accepting the placeholder D1 database configuration; production requires replacing IDs first.
 - `SESSION_SECRET` is required for local and production login. It must be set in `.dev.vars` locally or Cloudflare secrets remotely.
+- `SETUP_TOKEN` is required for `/admin/setup`; it must be set in `.dev.vars` locally or Cloudflare secrets remotely.
 - `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migration/create-admin against that config or use `pnpm dev`.
 
 ## Last Verified Commands
@@ -108,6 +118,21 @@ POST /api/auth/login -> 200 OK
 Set-Cookie includes HttpOnly; Secure; SameSite=Lax
 GET /api/auth/me with Cookie header -> ok true
 GET /api/admin/health without Cookie -> 401
+```
+
+Stage 3.5 verification:
+
+```powershell
+$env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd db:migration:apply:local
+```
+
+```txt
+GET /admin/setup while users table is empty -> 200
+POST /api/auth/setup with wrong setupToken -> 400
+POST /api/auth/setup with correct setupToken -> 201
+GET /admin/setup after first user exists -> 302 /admin/login
+POST /api/auth/login with email + password -> 200
+Set-Cookie includes HttpOnly; Secure; SameSite=Lax
 ```
 
 ## Next Step
