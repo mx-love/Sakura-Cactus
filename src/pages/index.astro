@@ -9,28 +9,46 @@ const posts = await getPublicPosts();
 ---
 
 <SiteLayout>
-  <section class="min-h-screen bg-[var(--color-bg)] px-6 py-16 text-[var(--color-text)]">
-    <div class="mx-auto flex max-w-4xl flex-col gap-8">
-      <p class="text-sm font-medium uppercase tracking-[0.18em] text-[var(--color-muted)]">
-        Cloudflare native blog
-      </p>
-      <div class="space-y-5">
-        <h1 class="text-4xl font-semibold sm:text-6xl">Sakura Cactus</h1>
-        <p class="max-w-2xl text-lg leading-8 text-[var(--color-muted)]">
-          一个基于 Astro、Cloudflare Workers、D1 和 R2 的个人博客系统。文章由后台写入 D1，访客只看到公开发布内容。
-        </p>
+  <section class="min-h-screen bg-[var(--color-bg)] px-5 py-12 text-[var(--color-text)]">
+    <div class="mx-auto max-w-6xl space-y-10">
+      <div class="rounded-[28px] border border-[var(--color-border)] bg-white/70 p-6 shadow-[var(--shadow-soft)] sm:p-10">
+        <p class="text-sm font-medium uppercase tracking-[0.16em] text-[var(--color-muted)]">Cloudflare native blog</p>
+        <div class="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+          <div class="space-y-5">
+            <h1 class="text-4xl font-semibold leading-tight sm:text-6xl">Sakura Cactus</h1>
+            <p class="max-w-2xl text-lg leading-8 text-[var(--color-muted)]">
+              一个淡粉色、轻量、可自托管的个人博客系统。文章写在后台，图片留在私有 R2，访客只看到公开发布内容。
+            </p>
+          </div>
+          <div class="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)]/70 p-5">
+            <p class="text-sm font-semibold">Writing first</p>
+            <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+              Built for personal notes, essays, and quiet publishing without Git-based writing.
+            </p>
+          </div>
+        </div>
       </div>
+
       <div class="space-y-4">
-        <h2 class="text-xl font-semibold">Latest posts</h2>
+        <div class="flex items-end justify-between gap-4">
+          <div>
+            <p class="text-sm text-[var(--color-muted)]">Recently published</p>
+            <h2 class="mt-1 text-2xl font-semibold">Latest posts</h2>
+          </div>
+          <a class="hidden rounded-full border border-[var(--color-border)] bg-white/80 px-4 py-2 text-sm font-semibold sm:inline-block" href="/archive">
+            Archive
+          </a>
+        </div>
         {
           posts.length === 0 ? (
-            <div class="rounded-lg border border-[var(--color-border)] bg-white/70 p-5 shadow-sm">
-              <p class="text-sm leading-6 text-[var(--color-muted)]">No published posts yet.</p>
+            <div class="rounded-[24px] border border-[var(--color-border)] bg-white/70 p-8 text-center shadow-[var(--shadow-soft)]">
+              <p class="text-base font-semibold">No published posts yet</p>
+              <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">Once a public post is published, it will appear here.</p>
             </div>
           ) : (
-            <div class="grid gap-4">
+            <div class="grid gap-4 md:grid-cols-2">
               {posts.map((post) => (
-                <article class="rounded-lg border border-[var(--color-border)] bg-white/70 p-5 shadow-sm">
+                <article class="rounded-[24px] border border-[var(--color-border)] bg-white/75 p-5 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:bg-white/90">
                   <p class="text-xs uppercase text-[var(--color-muted)]">
                     {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Published'}
                   </p>

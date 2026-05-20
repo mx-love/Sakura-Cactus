@@ -11,7 +11,7 @@ The project keeps code and content separate:
 
 ## Current Stage
 
-Stage 5.5: editor image integration.
+Stage 6: UI theme and navigation optimization.
 
 Implemented:
 
@@ -48,10 +48,18 @@ Implemented:
 - `asset:token` Markdown image rendering to `/i/:token`
 - `post_assets` syncing when posts are saved
 - Referenced images are made public when a public post is published
+- Automatic soft delete for images that are no longer referenced by any post
+- Public site header with Home, Archive, About, and Admin links
+- Mobile front-site menu
+- Improved homepage hero and latest post cards
+- Improved article reading layout
+- Unified admin layout and navigation
+- `/archive`, `/about`, and `/admin/settings` placeholder pages
 
 Not implemented yet:
 
-- Cleanup workflow for unused images
+- Full settings system
+- Full archive grouping
 
 ## Commands
 
@@ -208,4 +216,4 @@ The renderer converts it to:
 <img src="/i/token" alt="图片说明" loading="lazy" />
 ```
 
-R2 keys and R2 public URLs are never written to post content. Saving a post rescans the Markdown and updates `post_assets`. Publishing a public post makes only the currently referenced assets public.
+R2 keys and R2 public URLs are never written to post content. Saving a post rescans the Markdown and updates `post_assets`. Publishing a public post makes only the currently referenced assets public. When an image is no longer referenced by any post, Sakura Cactus deletes the R2 object first, then soft deletes the D1 asset record.

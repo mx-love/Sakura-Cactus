@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import {
   deleteAdminAsset,
   getAdminAsset,
+  isAssetStorageError,
   isAssetValidationError,
   setAdminAssetVisibility
 } from '@/features/assets/asset.service';
@@ -89,6 +90,10 @@ export const DELETE: APIRoute = async ({ params }) => {
   } catch (error) {
     if (isAssetValidationError(error)) {
       return jsonError(error.code, error.message, { status: 400 });
+    }
+
+    if (isAssetStorageError(error)) {
+      return jsonError(error.code, error.message, { status: 502 });
     }
 
     console.error('Asset delete failed:', error);

@@ -1,4 +1,5 @@
-import type { PostRow } from '@/lib/database.types';
+import { refreshAssetUsageCounts } from '@/features/assets/asset.repo';
+import type { AssetRow, PostRow } from '@/lib/database.types';
 import { nowIso } from '@/lib/db';
 import { createRandomId } from '@/features/auth/crypto.service';
 import type { NormalizedPostInput } from './post.schema';
@@ -237,7 +238,7 @@ export async function setPostStatus(db: D1Database, id: string, status: Exclude<
   return findPostById(db, id);
 }
 
-export async function replacePostAssets(db: D1Database, postId: string, assetIds: string[]): Promise<void> {
+export async function replacePostAssets(db: D1Database, postId: string, assetIds: string[]): Promise<AssetRow[]> {
   const uniqueAssetIds = [...new Set(assetIds)];
   const now = nowIso();
 
@@ -263,18 +264,22 @@ export async function replacePostAssets(db: D1Database, postId: string, assetIds
       .run();
   }
 
-  for (const assetId of affectedAssetIds) {
-    await db
-      .prepare(
-        `UPDATE assets
-         SET usage_count = (
-           SELECT COUNT(*) FROM post_assets WHERE asset_id = ?
-         )
-         WHERE id = ?`
-      )
-      .bind(assetId, assetId)
-      .run();
-  }
+  return refreshAssetUsageCounts(db, [...affectedAssetIds]);
+}
+
+export async function listPostAssetIds(db: D1Database, postId: string): Promise<string[]> {
+  const result = await db
+    .prepare('SELECT asset_id FROM post_assets WHERE post_id = ?')
+    .bind(postId)
+    .all<{ asset_id: string }>();
+
+  return result.results?.map((row) => row.asset_id) ?? [];
+}
+
+export async function clearPostAssets(db: D1Database, postId: string): Promise<AssetRow[]> {
+  const assetIds = await listPostAssetIds(db, postId);
+  await db.prepare('DELETE FROM post_assets WHERE post_id = ?').bind(postId).run();
+  return refreshAssetUsageCounts(db, assetIds);
 }
 
 export async function softDeletePost(db: D1Database, id: string): Promise<PostRow | null> {

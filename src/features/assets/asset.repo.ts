@@ -167,6 +167,52 @@ export async function softDeleteAsset(db: D1Database, id: string): Promise<Asset
   };
 }
 
+export async function refreshAssetUsageCounts(db: D1Database, assetIds: string[]): Promise<AssetRow[]> {
+  const uniqueAssetIds = [...new Set(assetIds)];
+  const now = nowIso();
+  const unusedAssets: AssetRow[] = [];
+
+  for (const assetId of uniqueAssetIds) {
+    const row = await db
+      .prepare('SELECT COUNT(*) AS count FROM post_assets WHERE asset_id = ?')
+      .bind(assetId)
+      .first<{ count: number }>();
+    const usageCount = row?.count ?? 0;
+
+    if (usageCount === 0) {
+      const asset = await findAssetById(db, assetId);
+
+      if (asset && !asset.deleted_at) {
+        unusedAssets.push({
+          ...asset,
+          usage_count: 0
+        });
+      }
+
+      await db
+        .prepare(
+          `UPDATE assets
+           SET usage_count = 0,
+               updated_at = ?
+           WHERE id = ? AND deleted_at IS NULL`
+        )
+        .bind(now, assetId)
+        .run();
+    } else {
+      await db
+        .prepare(
+          `UPDATE assets
+           SET usage_count = ?, updated_at = ?
+           WHERE id = ? AND deleted_at IS NULL`
+        )
+        .bind(usageCount, now, assetId)
+        .run();
+    }
+  }
+
+  return unusedAssets;
+}
+
 export async function isAssetUsedByPublishedPublicPost(db: D1Database, assetId: string): Promise<boolean> {
   const row = await db
     .prepare(

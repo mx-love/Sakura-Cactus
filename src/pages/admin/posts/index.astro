@@ -1,40 +1,25 @@
 ---
-import SiteLayout from '@/components/layout/SiteLayout.astro';
+import AdminLayout from '@/components/layout/AdminLayout.astro';
 import { PostRowActions } from '@/components/admin/PostRowActions';
-import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminPosts } from '@/features/posts/post.service';
-
-const user = await getCurrentAdminUser(Astro);
-
-if (!user) {
-  return Astro.redirect('/admin/login');
-}
 
 const posts = await getAdminPosts();
 ---
 
-<SiteLayout title="Posts | Sakura Cactus">
-  <section class="min-h-screen bg-[var(--color-bg)] px-6 py-10 text-[var(--color-text)]">
-    <div class="mx-auto max-w-6xl space-y-6">
-      <div class="flex flex-col gap-4 rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm text-[var(--color-muted)]">Admin</p>
-          <h1 class="mt-1 text-2xl font-semibold">Posts</h1>
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <a class="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold" href="/admin">
-            Dashboard
-          </a>
-          <a class="rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white" href="/admin/posts/new">
-            New post
-          </a>
-        </div>
-      </div>
-
-      <div class="overflow-hidden rounded-lg border border-[var(--color-border)] bg-white/80 shadow-sm">
+<AdminLayout title="Posts | Sakura Cactus" heading="Posts">
+  <div class="space-y-5">
+    <div class="flex justify-end">
+      <a class="rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white" href="/admin/posts/new">
+        New post
+      </a>
+    </div>
+    <div class="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-white/82 shadow-[var(--shadow-soft)]">
         {
           posts.length === 0 ? (
-            <div class="p-6 text-sm text-[var(--color-muted)]">No posts yet.</div>
+            <div class="p-8 text-center">
+              <p class="font-semibold">No posts yet</p>
+              <p class="mt-2 text-sm text-[var(--color-muted)]">Create your first draft from the button above.</p>
+            </div>
           ) : (
             <div class="overflow-x-auto">
               <table class="w-full min-w-[760px] text-left text-sm">
@@ -70,7 +55,6 @@ const posts = await getAdminPosts();
             </div>
           )
         }
-      </div>
     </div>
-  </section>
-</SiteLayout>
+  </div>
+</AdminLayout>

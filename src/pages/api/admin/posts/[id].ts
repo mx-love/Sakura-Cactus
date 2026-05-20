@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { jsonError, jsonOk } from '@/lib/response';
+import { isAssetStorageError } from '@/features/assets/asset.service';
 import {
   deleteAdminPost,
   getAdminPost,
@@ -63,6 +64,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
       return jsonError('SLUG_CONFLICT', error.message, { status: 409 });
     }
 
+    if (isAssetStorageError(error)) {
+      return jsonError(error.code, error.message, { status: 502 });
+    }
+
     console.error('Update post failed:', error);
     return jsonError('POST_UPDATE_FAILED', 'Unable to update post.', { status: 500 });
   }
@@ -75,11 +80,20 @@ export const DELETE: APIRoute = async ({ params }) => {
     return jsonError('POST_NOT_FOUND', 'Post not found.', { status: 404 });
   }
 
-  const post = await deleteAdminPost(id);
+  try {
+    const post = await deleteAdminPost(id);
 
-  if (!post) {
-    return jsonError('POST_NOT_FOUND', 'Post not found.', { status: 404 });
+    if (!post) {
+      return jsonError('POST_NOT_FOUND', 'Post not found.', { status: 404 });
+    }
+
+    return jsonOk({ post });
+  } catch (error) {
+    if (isAssetStorageError(error)) {
+      return jsonError(error.code, error.message, { status: 502 });
+    }
+
+    console.error('Delete post failed:', error);
+    return jsonError('POST_DELETE_FAILED', 'Unable to delete post.', { status: 500 });
   }
-
-  return jsonOk({ post });
 };

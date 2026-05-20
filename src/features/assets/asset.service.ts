@@ -31,6 +31,20 @@ export function isAssetValidationError(error: unknown): error is AssetValidation
   return error instanceof AssetValidationError;
 }
 
+export class AssetStorageError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'AssetStorageError';
+  }
+}
+
+export function isAssetStorageError(error: unknown): error is AssetStorageError {
+  return error instanceof AssetStorageError;
+}
+
 function buildR2Key(mimeType: string): string {
   const now = new Date();
   const year = now.getUTCFullYear();
@@ -96,20 +110,40 @@ export async function setAdminAssetVisibility(
 
 export async function deleteAdminAsset(id: string): Promise<AssetRow | null> {
   const db = getDb();
-  const bucket = getMediaBucket();
   const isReferenced = await isAssetReferencedByAnyPost(db, id);
 
   if (isReferenced) {
     throw new AssetValidationError('ASSET_IN_USE', 'Remove this image from posts before deleting it.');
   }
 
-  const asset = await softDeleteAsset(db, id);
+  const asset = await findAssetById(db, id);
 
-  if (asset) {
-    await bucket.delete(asset.r2_key);
+  if (!asset || asset.deleted_at) {
+    return null;
   }
 
-  return asset;
+  return deleteAssetObjectAndSoftDelete(db, asset);
+}
+
+export async function deleteAssetObjectAndSoftDelete(db: D1Database, asset: AssetRow): Promise<AssetRow | null> {
+  try {
+    await getMediaBucket().delete(asset.r2_key);
+  } catch (error) {
+    console.error('R2 asset delete failed:', error);
+    throw new AssetStorageError('R2_DELETE_FAILED', 'Unable to delete image object from storage.');
+  }
+
+  return softDeleteAsset(db, asset.id);
+}
+
+export async function cleanupUnreferencedAssets(db: D1Database, assets: AssetRow[]): Promise<void> {
+  for (const asset of assets) {
+    const isReferenced = await isAssetReferencedByAnyPost(db, asset.id);
+
+    if (!isReferenced && !asset.deleted_at) {
+      await deleteAssetObjectAndSoftDelete(db, asset);
+    }
+  }
 }
 
 export async function getAssetForToken(

@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 5.6: writing page UX refactor.
+Stage 6: UI theme and navigation optimization.
 
 ## Completed
 
@@ -85,10 +85,25 @@ Stage 5.6: writing page UX refactor.
 - [x] Added Edit and Preview tabs for Markdown content.
 - [x] Preview renders `asset:token` images through `/i/:token`.
 - [x] Updated action buttons so status is controlled by Save draft, Publish, Update, and Unpublish.
+- [x] Added public `SiteHeader` with desktop and mobile navigation.
+- [x] Improved homepage hero, latest post cards, and empty state.
+- [x] Improved public post detail layout and prose image styling.
+- [x] Added `/archive` placeholder page.
+- [x] Added `/about` placeholder page.
+- [x] Added unified `AdminLayout`.
+- [x] Added admin navigation for Dashboard, Posts, Media, and Settings.
+- [x] Added `/admin/settings` placeholder page.
+- [x] Updated dashboard, posts, media, and writing pages to use admin navigation.
+- [x] Improved media card presentation and action labels.
+- [x] Automatically delete R2 objects and soft delete D1 asset records when no posts reference them.
+- [x] Delete post now clears its `post_assets` associations and updates asset usage.
+- [x] Removing `asset:token` Markdown from a post now updates usage and soft deletes unused assets on save.
+- [x] Media library shows `Unused`, `Used by 1 post`, or `Used by N posts`.
+- [x] Manual media deletion deletes the R2 object first, then soft deletes the D1 asset record when the asset is unreferenced.
 
 ## Pending
 
-- [ ] Stage 6: add Sakura Cactus theme.
+- [ ] Stage 7: add security hardening and deployment docs.
 
 ## Known Issues
 
@@ -249,6 +264,30 @@ Result:
 Build completed successfully.
 ```
 
+Stage 6 verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
+Asset cleanup verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
 ## Next Step
 
-Stage 6: add Sakura Cactus theme.
+Stage 7: add security hardening and deployment docs.

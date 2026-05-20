@@ -1,37 +1,23 @@
 ---
-import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { SignOutButton } from '@/components/admin/SignOutButton';
-import { getCurrentAdminUser } from '@/features/auth/auth.service';
-
-const user = await getCurrentAdminUser(Astro);
-
-if (!user) {
-  return Astro.redirect('/admin/login');
-}
+import AdminLayout from '@/components/layout/AdminLayout.astro';
 ---
 
-<SiteLayout title="Admin | Sakura Cactus">
-  <section class="min-h-screen bg-[var(--color-bg)] px-6 py-10 text-[var(--color-text)]">
-    <div class="mx-auto max-w-4xl space-y-6">
-      <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
-        <p class="text-sm text-[var(--color-muted)]">Signed in as</p>
-        <h1 class="mt-1 text-2xl font-semibold">{user.displayName ?? user.username}</h1>
-      </div>
-      <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
-        <h2 class="text-lg font-semibold">Dashboard</h2>
-        <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-          Admin authentication is active. Use post management to write drafts and publish public posts.
-        </p>
-        <div class="mt-5 flex flex-wrap gap-3">
-          <a class="rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white" href="/admin/posts">
-            Manage posts
-          </a>
-          <a class="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)]" href="/admin/media">
-            Manage media
-          </a>
-          <SignOutButton client:load />
-        </div>
-      </div>
-    </div>
-  </section>
-</SiteLayout>
+<AdminLayout title="Admin | Sakura Cactus" heading="Dashboard">
+  <div class="grid gap-4 md:grid-cols-3">
+    <a class="rounded-[24px] border border-[var(--color-border)] bg-white/80 p-5 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5" href="/admin/posts">
+      <p class="text-sm text-[var(--color-muted)]">Write</p>
+      <h2 class="mt-2 text-xl font-semibold">Posts</h2>
+      <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">Create drafts, publish articles, and manage the archive.</p>
+    </a>
+    <a class="rounded-[24px] border border-[var(--color-border)] bg-white/80 p-5 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5" href="/admin/media">
+      <p class="text-sm text-[var(--color-muted)]">Images</p>
+      <h2 class="mt-2 text-xl font-semibold">Media</h2>
+      <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">Upload private R2 images and copy safe token URLs.</p>
+    </a>
+    <a class="rounded-[24px] border border-[var(--color-border)] bg-white/80 p-5 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5" href="/admin/settings">
+      <p class="text-sm text-[var(--color-muted)]">Later</p>
+      <h2 class="mt-2 text-xl font-semibold">Settings</h2>
+      <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">Site settings placeholder for a future configuration stage.</p>
+    </a>
+  </div>
+</AdminLayout>

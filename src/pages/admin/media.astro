@@ -1,15 +1,8 @@
 ---
-import SiteLayout from '@/components/layout/SiteLayout.astro';
+import AdminLayout from '@/components/layout/AdminLayout.astro';
 import { MediaAssetActions } from '@/components/admin/MediaAssetActions';
 import { MediaUploader } from '@/components/admin/MediaUploader';
-import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminAssets } from '@/features/assets/asset.service';
-
-const user = await getCurrentAdminUser(Astro);
-
-if (!user) {
-  return Astro.redirect('/admin/login');
-}
 
 const assets = await getAdminAssets();
 
@@ -24,39 +17,36 @@ function formatSize(bytes: number): string {
 
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
+
+function formatUsage(count: number): string {
+  if (count === 0) {
+    return 'Unused';
+  }
+
+  if (count === 1) {
+    return 'Used by 1 post';
+  }
+
+  return `Used by ${count} posts`;
+}
 ---
 
-<SiteLayout title="Media | Sakura Cactus">
-  <section class="min-h-screen bg-[var(--color-bg)] px-6 py-10 text-[var(--color-text)]">
-    <div class="mx-auto max-w-6xl space-y-6">
-      <div class="flex flex-col gap-4 rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm text-[var(--color-muted)]">Admin</p>
-          <h1 class="mt-1 text-2xl font-semibold">Media</h1>
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <a class="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold" href="/admin">
-            Dashboard
-          </a>
-          <a class="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold" href="/admin/posts">
-            Posts
-          </a>
-        </div>
-      </div>
-
-      <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
+<AdminLayout title="Media | Sakura Cactus" heading="Media">
+  <div class="space-y-6">
+      <div class="rounded-[24px] border border-[var(--color-border)] bg-white/82 p-5 shadow-[var(--shadow-soft)]">
         <MediaUploader client:load />
       </div>
 
       {
         assets.length === 0 ? (
-          <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 text-sm text-[var(--color-muted)] shadow-sm">
-            No images uploaded yet.
+          <div class="rounded-[24px] border border-[var(--color-border)] bg-white/82 p-8 text-center shadow-[var(--shadow-soft)]">
+            <p class="font-semibold">No images uploaded yet</p>
+            <p class="mt-2 text-sm text-[var(--color-muted)]">Upload images here, or paste them directly into the post editor.</p>
           </div>
         ) : (
           <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {assets.map((asset) => (
-              <article class="overflow-hidden rounded-lg border border-[var(--color-border)] bg-white/80 shadow-sm">
+              <article class="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-white/82 shadow-[var(--shadow-soft)]">
                 <div class="aspect-[4/3] bg-white">
                   <img
                     alt={asset.original_filename ?? asset.id}
@@ -73,8 +63,11 @@ function formatSize(bytes: number): string {
                     </p>
                   </div>
                   <div class="flex flex-wrap gap-2 text-xs text-[var(--color-muted)]">
-                    <span class="rounded-full border border-[var(--color-border)] bg-white px-2 py-1">
+                    <span class="rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1 font-semibold text-[var(--color-text)]">
                       {asset.visibility}
+                    </span>
+                    <span class="rounded-full border border-[var(--color-border)] bg-white px-2 py-1">
+                      {formatUsage(asset.usage_count)}
                     </span>
                     <span class="rounded-full border border-[var(--color-border)] bg-white px-2 py-1">
                       /i/{asset.token}
@@ -87,6 +80,5 @@ function formatSize(bytes: number): string {
           </div>
         )
       }
-    </div>
-  </section>
-</SiteLayout>
+  </div>
+</AdminLayout>

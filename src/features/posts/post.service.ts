@@ -1,8 +1,10 @@
 import { getDb } from '@/lib/db';
 import { findAssetsByTokens, makeAssetsPublic } from '@/features/assets/asset.repo';
+import { cleanupUnreferencedAssets } from '@/features/assets/asset.service';
 import { calculateReadingTimeMinutes, calculateWordCount, extractAssetTokens, renderMarkdown } from './post.renderer';
 import {
   createPost,
+  clearPostAssets,
   findPostById,
   findPublicPostBySlug,
   listAdminPosts,
@@ -41,11 +43,13 @@ async function syncPostAssetReferences(db: D1Database, post: PostRow): Promise<v
   const assets = await findAssetsByTokens(db, tokens);
   const assetIds = assets.map((asset) => asset.id);
 
-  await replacePostAssets(db, post.id, assetIds);
+  const unusedAssets = await replacePostAssets(db, post.id, assetIds);
 
   if (post.status === 'published' && post.visibility === 'public') {
     await makeAssetsPublic(db, assetIds);
   }
+
+  await cleanupUnreferencedAssets(db, unusedAssets);
 }
 
 export function isPostValidationError(error: unknown): error is PostValidationError {
@@ -113,7 +117,15 @@ export async function unpublishAdminPost(id: string): Promise<PostRow | null> {
 }
 
 export async function deleteAdminPost(id: string): Promise<PostRow | null> {
-  return softDeletePost(getDb(), id);
+  const db = getDb();
+  const post = await softDeletePost(db, id);
+
+  if (post) {
+    const unusedAssets = await clearPostAssets(db, id);
+    await cleanupUnreferencedAssets(db, unusedAssets);
+  }
+
+  return post;
 }
 
 export async function getPublicPosts(): Promise<PublicPostSummary[]> {

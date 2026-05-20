@@ -1,14 +1,17 @@
 ---
 import '@/styles/global.css';
+import SiteHeader from './SiteHeader.astro';
 
 interface Props {
   title?: string;
   description?: string;
+  showHeader?: boolean;
 }
 
 const {
   title = 'Sakura Cactus',
-  description = 'A Cloudflare-native personal blog with an admin dashboard.'
+  description = 'A Cloudflare-native personal blog with an admin dashboard.',
+  showHeader = true
 } = Astro.props;
 ---
 
@@ -22,6 +25,7 @@ const {
     <title>{title}</title>
   </head>
   <body>
+    {showHeader ? <SiteHeader /> : null}
     <main>
       <slot />
     </main>

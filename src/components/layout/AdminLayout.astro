@@ -1,0 +1,102 @@
+---
+import SiteLayout from './SiteLayout.astro';
+import { SignOutButton } from '@/components/admin/SignOutButton';
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
+
+interface Props {
+  title?: string;
+  heading?: string;
+  eyebrow?: string;
+  wide?: boolean;
+}
+
+const {
+  title = 'Admin | Sakura Cactus',
+  heading = 'Dashboard',
+  eyebrow = 'Admin',
+  wide = false
+} = Astro.props;
+
+const user = await getCurrentAdminUser(Astro);
+
+if (!user) {
+  return Astro.redirect('/admin/login');
+}
+
+const pathname = Astro.url.pathname;
+const navItems = [
+  { href: '/admin', label: 'Dashboard' },
+  { href: '/admin/posts', label: 'Posts' },
+  { href: '/admin/media', label: 'Media' },
+  { href: '/admin/settings', label: 'Settings' }
+];
+---
+
+<SiteLayout title={title} showHeader={false}>
+  <section class="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div class="mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
+      <aside class="border-b border-[var(--color-border)] bg-white/75 px-4 py-4 shadow-sm lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:border-b-0 lg:border-r">
+        <div class="flex items-center justify-between gap-3 lg:block">
+          <a class="flex items-center gap-3" href="/admin">
+            <span class="flex size-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-lg font-semibold">
+              S
+            </span>
+            <span>
+              <span class="block font-semibold">Sakura Cactus</span>
+              <span class="block text-xs text-[var(--color-muted)]">Admin</span>
+            </span>
+          </a>
+          <a class="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold lg:hidden" href="/">
+            Site
+          </a>
+        </div>
+
+        <nav class="mt-5 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+          {navItems.map((item) => {
+            const active = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(`${item.href}/`));
+            return (
+              <a
+                class={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  active
+                    ? 'bg-[var(--color-text)] text-white shadow-sm'
+                    : 'text-[var(--color-muted)] hover:bg-white hover:text-[var(--color-text)]'
+                }`}
+                href={item.href}
+              >
+                {item.label}
+              </a>
+            );
+          })}
+        </nav>
+
+        <div class="mt-5 hidden space-y-3 rounded-lg border border-[var(--color-border)] bg-white/80 p-3 lg:block">
+          <p class="text-xs text-[var(--color-muted)]">Signed in as</p>
+          <p class="truncate text-sm font-semibold">{user.displayName ?? user.username}</p>
+          <a class="block rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-center text-sm font-semibold" href="/">
+            View site
+          </a>
+          <SignOutButton client:load />
+        </div>
+      </aside>
+
+      <div class="min-w-0 flex-1 px-5 py-6 lg:px-8">
+        <header class="mb-6 flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-white/75 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-[var(--color-muted)]">{eyebrow}</p>
+            <h1 class="mt-1 text-2xl font-semibold">{heading}</h1>
+          </div>
+          <div class="flex flex-wrap gap-2 lg:hidden">
+            <a class="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold" href="/">
+              View site
+            </a>
+            <SignOutButton client:load />
+          </div>
+        </header>
+
+        <main class={wide ? 'max-w-none' : 'mx-auto max-w-6xl'}>
+          <slot />
+        </main>
+      </div>
+    </div>
+  </section>
+</SiteLayout>

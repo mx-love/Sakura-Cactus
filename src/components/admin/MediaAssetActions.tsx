@@ -65,7 +65,7 @@ export function MediaAssetActions({ assetId, token, visibility }: MediaAssetActi
         onClick={copyUrl}
         type="button"
       >
-        Copy URL
+        Copy /i URL
       </button>
       {visibility !== 'public' ? (
         <button
@@ -74,7 +74,7 @@ export function MediaAssetActions({ assetId, token, visibility }: MediaAssetActi
           onClick={() => setVisibility('public')}
           type="button"
         >
-          Make public
+          Set public
         </button>
       ) : (
         <button
@@ -83,7 +83,7 @@ export function MediaAssetActions({ assetId, token, visibility }: MediaAssetActi
           onClick={() => setVisibility('draft')}
           type="button"
         >
-          Make draft
+          Set draft
         </button>
       )}
       <button
@@ -92,7 +92,7 @@ export function MediaAssetActions({ assetId, token, visibility }: MediaAssetActi
         onClick={deleteAsset}
         type="button"
       >
-        Delete
+        Delete image
       </button>
     </div>
   );

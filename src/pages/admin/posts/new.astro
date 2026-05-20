@@ -1,28 +1,8 @@
 ---
-import SiteLayout from '@/components/layout/SiteLayout.astro';
+import AdminLayout from '@/components/layout/AdminLayout.astro';
 import { PostEditor } from '@/components/admin/PostEditor';
-import { getCurrentAdminUser } from '@/features/auth/auth.service';
-
-const user = await getCurrentAdminUser(Astro);
-
-if (!user) {
-  return Astro.redirect('/admin/login');
-}
 ---
 
-<SiteLayout title="New Post | Sakura Cactus">
-  <section class="min-h-screen bg-[var(--color-bg)] px-6 py-10 text-[var(--color-text)]">
-    <div class="mx-auto max-w-7xl space-y-6">
-      <div class="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-white/80 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm text-[var(--color-muted)]">Posts</p>
-          <h1 class="mt-1 text-2xl font-semibold">New post</h1>
-        </div>
-        <a class="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold" href="/admin/posts">
-          Back to posts
-        </a>
-      </div>
-      <PostEditor client:load />
-    </div>
-  </section>
-</SiteLayout>
+<AdminLayout title="New Post | Sakura Cactus" heading="New post" eyebrow="Posts" wide>
+  <PostEditor client:load />
+</AdminLayout>

@@ -1,0 +1,45 @@
+---
+const navItems = [
+  { href: '/', label: 'Home' },
+  { href: '/archive', label: 'Archive' },
+  { href: '/about', label: 'About' }
+];
+---
+
+<header class="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[rgba(255,247,250,0.88)] backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
+    <a class="flex items-center gap-3 text-[var(--color-text)]" href="/">
+      <span class="flex size-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-white/80 text-lg shadow-sm">
+        S
+      </span>
+      <span class="font-semibold">Sakura Cactus</span>
+    </a>
+
+    <nav class="hidden items-center gap-2 sm:flex">
+      {navItems.map((item) => (
+        <a class="rounded-full px-3 py-2 text-sm font-medium text-[var(--color-muted)] transition hover:bg-white/80 hover:text-[var(--color-text)]" href={item.href}>
+          {item.label}
+        </a>
+      ))}
+      <a class="rounded-full border border-[var(--color-border)] bg-white/80 px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm" href="/admin">
+        Admin
+      </a>
+    </nav>
+
+    <details class="relative sm:hidden">
+      <summary class="list-none rounded-full border border-[var(--color-border)] bg-white/80 px-3 py-2 text-sm font-semibold shadow-sm">
+        Menu
+      </summary>
+      <div class="absolute right-0 mt-2 w-44 rounded-lg border border-[var(--color-border)] bg-white p-2 shadow-lg">
+        {navItems.map((item) => (
+          <a class="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]" href={item.href}>
+            {item.label}
+          </a>
+        ))}
+        <a class="block rounded-lg px-3 py-2 text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-bg)]" href="/admin">
+          Admin
+        </a>
+      </div>
+    </details>
+  </div>
+</header>
