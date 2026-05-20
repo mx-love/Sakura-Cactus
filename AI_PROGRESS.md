@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 4: post management.
+Stage 5.6: writing page UX refactor.
 
 ## Completed
 
@@ -57,10 +57,38 @@ Stage 4: post management.
 - [x] Implemented public homepage post list.
 - [x] Implemented public `/posts/[slug]` detail page.
 - [x] Public routes only expose published public posts with `deleted_at IS NULL`.
+- [x] Implemented `src/features/assets` repo/service/security/types.
+- [x] Implemented admin asset APIs:
+  - `GET /api/admin/assets`
+  - `POST /api/admin/assets/upload`
+  - `GET /api/admin/assets/:id`
+  - `PATCH /api/admin/assets/:id`
+  - `DELETE /api/admin/assets/:id`
+- [x] Implemented `/admin/media`.
+- [x] Implemented private R2 upload through `MEDIA_BUCKET`.
+- [x] Implemented random token image proxy at `/i/:token`.
+- [x] Draft/private asset requests return 404 for visitors.
+- [x] Public asset requests use long immutable cache headers.
+- [x] Uploads reject non-image types and files larger than 5 MB.
+- [x] Added paste image upload in `/admin/posts/new` and `/admin/posts/[id]`.
+- [x] Added drag-and-drop image upload in the post editor.
+- [x] Added gallery image insertion in the post editor.
+- [x] Markdown `![alt](asset:token)` renders to `/i/:token`.
+- [x] Saving posts syncs `post_assets` from current Markdown.
+- [x] Publishing public posts makes only currently referenced assets public.
+- [x] Removing image Markdown from a post removes that `post_assets` association on save.
+- [x] Referenced assets are protected from physical deletion in the media API.
+- [x] Refactored `/admin/posts/new` and `/admin/posts/[id]` into a writing-focused layout.
+- [x] Moved core writing fields into the main editor column.
+- [x] Moved slug, visibility, published time, and SEO settings into the right settings column.
+- [x] Removed the status dropdown from the writing flow.
+- [x] Added Edit and Preview tabs for Markdown content.
+- [x] Preview renders `asset:token` images through `/i/:token`.
+- [x] Updated action buttons so status is controlled by Save draft, Publish, Update, and Unpublish.
 
 ## Pending
 
-- [ ] Stage 5: add private R2 media library.
+- [ ] Stage 6: add Sakura Cactus theme.
 
 ## Known Issues
 
@@ -185,6 +213,42 @@ Result:
 Blocked by existing project type environment gaps: Node script types and Wrangler/Cloudflare Worker globals.
 ```
 
+Stage 5 verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
+Stage 5.5 verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
+Stage 5.6 verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
 ## Next Step
 
-Stage 5: add private R2 media library.
+Stage 6: add Sakura Cactus theme.

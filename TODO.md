@@ -6,12 +6,16 @@
 - [x] Stage 3: add admin authentication.
 - [x] Stage 3.5: add first-admin setup flow.
 - [x] Stage 4: add post management.
-- [ ] Stage 5: add private R2 media library.
+- [x] Stage 5: add private R2 media library.
 
 ## P1
 
 - [ ] Stage 6: add Sakura Cactus theme.
 - [ ] Stage 7: add security hardening and deployment docs.
+- [ ] Add cleanup workflow for unused images.
+- [ ] Consider reverting assets to draft when no published public posts reference them.
+- [ ] Add 30-second draft autosave in the post editor.
+- [ ] Warn before leaving the post editor with unsaved changes.
 
 ## P2
 

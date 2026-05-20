@@ -237,6 +237,46 @@ export async function setPostStatus(db: D1Database, id: string, status: Exclude<
   return findPostById(db, id);
 }
 
+export async function replacePostAssets(db: D1Database, postId: string, assetIds: string[]): Promise<void> {
+  const uniqueAssetIds = [...new Set(assetIds)];
+  const now = nowIso();
+
+  const existing = await db
+    .prepare('SELECT asset_id FROM post_assets WHERE post_id = ?')
+    .bind(postId)
+    .all<{ asset_id: string }>();
+  const affectedAssetIds = new Set<string>(existing.results?.map((row) => row.asset_id) ?? []);
+
+  for (const assetId of uniqueAssetIds) {
+    affectedAssetIds.add(assetId);
+  }
+
+  await db.prepare('DELETE FROM post_assets WHERE post_id = ?').bind(postId).run();
+
+  for (const assetId of uniqueAssetIds) {
+    await db
+      .prepare(
+        `INSERT INTO post_assets (post_id, asset_id, role, created_at)
+         VALUES (?, ?, 'inline', ?)`
+      )
+      .bind(postId, assetId, now)
+      .run();
+  }
+
+  for (const assetId of affectedAssetIds) {
+    await db
+      .prepare(
+        `UPDATE assets
+         SET usage_count = (
+           SELECT COUNT(*) FROM post_assets WHERE asset_id = ?
+         )
+         WHERE id = ?`
+      )
+      .bind(assetId, assetId)
+      .run();
+  }
+}
+
 export async function softDeletePost(db: D1Database, id: string): Promise<PostRow | null> {
   const current = await findPostById(db, id);
 

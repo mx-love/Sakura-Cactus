@@ -1,11 +1,13 @@
 import { getDb } from '@/lib/db';
-import { calculateReadingTimeMinutes, calculateWordCount, renderMarkdown } from './post.renderer';
+import { findAssetsByTokens, makeAssetsPublic } from '@/features/assets/asset.repo';
+import { calculateReadingTimeMinutes, calculateWordCount, extractAssetTokens, renderMarkdown } from './post.renderer';
 import {
   createPost,
   findPostById,
   findPublicPostBySlug,
   listAdminPosts,
   listPublicPosts,
+  replacePostAssets,
   setPostStatus,
   slugExists,
   softDeletePost,
@@ -34,6 +36,18 @@ function buildPersistedInput(raw: unknown, defaultStatus: 'draft' | 'published' 
   };
 }
 
+async function syncPostAssetReferences(db: D1Database, post: PostRow): Promise<void> {
+  const tokens = extractAssetTokens(post.content_markdown);
+  const assets = await findAssetsByTokens(db, tokens);
+  const assetIds = assets.map((asset) => asset.id);
+
+  await replacePostAssets(db, post.id, assetIds);
+
+  if (post.status === 'published' && post.visibility === 'public') {
+    await makeAssetsPublic(db, assetIds);
+  }
+}
+
 export function isPostValidationError(error: unknown): error is PostValidationError {
   return error instanceof PostValidationError;
 }
@@ -59,7 +73,9 @@ export async function createAdminPost(raw: unknown): Promise<PostRow> {
     throw new PostConflictError();
   }
 
-  return createPost(db, input);
+  const post = await createPost(db, input);
+  await syncPostAssetReferences(db, post);
+  return (await findPostById(db, post.id)) ?? post;
 }
 
 export async function updateAdminPost(id: string, raw: unknown): Promise<PostRow | null> {
@@ -70,11 +86,26 @@ export async function updateAdminPost(id: string, raw: unknown): Promise<PostRow
     throw new PostConflictError();
   }
 
-  return updatePost(db, id, input);
+  const post = await updatePost(db, id, input);
+
+  if (post) {
+    await syncPostAssetReferences(db, post);
+    return findPostById(db, post.id);
+  }
+
+  return null;
 }
 
 export async function publishAdminPost(id: string): Promise<PostRow | null> {
-  return setPostStatus(getDb(), id, 'published');
+  const db = getDb();
+  const post = await setPostStatus(db, id, 'published');
+
+  if (post) {
+    await syncPostAssetReferences(db, post);
+    return findPostById(db, post.id);
+  }
+
+  return null;
 }
 
 export async function unpublishAdminPost(id: string): Promise<PostRow | null> {

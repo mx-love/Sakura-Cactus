@@ -7,6 +7,8 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+const ASSET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,64}$/;
+
 function isSafeUrl(url: string): boolean {
   const trimmed = url.trim().toLowerCase();
   return (
@@ -17,6 +19,26 @@ function isSafeUrl(url: string): boolean {
   );
 }
 
+function renderImage(alt: string, rawUrl: string): string {
+  const url = rawUrl.trim();
+
+  if (url.startsWith('asset:')) {
+    const token = url.slice('asset:'.length).trim();
+
+    if (!ASSET_TOKEN_PATTERN.test(token)) {
+      return escapeHtml(alt);
+    }
+
+    return `<img src="/i/${escapeHtml(token)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+  }
+
+  if (!isSafeUrl(url)) {
+    return escapeHtml(alt);
+  }
+
+  return `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+}
+
 function renderInline(markdown: string): string {
   let html = escapeHtml(markdown);
 
@@ -24,13 +46,7 @@ function renderInline(markdown: string): string {
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt: string, rawUrl: string) => {
-    const url = rawUrl.trim();
-
-    if (!isSafeUrl(url)) {
-      return escapeHtml(alt);
-    }
-
-    return `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+    return renderImage(alt, rawUrl);
   });
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, rawUrl: string) => {
     const url = rawUrl.trim();
@@ -44,6 +60,18 @@ function renderInline(markdown: string): string {
   });
 
   return html;
+}
+
+export function extractAssetTokens(markdown: string): string[] {
+  const tokens = new Set<string>();
+  const pattern = /!\[[^\]]*]\(\s*asset:([A-Za-z0-9_-]{24,64})\s*\)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(markdown)) !== null) {
+    tokens.add(match[1]);
+  }
+
+  return [...tokens];
 }
 
 function renderParagraph(lines: string[]): string {

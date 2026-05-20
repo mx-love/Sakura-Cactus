@@ -11,7 +11,7 @@ The project keeps code and content separate:
 
 ## Current Stage
 
-Stage 4: post management.
+Stage 5.5: editor image integration.
 
 Implemented:
 
@@ -37,11 +37,21 @@ Implemented:
 - Server-rendered Markdown HTML with basic sanitization
 - Public homepage post list
 - Public `/posts/[slug]` post detail page
+- Private R2 media upload from `/admin/media`
+- D1-backed asset records
+- Admin asset APIs under `/api/admin/assets`
+- Token-based image proxy at `/i/:token`
+- Public/draft/private asset visibility controls
+- Paste image upload in the post editor
+- Drag-and-drop image upload in the post editor
+- Gallery image insertion from the post editor
+- `asset:token` Markdown image rendering to `/i/:token`
+- `post_assets` syncing when posts are saved
+- Referenced images are made public when a public post is published
 
 Not implemented yet:
 
-- R2 upload and `/i/:token`
-- Media library
+- Cleanup workflow for unused images
 
 ## Commands
 
@@ -145,3 +155,57 @@ AND deleted_at IS NULL
 ```
 
 Draft, private, archived, deleted, and missing posts return 404 on public detail routes.
+
+## Media Library
+
+After signing in, open `/admin/media` to upload and manage images.
+
+Rules:
+
+- Files are stored in the private `MEDIA_BUCKET` R2 bucket.
+- Public URLs use `/i/:token`; R2 object keys are not exposed.
+- Tokens are random URL-safe values, not sequential IDs.
+- Uploads create D1 records in `assets`.
+- Default visibility is `draft`.
+- Allowed MIME types: `image/webp`, `image/jpeg`, `image/png`, `image/gif`.
+- Maximum file size: 5 MB.
+- SVG, HTML, JavaScript, executable, archive, and non-image uploads are rejected.
+
+Visitor access:
+
+```txt
+public asset -> 200
+asset used by a published public post -> 200
+draft/private asset without admin session -> 404
+deleted or missing asset -> 404
+```
+
+Admin access:
+
+```txt
+draft/private asset with valid admin session -> 200
+```
+
+Public assets use long immutable caching. Draft/private assets use `Cache-Control: private, no-store`.
+
+## Editor Images
+
+In `/admin/posts/new` and `/admin/posts/[id]`, administrators can insert images without leaving the editor:
+
+- Paste an image into the Markdown textarea.
+- Drag an image file onto the Markdown textarea.
+- Click `Insert image` and choose from the existing gallery.
+
+The editor inserts this Markdown syntax:
+
+```md
+![图片说明](asset:token)
+```
+
+The renderer converts it to:
+
+```html
+<img src="/i/token" alt="图片说明" loading="lazy" />
+```
+
+R2 keys and R2 public URLs are never written to post content. Saving a post rescans the Markdown and updates `post_assets`. Publishing a public post makes only the currently referenced assets public.
