@@ -11,7 +11,7 @@ The project keeps code and content separate:
 
 ## Current Stage
 
-Stage 3.5: admin setup and login strategy.
+Stage 4: post management.
 
 Implemented:
 
@@ -32,11 +32,16 @@ Implemented:
 - Server-side protection for `/admin/*` and `/api/admin/*`
 - First-admin setup guarded by `SETUP_TOKEN`
 - Login with username or email
+- Admin post list, create, edit, publish, unpublish, and soft delete
+- D1-backed post API under `/api/admin/posts`
+- Server-rendered Markdown HTML with basic sanitization
+- Public homepage post list
+- Public `/posts/[slug]` post detail page
 
 Not implemented yet:
 
-- Post management
 - R2 upload and `/i/:token`
+- Media library
 
 ## Commands
 
@@ -109,3 +114,34 @@ SETUP_TOKEN
 Do not commit `.env`, `.dev.vars`, Cloudflare API tokens, R2 access keys, session secrets, Turnstile secrets, or administrator passwords.
 
 Admin authentication stores only password hashes and session token hashes in D1. The browser receives only an HttpOnly, Secure, SameSite=Lax cookie. Setup requires a server-side `SETUP_TOKEN` and is disabled after the first user exists.
+
+## Post Management
+
+After signing in, open `/admin/posts` to manage posts.
+
+Supported fields:
+
+- `title`
+- `slug`
+- `excerpt`
+- `content_markdown`
+- `content_html`
+- `status`
+- `visibility`
+- `seo_title`
+- `seo_description`
+- `published_at`
+- `created_at`
+- `updated_at`
+
+Post statuses are `draft`, `published`, `archived`, and `deleted`. Deleting a post performs a soft delete by setting `deleted_at` and `status = 'deleted'`.
+
+Visitors can only read posts where:
+
+```sql
+status = 'published'
+AND visibility = 'public'
+AND deleted_at IS NULL
+```
+
+Draft, private, archived, deleted, and missing posts return 404 on public detail routes.

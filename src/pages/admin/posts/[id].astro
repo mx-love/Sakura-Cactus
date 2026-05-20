@@ -1,0 +1,33 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { PostEditor } from '@/components/admin/PostEditor';
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { getAdminPost } from '@/features/posts/post.service';
+
+const user = await getCurrentAdminUser(Astro);
+
+if (!user) {
+  return Astro.redirect('/admin/login');
+}
+
+const id = Astro.params.id;
+const post = id ? await getAdminPost(id) : null;
+
+if (!post) {
+  return new Response('Not found', { status: 404 });
+}
+---
+
+<SiteLayout title={`Edit ${post.title} | Sakura Cactus`}>
+  <section class="min-h-screen bg-[var(--color-bg)] px-6 py-10 text-[var(--color-text)]">
+    <div class="mx-auto max-w-5xl space-y-6">
+      <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
+        <p class="text-sm text-[var(--color-muted)]">Posts</p>
+        <h1 class="mt-1 text-2xl font-semibold">Edit post</h1>
+      </div>
+      <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
+        <PostEditor client:load post={post} />
+      </div>
+    </div>
+  </section>
+</SiteLayout>

@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 3.5: admin setup and login strategy.
+Stage 4: post management.
 
 ## Completed
 
@@ -43,10 +43,24 @@ Stage 3.5: admin setup and login strategy.
 - [x] Login supports username or email.
 - [x] Kept `scripts/create-admin.ts` as a backup maintenance tool and added optional email support.
 - [x] Documented Cloudflare Access as an outer protection layer.
+- [x] Implemented `src/features/posts` repo/service/schema/types/renderer.
+- [x] Implemented admin post APIs:
+  - `GET /api/admin/posts`
+  - `POST /api/admin/posts`
+  - `GET /api/admin/posts/:id`
+  - `PUT /api/admin/posts/:id`
+  - `DELETE /api/admin/posts/:id`
+  - `POST /api/admin/posts/:id/publish`
+  - `POST /api/admin/posts/:id/unpublish`
+- [x] Implemented `/admin/posts`, `/admin/posts/new`, and `/admin/posts/[id]`.
+- [x] Implemented Markdown rendering with basic HTML sanitization.
+- [x] Implemented public homepage post list.
+- [x] Implemented public `/posts/[slug]` detail page.
+- [x] Public routes only expose published public posts with `deleted_at IS NULL`.
 
 ## Pending
 
-- [ ] Stage 4: add post management.
+- [ ] Stage 5: add private R2 media library.
 
 ## Known Issues
 
@@ -59,6 +73,10 @@ Stage 3.5: admin setup and login strategy.
 - `SESSION_SECRET` is required for local and production login. It must be set in `.dev.vars` locally or Cloudflare secrets remotely.
 - `SETUP_TOKEN` is required for `/admin/setup`; it must be set in `.dev.vars` locally or Cloudflare secrets remotely.
 - `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migration/create-admin against that config or use `pnpm dev`.
+- `pnpm check` currently prompts to install `@astrojs/check`; it was not installed during Stage 4 to avoid changing package dependencies.
+- `pnpm exec tsc --noEmit` is blocked by TypeScript 6 reporting the existing `baseUrl` deprecation in `tsconfig.json`.
+- `pnpm exec tsc --noEmit --ignoreDeprecations 6.0` is still blocked by the existing type environment:
+  missing Node script types, missing Wrangler/Cloudflare Worker types for `D1Database`, and missing `cloudflare:workers` module declarations.
 
 ## Last Verified Commands
 
@@ -135,6 +153,38 @@ POST /api/auth/login with email + password -> 200
 Set-Cookie includes HttpOnly; Secure; SameSite=Lax
 ```
 
+Stage 4 verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
+```powershell
+pnpm.cmd exec tsc --noEmit
+```
+
+Result:
+
+```txt
+Blocked by existing TypeScript 6 baseUrl deprecation warning in tsconfig.json.
+```
+
+```powershell
+pnpm.cmd exec tsc --noEmit --ignoreDeprecations 6.0
+```
+
+Result:
+
+```txt
+Blocked by existing project type environment gaps: Node script types and Wrangler/Cloudflare Worker globals.
+```
+
 ## Next Step
 
-Stage 4: add post management.
+Stage 5: add private R2 media library.

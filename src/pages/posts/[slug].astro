@@ -1,0 +1,35 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getPublicPostBySlug } from '@/features/posts/post.service';
+
+export const prerender = false;
+
+const slug = Astro.params.slug;
+const post = slug ? await getPublicPostBySlug(slug) : null;
+
+if (!post) {
+  return new Response('Not found', { status: 404 });
+}
+
+const title = post.seoTitle ?? post.title;
+const description = post.seoDescription ?? post.excerpt ?? 'Sakura Cactus post.';
+---
+
+<SiteLayout title={`${title} | Sakura Cactus`} description={description}>
+  <article class="min-h-screen bg-[var(--color-bg)] px-6 py-16 text-[var(--color-text)]">
+    <div class="mx-auto max-w-3xl">
+      <a class="text-sm font-medium text-[var(--color-muted)]" href="/">Back to home</a>
+      <header class="mt-8 border-b border-[var(--color-border)] pb-8">
+        <p class="text-sm text-[var(--color-muted)]">
+          {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Published'}
+        </p>
+        <h1 class="mt-3 text-4xl font-semibold leading-tight">{post.title}</h1>
+        {post.excerpt ? <p class="mt-4 text-lg leading-8 text-[var(--color-muted)]">{post.excerpt}</p> : null}
+      </header>
+      <div
+        class="prose-content mt-8 rounded-lg border border-[var(--color-border)] bg-white/70 p-6 leading-8 shadow-sm"
+        set:html={post.contentHtml}
+      />
+    </div>
+  </article>
+</SiteLayout>

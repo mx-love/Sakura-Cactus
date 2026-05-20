@@ -20,9 +20,12 @@ if (!user) {
       <div class="rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
         <h2 class="text-lg font-semibold">Dashboard</h2>
         <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-          Admin authentication is active. Post management starts in the next stage.
+          Admin authentication is active. Use post management to write drafts and publish public posts.
         </p>
-        <div class="mt-5">
+        <div class="mt-5 flex flex-wrap gap-3">
+          <a class="rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white" href="/admin/posts">
+            Manage posts
+          </a>
           <SignOutButton client:load />
         </div>
       </div>
