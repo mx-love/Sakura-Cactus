@@ -2,11 +2,9 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { SetupForm } from '@/components/admin/SetupForm';
 import { getDb } from '@/lib/db';
-import { countUsers } from '@/features/auth/user.repo';
+import { isAdminSetupAvailable } from '@/features/auth/setup.service';
 
-const userCount = await countUsers(getDb(Astro));
-
-if (userCount > 0) {
+if (!(await isAdminSetupAvailable(getDb(Astro)))) {
   return Astro.redirect('/admin/login');
 }
 ---

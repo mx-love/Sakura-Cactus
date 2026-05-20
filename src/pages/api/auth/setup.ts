@@ -2,8 +2,9 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getDb } from '@/lib/db';
 import { jsonError, jsonOk } from '@/lib/response';
-import { countUsers, createAdminUser } from '@/features/auth/user.repo';
+import { createAdminUser } from '@/features/auth/user.repo';
 import { hashPassword } from '@/features/auth/password.service';
+import { isAdminSetupAvailable } from '@/features/auth/setup.service';
 
 export const prerender = false;
 
@@ -20,9 +21,8 @@ function isValidUsername(username: string): boolean {
 
 export const POST: APIRoute = async (context) => {
   const db = getDb(context);
-  const existingUsers = await countUsers(db);
 
-  if (existingUsers > 0) {
+  if (!(await isAdminSetupAvailable(db))) {
     return setupUnavailableResponse();
   }
 
