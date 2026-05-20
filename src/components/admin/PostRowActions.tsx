@@ -25,6 +25,27 @@ export function PostRowActions({ postId, status }: PostRowActionsProps) {
     }
   }
 
+  async function deletePost() {
+    if (!window.confirm('Delete this post? This will remove it from the public site.')) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`/api/admin/posts/${postId}`, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+
+      if (response.ok) {
+        window.location.assign('/admin/posts');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
       <a
@@ -55,7 +76,7 @@ export function PostRowActions({ postId, status }: PostRowActionsProps) {
       <button
         className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60"
         disabled={isSubmitting}
-        onClick={() => mutate(`/api/admin/posts/${postId}`, 'DELETE')}
+        onClick={deletePost}
         type="button"
       >
         Delete

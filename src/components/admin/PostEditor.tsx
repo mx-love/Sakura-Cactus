@@ -126,6 +126,37 @@ export function PostEditor({ post }: PostEditorProps) {
     }
   }
 
+  async function deletePost() {
+    if (!postId) {
+      setError('Save the post before deleting.');
+      return;
+    }
+
+    if (!window.confirm('Delete this post? This will remove it from the public site.')) {
+      return;
+    }
+
+    setError(null);
+    setMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`/api/admin/posts/${postId}`, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+
+      if (!response.ok) {
+        setError(await readError(response, 'Unable to delete post.'));
+        return;
+      }
+
+      window.location.assign('/admin/posts');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <form className="space-y-6" onSubmit={(event) => event.preventDefault()}>
       <div className="grid gap-5 md:grid-cols-2">
@@ -243,6 +274,14 @@ export function PostEditor({ post }: PostEditorProps) {
           type="button"
         >
           Unpublish
+        </button>
+        <button
+          className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-60"
+          disabled={isSubmitting || !isExisting}
+          onClick={deletePost}
+          type="button"
+        >
+          Delete
         </button>
         <a
           className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)]"
