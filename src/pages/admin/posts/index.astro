@@ -32,7 +32,6 @@ const posts = await getAdminPosts();
                 <thead>
                   <tr>
                     <th>Title</th>
-                    <th>Slug</th>
                     <th>Status</th>
                     <th>Visibility</th>
                     <th>Updated</th>
@@ -44,9 +43,8 @@ const posts = await getAdminPosts();
                   {posts.map((post) => (
                     <tr>
                       <td>
-                        <a class="font-black hover:text-[var(--color-danger)]" href={`/admin/posts/${post.id}`}>{post.title}</a>
+                        <a class="font-black hover:text-[var(--color-danger)]" href={`/write?post=${post.id}`}>{post.title}</a>
                       </td>
-                      <td class="max-w-48 truncate text-[var(--color-muted)]">/{post.slug}</td>
                       <td><span class={`sc-badge sc-badge-${post.status}`}>{post.status}</span></td>
                       <td><span class={`sc-badge sc-badge-${post.visibility}`}>{post.visibility}</span></td>
                       <td class="text-[var(--color-muted)]">{new Date(post.updated_at).toLocaleString()}</td>
@@ -67,9 +65,8 @@ const posts = await getAdminPosts();
                   <span class={`sc-badge sc-badge-${post.visibility}`}>{post.visibility}</span>
                 </div>
                 <h3 class="mt-3 text-xl font-black">
-                  <a href={`/admin/posts/${post.id}`}>{post.title}</a>
+                  <a href={`/write?post=${post.id}`}>{post.title}</a>
                 </h3>
-                <p class="mt-1 truncate text-sm text-[var(--color-muted)]">/{post.slug}</p>
                 <p class="mt-4 text-xs text-[var(--color-muted)]">Updated {new Date(post.updated_at).toLocaleString()}</p>
                 <div class="mt-4">
                   <PostRowActions client:load postId={post.id} status={post.status} />

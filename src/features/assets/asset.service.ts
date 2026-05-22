@@ -7,15 +7,32 @@ import {
   createAssetRecord,
   findAssetById,
   findAssetByToken,
+  findReusableAssetBySha256,
   isAssetReferencedByAnyPost,
   isAssetUsedByPublishedPublicPost,
   listAssets,
+  listExpiredUnusedDraftAssets,
+  listUnusedDraftAssetsByTokens,
   softDeleteAsset,
   updateAssetVisibility
 } from './asset.repo';
 import type { AssetRow, AssetVisibility } from './asset.types';
 
 const TOKEN_BYTES = 24;
+const DEFAULT_ORPHAN_ASSET_TTL_HOURS = 24;
+
+export interface AssetCleanupStats {
+  scanned: number;
+  deleted: number;
+  skipped: number;
+  failed: number;
+}
+
+export interface AdminAssetUploadResult {
+  asset: AssetRow;
+  created: boolean;
+  reused: boolean;
+}
 
 export function getMediaBucket(): R2Bucket {
   const bucket = env.MEDIA_BUCKET;
@@ -67,15 +84,25 @@ export async function getAdminAsset(id: string): Promise<AssetRow | null> {
   return asset && !asset.deleted_at ? asset : null;
 }
 
-export async function uploadAdminAsset(file: File, user: PublicAdminUser): Promise<AssetRow> {
+export async function uploadAdminAsset(file: File, user: PublicAdminUser): Promise<AdminAssetUploadResult> {
   assertValidImageFile(file);
 
   const db = getDb();
   const bucket = getMediaBucket();
   const buffer = await file.arrayBuffer();
+  const sha256 = await sha256ArrayBuffer(buffer);
+  const reusableAsset = await findReusableAssetBySha256(db, sha256, file.type, file.size);
+
+  if (reusableAsset) {
+    return {
+      asset: reusableAsset,
+      created: false,
+      reused: true
+    };
+  }
+
   const token = createRandomToken(TOKEN_BYTES);
   const r2Key = buildR2Key(file.type);
-  const sha256 = await sha256ArrayBuffer(buffer);
 
   await bucket.put(r2Key, buffer, {
     httpMetadata: {
@@ -86,7 +113,7 @@ export async function uploadAdminAsset(file: File, user: PublicAdminUser): Promi
     }
   });
 
-  return createAssetRecord(db, {
+  const asset = await createAssetRecord(db, {
     token,
     r2Key,
     originalFilename: file.name || null,
@@ -95,6 +122,12 @@ export async function uploadAdminAsset(file: File, user: PublicAdminUser): Promi
     sha256,
     createdBy: user.id
   });
+
+  return {
+    asset,
+    created: true,
+    reused: false
+  };
 }
 
 export async function setAdminAssetVisibility(
@@ -144,6 +177,76 @@ export async function cleanupUnreferencedAssets(db: D1Database, assets: AssetRow
       await deleteAssetObjectAndSoftDelete(db, asset);
     }
   }
+}
+
+export async function cleanupExpiredDraftAssets(ttlHours = DEFAULT_ORPHAN_ASSET_TTL_HOURS): Promise<AssetCleanupStats> {
+  const db = getDb();
+  const cutoffIso = new Date(Date.now() - ttlHours * 60 * 60 * 1000).toISOString();
+  const candidates = await listExpiredUnusedDraftAssets(db, cutoffIso);
+  const stats: AssetCleanupStats = {
+    scanned: candidates.length,
+    deleted: 0,
+    skipped: 0,
+    failed: 0
+  };
+
+  for (const asset of candidates) {
+    const isReferenced = await isAssetReferencedByAnyPost(db, asset.id);
+
+    if (isReferenced) {
+      stats.skipped += 1;
+      continue;
+    }
+
+    try {
+      const deletedAsset = await deleteAssetObjectAndSoftDelete(db, asset);
+
+      if (deletedAsset) {
+        stats.deleted += 1;
+      } else {
+        stats.skipped += 1;
+      }
+    } catch (error) {
+      stats.failed += 1;
+    }
+  }
+
+  return stats;
+}
+
+export async function cleanupUnsavedDraftAssetsByTokens(tokens: string[]): Promise<AssetCleanupStats> {
+  const db = getDb();
+  const validTokens = [...new Set(tokens.map((token) => token.trim()).filter(isValidAssetToken))];
+  const candidates = await listUnusedDraftAssetsByTokens(db, validTokens);
+  const stats: AssetCleanupStats = {
+    scanned: validTokens.length,
+    deleted: 0,
+    skipped: validTokens.length - candidates.length,
+    failed: 0
+  };
+
+  for (const asset of candidates) {
+    const isReferenced = await isAssetReferencedByAnyPost(db, asset.id);
+
+    if (isReferenced) {
+      stats.skipped += 1;
+      continue;
+    }
+
+    try {
+      const deletedAsset = await deleteAssetObjectAndSoftDelete(db, asset);
+
+      if (deletedAsset) {
+        stats.deleted += 1;
+      } else {
+        stats.skipped += 1;
+      }
+    } catch (error) {
+      stats.failed += 1;
+    }
+  }
+
+  return stats;
 }
 
 export async function getAssetForToken(

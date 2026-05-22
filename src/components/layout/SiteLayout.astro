@@ -5,14 +5,38 @@ import SiteHeader from './SiteHeader.astro';
 interface Props {
   title?: string;
   description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
   showHeader?: boolean;
+  showFooter?: boolean;
 }
 
 const {
   title = 'Sakura Cactus',
-  description = 'A Cloudflare-native personal blog with an admin dashboard.',
-  showHeader = true
+  description = '温柔地写，安静地发布。',
+  canonicalUrl,
+  ogImage,
+  showHeader = true,
+  showFooter = showHeader
 } = Astro.props;
+
+const footerLinks = [
+  {
+    label: 'Cloudflare',
+    href: 'https://www.cloudflare.com/',
+    icon: 'cf'
+  },
+  {
+    label: 'GitHub',
+    href: 'https://github.com/',
+    icon: 'github'
+  },
+  {
+    label: 'Bilibili',
+    href: 'https://www.bilibili.com/',
+    icon: 'bilibili'
+  }
+];
 ---
 
 <!doctype html>
@@ -21,6 +45,11 @@ const {
     <meta charset="UTF-8" />
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
+    {ogImage ? <meta property="og:image" content={ogImage} /> : null}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
   </head>
@@ -29,5 +58,33 @@ const {
     <main>
       <slot />
     </main>
+    {showFooter ? (
+      <footer class="sc-site-footer">
+        <div class="sc-site-footer-inner">
+          <span>Sakura Cactus © {new Date().getFullYear()}</span>
+          <div class="sc-footer-links" aria-label="外部链接">
+            {footerLinks.map((link) => (
+              <a class="sc-footer-icon-link" href={link.href} target="_blank" rel="noreferrer" aria-label={link.label} title={link.label}>
+                {link.icon === 'cf' ? (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <path d="M8.4 16.5h8.8a3.2 3.2 0 0 0 .5-6.35A5.2 5.2 0 0 0 7.5 9.1a3.75 3.75 0 0 0 .9 7.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                    <path d="M6.7 13.4h10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                ) : link.icon === 'github' ? (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12 2.25a9.75 9.75 0 0 0-3.08 19c.49.09.67-.21.67-.47v-1.69c-2.73.59-3.3-1.17-3.3-1.17-.45-1.13-1.09-1.43-1.09-1.43-.89-.61.07-.6.07-.6.98.07 1.5 1.01 1.5 1.01.87 1.49 2.28 1.06 2.84.81.09-.63.34-1.06.62-1.31-2.18-.25-4.47-1.09-4.47-4.85 0-1.07.38-1.94 1.01-2.63-.1-.25-.44-1.25.1-2.59 0 0 .83-.27 2.69 1a9.32 9.32 0 0 1 4.9 0c1.86-1.27 2.68-1 2.68-1 .54 1.34.2 2.34.1 2.59.63.69 1.01 1.56 1.01 2.63 0 3.77-2.29 4.59-4.48 4.84.35.31.67.9.67 1.82v2.7c0 .26.18.57.68.47A9.75 9.75 0 0 0 12 2.25Z" clip-rule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <rect x="4" y="7" width="16" height="12" rx="3" stroke="currentColor" stroke-width="1.8" />
+                    <path d="m9 4 2 3M15 4l-2 3M9 12v2M15 12v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                )}
+              </a>
+            ))}
+          </div>
+        </div>
+      </footer>
+    ) : null}
   </body>
 </html>

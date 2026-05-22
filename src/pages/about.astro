@@ -1,24 +1,46 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getPublicPostBySlug, getPublicPosts } from '@/features/posts/post.service';
+
+export const prerender = false;
+
+const posts = await getPublicPosts();
+const aboutSummary = posts.find((post) => post.tags.some((tag) => tag.name.toLowerCase() === 'about' || tag.slug === 'about'));
+const aboutPost = aboutSummary ? await getPublicPostBySlug(aboutSummary.slug) : null;
 ---
 
-<SiteLayout title="关于 | Sakura Cactus">
+<SiteLayout
+  title={aboutPost ? `${aboutPost.title} | Sakura Cactus` : '关于 | Sakura Cactus'}
+  description={aboutPost?.excerpt ?? '关于 Sakura Cactus。'}
+  ogImage={aboutPost?.coverImageUrl ?? undefined}
+>
   <section class="sc-page">
-    <div class="sc-shell">
-      <article class="sc-prose py-10">
-        <h1>关于 Sakura Cactus</h1>
-        <p>
-          Sakura Cactus 是一个面向个人写作的极简博客系统。前台保持克制、清晰和可读，后台只保留必要的私有写作能力。
-        </p>
-        <h2>技术栈</h2>
-        <p>
-          Astro、Cloudflare Workers、D1、R2、React、TypeScript 和 Tailwind CSS。文章存储在 D1，图片存储在私有 R2，并通过 Sakura Cactus 的 token 代理访问。
-        </p>
-        <h2>签名</h2>
-        <blockquote>温柔地写，安静地发布。</blockquote>
-        <h2>联系方式</h2>
-        <p>联系方式会在后续设置系统中维护。当前先保留占位。</p>
-      </article>
+    <div class="sc-public-shell sc-prose-shell">
+      <nav class="sc-breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>»</span>
+        <span>关于</span>
+      </nav>
+
+      {aboutPost ? (
+        <article>
+          <header class="sc-page-header">
+            <h1>{aboutPost.title}</h1>
+            {aboutPost.excerpt ? <p>{aboutPost.excerpt}</p> : null}
+          </header>
+          <div class="sc-prose prose-content" set:html={aboutPost.contentHtml} />
+        </article>
+      ) : (
+        <>
+          <header class="sc-page-header">
+            <h1>关于</h1>
+          </header>
+          <div class="sc-empty">
+            <p>还没有关于页面。</p>
+            <p>发布一篇带 about 标签的文章后，它会显示在这里。</p>
+          </div>
+        </>
+      )}
     </div>
   </section>
 </SiteLayout>

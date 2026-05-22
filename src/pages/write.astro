@@ -1,8 +1,18 @@
 ---
 import AdminLayout from '@/components/layout/AdminLayout.astro';
 import { PostEditor } from '@/components/admin/PostEditor';
+import { getAdminPost } from '@/features/posts/post.service';
+
+const postId = Astro.url.searchParams.get('post');
+const post = postId ? await getAdminPost(postId) : null;
+
+if (postId && !post) {
+  return new Response('Not found', { status: 404 });
+}
 ---
 
 <AdminLayout title="写作 | Sakura Cactus" heading="写作" eyebrow="Private writing" wide bare>
-  <PostEditor client:load />
+  <div class="sc-writer-page">
+    <PostEditor client:load post={post} />
+  </div>
 </AdminLayout>

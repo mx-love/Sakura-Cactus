@@ -1,16 +1,21 @@
 import type { PostRow, PostStatus, PostVisibility } from '@/lib/database.types';
+import { extractFirstImageUrl } from './post.renderer';
 
 export type { PostRow, PostStatus, PostVisibility };
 
+export interface PublicPostTag {
+  name: string;
+  slug: string;
+}
+
 export interface PostInput {
   title: string;
-  slug?: string | null;
   excerpt?: string | null;
   contentMarkdown: string;
   status?: PostStatus;
   visibility?: PostVisibility;
-  seoTitle?: string | null;
-  seoDescription?: string | null;
+  publishedAt?: string | null;
+  tags?: string[] | string | null;
 }
 
 export interface CreatePostInput extends PostInput {
@@ -32,6 +37,8 @@ export interface PublicPostSummary {
   slug: string;
   title: string;
   excerpt: string | null;
+  coverImageUrl: string | null;
+  tags: PublicPostTag[];
   publishedAt: string | null;
   updatedAt: string;
 }
@@ -42,20 +49,22 @@ export interface PublicPostDetail extends PublicPostSummary {
   seoDescription: string | null;
 }
 
-export function toPublicPostSummary(post: PostRow): PublicPostSummary {
+export function toPublicPostSummary(post: PostRow, tags: PublicPostTag[] = []): PublicPostSummary {
   return {
     id: post.id,
     slug: post.slug,
     title: post.title,
     excerpt: post.excerpt,
+    coverImageUrl: extractFirstImageUrl(post.content_markdown),
+    tags: tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
     publishedAt: post.published_at,
     updatedAt: post.updated_at
   };
 }
 
-export function toPublicPostDetail(post: PostRow): PublicPostDetail {
+export function toPublicPostDetail(post: PostRow, tags: PublicPostTag[] = []): PublicPostDetail {
   return {
-    ...toPublicPostSummary(post),
+    ...toPublicPostSummary(post, tags),
     contentHtml: post.content_html ?? '',
     seoTitle: post.seo_title,
     seoDescription: post.seo_description

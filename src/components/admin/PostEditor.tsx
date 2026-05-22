@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AssetRow } from '@/features/assets/asset.types';
 import { renderMarkdown } from '@/features/posts/post.renderer';
 import type { PostRow, PostStatus, PostVisibility } from '@/features/posts/post.types';
@@ -12,45 +12,49 @@ interface ApiErrorResponse {
 }
 
 interface PostEditorProps {
-  post?: PostRow | null;
+  post?: (PostRow & { tags?: Array<{ name: string }> }) | null;
 }
 
 type PostFormState = {
   title: string;
-  slug: string;
   excerpt: string;
+  tagInput: string;
+  publishedAt: string;
   contentMarkdown: string;
   status: Exclude<PostStatus, 'deleted'>;
   visibility: PostVisibility;
-  seoTitle: string;
-  seoDescription: string;
-  publishedAt: string;
 };
 
-function postToState(post?: PostRow | null): PostFormState {
-  return {
-    title: post?.title ?? '',
-    slug: post?.slug ?? '',
-    excerpt: post?.excerpt ?? '',
-    contentMarkdown: post?.content_markdown ?? '',
-    status: post?.status === 'deleted' ? 'draft' : (post?.status ?? 'draft'),
-    visibility: post?.visibility ?? 'public',
-    seoTitle: post?.seo_title ?? '',
-    seoDescription: post?.seo_description ?? '',
-    publishedAt: post?.published_at ?? ''
-  };
+function toDateTimeLocal(value: string | null | undefined): string {
+  const date = value ? new Date(value) : new Date();
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
-function slugifyTitle(title: string): string {
-  return (
-    title
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/-{2,}/g, '-') || `post-${Date.now()}`
-  );
+function toIsoDateTime(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function postToState(post?: (PostRow & { tags?: Array<{ name: string }> }) | null): PostFormState {
+  return {
+    title: post?.title ?? '',
+    excerpt: post?.excerpt ?? '',
+    tagInput: post?.tags?.map((tag) => tag.name).join(', ') ?? '',
+    publishedAt: toDateTimeLocal(post?.published_at),
+    contentMarkdown: post?.content_markdown ?? '',
+    status: post?.status === 'deleted' ? 'draft' : (post?.status ?? 'draft'),
+    visibility: post?.visibility ?? 'public'
+  };
 }
 
 function statusLabel(status: Exclude<PostStatus, 'deleted'>): string {
@@ -80,8 +84,21 @@ function isImageUrl(value: string): boolean {
   }
 }
 
+function extractAssetTokens(markdown: string): string[] {
+  const tokens = new Set<string>();
+  const pattern = /!\[[^\]]*]\(\s*asset:([A-Za-z0-9_-]{24,64})\s*\)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(markdown)) !== null) {
+    tokens.add(match[1]);
+  }
+
+  return [...tokens];
+}
+
 export function PostEditor({ post }: PostEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const sessionUploadedTokensRef = useRef<Set<string>>(new Set());
   const [form, setForm] = useState<PostFormState>(() => postToState(post));
   const [postId, setPostId] = useState(post?.id ?? null);
   const [message, setMessage] = useState<string | null>(null);
@@ -94,6 +111,20 @@ export function PostEditor({ post }: PostEditorProps) {
   const isPublished = form.status === 'published';
   const isBusy = isSubmitting || isUploadingImage;
   const statusClass = form.status === 'published' ? 'sc-badge-published' : form.status === 'archived' ? 'sc-badge-archived' : 'sc-badge-draft';
+
+  useEffect(() => {
+    const handlePageExit = () => {
+      cleanupUnsavedSessionUploads();
+    };
+
+    window.addEventListener('pagehide', handlePageExit);
+    window.addEventListener('beforeunload', handlePageExit);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageExit);
+      window.removeEventListener('beforeunload', handlePageExit);
+    };
+  }, []);
 
   function updateField<K extends keyof PostFormState>(field: K, value: PostFormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -137,8 +168,11 @@ export function PostEditor({ post }: PostEditorProps) {
       throw new Error(await readError(response, 'Unable to upload image.'));
     }
 
-    const payload = (await response.json()) as { ok: true; data: { asset: AssetRow; url: string } };
-    return payload.data.asset;
+    const payload = (await response.json()) as {
+      ok: true;
+      data: { asset: AssetRow; url: string; created: boolean; reused: boolean };
+    };
+    return payload.data;
   }
 
   async function uploadAndInsertImages(files: File[]) {
@@ -156,7 +190,13 @@ export function PostEditor({ post }: PostEditorProps) {
       const snippets: string[] = [];
 
       for (const image of images) {
-        const asset = await uploadImageFile(image);
+        const upload = await uploadImageFile(image);
+        const { asset } = upload;
+
+        if (upload.created) {
+          sessionUploadedTokensRef.current.add(asset.token);
+        }
+
         snippets.push(`![图片说明](asset:${asset.token})`);
       }
 
@@ -200,8 +240,41 @@ export function PostEditor({ post }: PostEditorProps) {
     await uploadAndInsertImages(files);
   }
 
-  function generateSlug() {
-    updateField('slug', slugifyTitle(form.title));
+  function markSavedAssetTokens(markdown: string) {
+    for (const token of extractAssetTokens(markdown)) {
+      sessionUploadedTokensRef.current.delete(token);
+    }
+  }
+
+  function cleanupUnsavedSessionUploads() {
+    const tokens = [...sessionUploadedTokensRef.current];
+
+    if (tokens.length === 0) {
+      return;
+    }
+
+    sessionUploadedTokensRef.current.clear();
+
+    const payload = JSON.stringify({ tokens });
+    const endpoint = '/api/admin/assets/cleanup-unsaved';
+
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' });
+
+      if (navigator.sendBeacon(endpoint, blob)) {
+        return;
+      }
+    }
+
+    void fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: payload,
+      keepalive: true
+    }).catch(() => undefined);
   }
 
   async function saveWithStatus(status: Exclude<PostStatus, 'deleted'>) {
@@ -219,13 +292,12 @@ export function PostEditor({ post }: PostEditorProps) {
         credentials: 'same-origin',
         body: JSON.stringify({
           title: form.title,
-          slug: form.slug,
           excerpt: form.excerpt,
           contentMarkdown: form.contentMarkdown,
           status,
           visibility: form.visibility,
-          seoTitle: form.title,
-          seoDescription: form.excerpt
+          publishedAt: toIsoDateTime(form.publishedAt),
+          tags: form.tagInput
         })
       });
 
@@ -234,13 +306,14 @@ export function PostEditor({ post }: PostEditorProps) {
         return;
       }
 
-      const payload = (await response.json()) as { ok: true; data: { post: PostRow } };
+      const payload = (await response.json()) as { ok: true; data: { post: PostRow & { tags?: Array<{ name: string }> } } };
       setPostId(payload.data.post.id);
       setForm(postToState(payload.data.post));
+      markSavedAssetTokens(payload.data.post.content_markdown);
       setMessage(status === 'published' ? '已发布' : '已保存');
 
       if (!postId) {
-        window.history.replaceState(null, '', '/write');
+        window.history.replaceState(null, '', `/write?post=${payload.data.post.id}`);
       }
     } finally {
       setIsSubmitting(false);
@@ -268,7 +341,7 @@ export function PostEditor({ post }: PostEditorProps) {
         return;
       }
 
-      const payload = (await response.json()) as { ok: true; data: { post: PostRow } };
+      const payload = (await response.json()) as { ok: true; data: { post: PostRow & { tags?: Array<{ name: string }> } } };
       setForm(postToState(payload.data.post));
       setMessage('已下架');
     } finally {
@@ -301,6 +374,7 @@ export function PostEditor({ post }: PostEditorProps) {
         return;
       }
 
+      cleanupUnsavedSessionUploads();
       window.location.assign('/articles');
     } finally {
       setIsSubmitting(false);
@@ -308,100 +382,56 @@ export function PostEditor({ post }: PostEditorProps) {
   }
 
   return (
-    <form className="space-y-5" onSubmit={(event) => event.preventDefault()}>
-      <div className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[rgba(255,253,253,0.9)] py-3 backdrop-blur">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <a className="text-sm font-bold text-[var(--color-primary)] hover:underline" href="/articles">
+    <form className="sc-writer" onSubmit={(event) => event.preventDefault()}>
+      <div className="sc-writer-topbar">
+        <div className="sc-writer-topbar-inner">
+          <a className="sc-writer-back" href="/articles">
             ← 返回文章
           </a>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`sc-badge ${statusClass}`}>{message ?? (error ? '保存失败' : statusLabel(form.status))}</span>
-            <button
-              className="sc-button sc-button-secondary sc-button-small disabled:opacity-60"
-              disabled={isBusy}
-              onClick={() => saveWithStatus('draft')}
-              type="button"
-            >
-              保存草稿
-            </button>
-            <button
-              className="sc-button sc-button-primary sc-button-small disabled:opacity-60"
-              disabled={isBusy}
-              onClick={() => saveWithStatus('published')}
-              type="button"
-            >
-              {isPublished ? '更新' : '发布'}
-            </button>
-            {isPublished ? (
-              <button
-                className="sc-button sc-button-secondary sc-button-small disabled:opacity-60"
-                disabled={isSubmitting || !isExisting}
-                onClick={unpublish}
-                type="button"
-              >
-                下架
-              </button>
-            ) : null}
+          <div className="sc-writer-top-actions">
+            {message || error ? <span className={`sc-badge ${statusClass}`}>{message ?? '保存失败'}</span> : null}
           </div>
         </div>
-        {error ? <p className="sc-field-error mt-2">{error}</p> : null}
+        {error ? <p className="sc-field-error sc-writer-error">{error}</p> : null}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-      <div className="space-y-5">
-        <div className="border-b border-[var(--color-border)] pb-5">
-          <input
-            aria-label="Post title"
-            className="w-full border-0 bg-transparent text-4xl font-extrabold leading-tight outline-none placeholder:text-[var(--color-subtle)] sm:text-5xl"
-            placeholder="Untitled post"
-            value={form.title}
-            onChange={(event) => updateField('title', event.target.value)}
-            required
-          />
-          <textarea
-            aria-label="Post excerpt"
-            className="mt-5 min-h-24 w-full resize-y border-0 bg-transparent text-lg leading-8 text-[var(--color-muted)] outline-none placeholder:text-[var(--color-subtle)]"
-            placeholder="Write a short subtitle or summary..."
-            value={form.excerpt}
-            onChange={(event) => updateField('excerpt', event.target.value)}
-          />
-        </div>
-
-        <div className="rounded-md border border-[var(--color-border)] bg-white">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-3 py-2">
-            <div className="flex gap-1">
+      <div className="sc-writer-grid">
+      <div className="sc-writer-main">
+        <div className="sc-writer-canvas">
+          <div className="sc-writer-tabs">
+            <div className="sc-writer-tab-list">
               <button
-                className={`rounded-md px-3 py-1.5 text-sm font-bold transition ${editorMode === 'edit' ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
+                className={`sc-writer-tab ${editorMode === 'edit' ? 'sc-writer-tab-active' : ''}`}
                 onClick={() => setEditorMode('edit')}
                 type="button"
               >
-                Edit
+                编辑
               </button>
               <button
-                className={`rounded-md px-3 py-1.5 text-sm font-bold transition ${editorMode === 'preview' ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
+                className={`sc-writer-tab ${editorMode === 'preview' ? 'sc-writer-tab-active' : ''}`}
                 onClick={() => setEditorMode('preview')}
                 type="button"
               >
-                Preview
+                预览
               </button>
               <button
-                className={`rounded-md px-3 py-1.5 text-sm font-bold transition ${editorMode === 'split' ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
+                className={`sc-writer-tab ${editorMode === 'split' ? 'sc-writer-tab-active' : ''}`}
                 onClick={() => setEditorMode('split')}
                 type="button"
               >
-                Split
+                分屏
               </button>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="sc-writer-upload-state">
               {isUploadingImage ? <span className="sc-badge">上传中</span> : null}
             </div>
           </div>
 
           {editorMode === 'edit' || editorMode === 'split' ? (
-            <div className={editorMode === 'split' ? 'grid lg:grid-cols-2' : ''}>
+            <div className={editorMode === 'split' ? 'sc-writer-split' : 'sc-writer-editor-wrap'}>
             <textarea
               ref={textareaRef}
-              className="min-h-[620px] w-full resize-y border-0 bg-white px-4 py-4 font-mono text-sm leading-8 outline-none placeholder:text-[var(--color-muted)]"
+              className="sc-writer-textarea"
               placeholder="Write Markdown here. Paste or drop images to upload."
               value={form.contentMarkdown}
               onChange={(event) => updateField('contentMarkdown', event.target.value)}
@@ -411,33 +441,66 @@ export function PostEditor({ post }: PostEditorProps) {
               required
             />
             {editorMode === 'split' ? (
-              <div className="sc-prose prose-content min-h-[620px] border-t border-[var(--color-border)] px-4 py-4 lg:border-l lg:border-t-0" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+              <div className="sc-writer-preview sc-prose prose-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
             ) : null}
             </div>
           ) : (
-            <div className="sc-prose prose-content min-h-[620px] bg-white px-4 py-4" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            <div className="sc-writer-preview sc-prose prose-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
           )}
         </div>
 
       </div>
 
-      <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
-        <div className="rounded-md border border-[var(--color-border)] bg-white p-4">
-          <h2 className="text-sm font-bold">文章设置</h2>
+      <aside className="sc-writer-side">
+        <div className="sc-writer-card">
+          <div className="sc-writer-fields">
+            <label className="sc-writer-field sc-writer-field-plain">
+              <input
+                aria-label="Post title"
+                className="sc-input sc-writer-control"
+                placeholder="标题"
+                value={form.title}
+                onChange={(event) => updateField('title', event.target.value)}
+                required
+              />
+            </label>
 
-          <div className="mt-4 space-y-4">
-            <div className="space-y-2">
-              <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">可见性</span>
-              <div className="grid grid-cols-2 gap-2">
+            <label className="sc-writer-field sc-writer-field-plain">
+              <input
+                aria-label="Post excerpt"
+                className="sc-input sc-writer-control"
+                placeholder="简介"
+                value={form.excerpt}
+                onChange={(event) => updateField('excerpt', event.target.value)}
+              />
+            </label>
+
+            <label className="sc-writer-field sc-writer-field-plain">
+              <input
+                className="sc-input sc-writer-control"
+                placeholder="标签"
+                value={form.tagInput}
+                onChange={(event) => updateField('tagInput', event.target.value)}
+              />
+            </label>
+
+            <div className="sc-writer-status-row">
+              <span>状态</span>
+              <span className={`sc-badge ${statusClass}`}>{statusLabel(form.status)}</span>
+            </div>
+
+            <div className="sc-writer-field">
+              <span>可见性</span>
+              <div className="sc-writer-visibility">
                 <button
-                  className={`rounded-2xl border px-3 py-2 text-sm font-black ${form.visibility === 'public' ? 'border-[var(--color-text)] bg-[var(--color-text)] text-white' : 'border-[var(--color-border)] bg-white text-[var(--color-text)]'}`}
+                  className={form.visibility === 'public' ? 'sc-writer-choice sc-writer-choice-active' : 'sc-writer-choice'}
                   onClick={() => updateField('visibility', 'public')}
                   type="button"
                 >
                   公开
                 </button>
                 <button
-                  className={`rounded-2xl border px-3 py-2 text-sm font-black ${form.visibility === 'private' ? 'border-[var(--color-text)] bg-[var(--color-text)] text-white' : 'border-[var(--color-border)] bg-white text-[var(--color-text)]'}`}
+                  className={form.visibility === 'private' ? 'sc-writer-choice sc-writer-choice-active' : 'sc-writer-choice'}
                   onClick={() => updateField('visibility', 'private')}
                   type="button"
                 >
@@ -446,36 +509,59 @@ export function PostEditor({ post }: PostEditorProps) {
               </div>
             </div>
 
-            <label className="space-y-2">
-              <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">Slug</span>
-              <div className="flex gap-2">
-                <input
-                  className="sc-input min-w-0 flex-1 text-sm"
-                  value={form.slug}
-                  onChange={(event) => updateField('slug', event.target.value)}
-                  placeholder="auto-generated-from-title"
-                />
-                <button
-                  className="sc-button sc-button-secondary sc-button-small"
-                  onClick={generateSlug}
-                  type="button"
-                >
-                  Auto
-                </button>
-              </div>
+            <label className="sc-writer-field">
+              <span>发布时间</span>
+              <input
+                className="sc-input sc-writer-control"
+                type="datetime-local"
+                value={form.publishedAt}
+                onChange={(event) => updateField('publishedAt', event.target.value)}
+              />
             </label>
 
-            <p className="text-xs leading-5 text-[var(--color-muted)]">
+            <div className="sc-writer-publish-actions">
+              <button
+                className="sc-button sc-button-primary sc-writer-primary-action disabled:opacity-60"
+                disabled={isBusy}
+                onClick={() => saveWithStatus('published')}
+                type="button"
+              >
+                {isPublished ? '更新' : '发布'}
+              </button>
+
+            {!isPublished ? (
+              <button
+                className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
+                disabled={isBusy}
+                onClick={() => saveWithStatus('draft')}
+                type="button"
+              >
+                保存草稿
+              </button>
+            ) : null}
+            {isPublished ? (
+              <button
+                className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
+                disabled={isSubmitting || !isExisting}
+                onClick={unpublish}
+                type="button"
+              >
+                下架
+              </button>
+            ) : null}
+            </div>
+
+            <p className="sc-writer-note">
               公开发布后会显示在文章列表。
             </p>
           </div>
         </div>
 
         {isExisting ? (
-          <div className="rounded-[24px] border border-[var(--color-danger-soft)] bg-white/62 p-4">
-            <h2 className="text-sm font-bold text-[var(--color-danger)]">危险区域</h2>
+          <div className="sc-writer-danger">
+            <h2>危险区域</h2>
             <button
-              className="sc-button sc-button-danger mt-3 w-full disabled:opacity-60"
+              className="sc-button sc-button-danger sc-writer-secondary-action disabled:opacity-60"
               disabled={isSubmitting}
               onClick={deletePost}
               type="button"

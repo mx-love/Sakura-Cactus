@@ -1,7 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
-import { isAdminSetupAvailable } from '@/features/auth/setup.service';
-import { getDb } from '@/lib/db';
 import { jsonError } from '@/lib/response';
 
 function isAdminPage(pathname: string): boolean {
@@ -35,11 +33,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (isAdminPage(pathname)) {
     if (isAdminSetupPage(pathname)) {
-      if (!(await isAdminSetupAvailable(getDb(context)))) {
-        return context.redirect('/admin/login');
-      }
-
-      return next();
+      return context.redirect('/admin/login');
     }
 
     const user = await getCurrentAdminUser(context);

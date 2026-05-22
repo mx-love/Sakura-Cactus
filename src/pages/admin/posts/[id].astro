@@ -1,16 +1,9 @@
 ---
-import AdminLayout from '@/components/layout/AdminLayout.astro';
-import { PostEditor } from '@/components/admin/PostEditor';
-import { getAdminPost } from '@/features/posts/post.service';
-
 const id = Astro.params.id;
-const post = id ? await getAdminPost(id) : null;
 
-if (!post) {
+if (!id) {
   return new Response('Not found', { status: 404 });
 }
----
 
-<AdminLayout title={`编辑 ${post.title} | Sakura Cactus`} heading="编辑文章" eyebrow="Private writing" wide bare>
-  <PostEditor client:load post={post} />
-</AdminLayout>
+return Astro.redirect(`/write?post=${encodeURIComponent(id)}`);
+---

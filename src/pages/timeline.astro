@@ -5,41 +5,96 @@ import { getPublicPosts } from '@/features/posts/post.service';
 export const prerender = false;
 
 const posts = await getPublicPosts();
-const groups = posts.reduce<Record<string, typeof posts>>((acc, post) => {
-  const date = post.publishedAt ? new Date(post.publishedAt) : new Date(post.updatedAt);
+
+const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
+
+function formatDate(value: string | null) {
+  return value ? dateFormatter.format(new Date(value)) : '';
+}
+
+function formatMonth(date: Date) {
+  return `${date.getMonth() + 1}月`;
+}
+
+const archive = posts.reduce<Record<string, Record<string, typeof posts>>>((acc, post) => {
+  if (!post.publishedAt) {
+    return acc;
+  }
+
+  const date = new Date(post.publishedAt);
   const year = String(date.getFullYear());
-  acc[year] = acc[year] ?? [];
-  acc[year].push(post);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  acc[year] = acc[year] ?? {};
+  acc[year][month] = acc[year][month] ?? [];
+  acc[year][month].push(post);
   return acc;
 }, {});
-const years = Object.keys(groups).sort((a, b) => Number(b) - Number(a));
+
+const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
 ---
 
-<SiteLayout title="时间轴 | Sakura Cactus">
+<SiteLayout title="时间轴 | Sakura Cactus" description="所有公开文章按发布时间归档。">
   <section class="sc-page">
-    <div class="sc-shell">
-      <header class="py-10">
-        <h1 class="text-4xl font-extrabold tracking-tight">时间轴</h1>
-        <p class="mt-4 leading-8 text-[var(--color-muted)]">这里只按时间记录文章，不做碎碎念或复杂信息流。</p>
+    <div class="sc-public-shell">
+      <nav class="sc-breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>»</span>
+        <span>时间轴</span>
+      </nav>
+
+      <header class="sc-page-header">
+        <h1>时间轴</h1>
+        <p>所有公开文章按发布时间归档。</p>
       </header>
 
       {years.length === 0 ? (
-        <p class="rounded-md border border-dashed border-[var(--color-border)] px-4 py-5 text-sm text-[var(--color-muted)]">暂无可归档文章。</p>
+        <div class="sc-empty">
+          <p>暂无可归档文章。</p>
+        </div>
       ) : (
-        <div class="space-y-10">
+        <div class="sc-archive">
           {years.map((year) => (
-            <section>
-              <h2 class="text-2xl font-extrabold">{year}</h2>
-              <div class="mt-4 space-y-3">
-                {groups[year].map((post) => (
-                  <a class="grid gap-2 border-b border-[var(--color-border)] pb-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)]" href={`/posts/${post.slug}`}>
-                    <span class="text-[var(--color-muted)]">
-                      {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Published'}
-                    </span>
-                    <span class="font-bold hover:text-[var(--color-primary)]">{post.title}</span>
-                  </a>
-                ))}
-              </div>
+            <section class="sc-archive-year">
+              <h2>{year}</h2>
+              {Object.keys(archive[year]).sort((a, b) => Number(b) - Number(a)).map((month) => (
+                <section class="sc-archive-month">
+                  <h3>{formatMonth(new Date(Number(year), Number(month) - 1, 1))}</h3>
+                  <div class="sc-archive-list">
+                    {archive[year][month].map((post) => (
+                      <article class="sc-archive-entry">
+                        <div class="sc-archive-date">
+                          {post.publishedAt ? (
+                            <>
+                              <span>{String(new Date(post.publishedAt).getMonth() + 1).padStart(2, '0')}/{String(new Date(post.publishedAt).getDate()).padStart(2, '0')}</span>
+                              <span class="sc-calendar-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <path d="M8 2v4" />
+                                  <path d="M16 2v4" />
+                                  <path d="M3 10h18" />
+                                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                                </svg>
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
+                        <div>
+                          <p class="sc-post-meta">
+                            {post.publishedAt ? <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time> : null}
+                          </p>
+                          <h4>
+                            <a href={`/posts/${post.slug}`}>{post.title}</a>
+                          </h4>
+                          {post.excerpt ? <p>{post.excerpt}</p> : null}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </section>
           ))}
         </div>

@@ -44,6 +44,28 @@ export async function findAssetByToken(db: D1Database, token: string): Promise<A
     .first<AssetRow>();
 }
 
+export async function findReusableAssetBySha256(
+  db: D1Database,
+  sha256: string,
+  mimeType: string,
+  sizeBytes: number
+): Promise<AssetRow | null> {
+  return db
+    .prepare(
+      `SELECT id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+       FROM assets
+       WHERE sha256 = ?
+         AND mime_type = ?
+         AND size_bytes = ?
+         AND deleted_at IS NULL
+       ORDER BY created_at ASC
+       LIMIT 1`
+    )
+    .bind(sha256, mimeType, sizeBytes)
+    .first<AssetRow>();
+}
+
 export async function findAssetsByTokens(db: D1Database, tokens: string[]): Promise<AssetRow[]> {
   const assets: AssetRow[] = [];
 
@@ -51,6 +73,51 @@ export async function findAssetsByTokens(db: D1Database, tokens: string[]): Prom
     const asset = await findAssetByToken(db, token);
 
     if (asset && !asset.deleted_at && asset.visibility !== 'deleted') {
+      assets.push(asset);
+    }
+  }
+
+  return assets;
+}
+
+export async function listExpiredUnusedDraftAssets(db: D1Database, cutoffIso: string): Promise<AssetRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+       FROM assets
+       WHERE deleted_at IS NULL
+         AND visibility = 'draft'
+         AND usage_count = 0
+         AND created_at < ?
+       ORDER BY created_at ASC`
+    )
+    .bind(cutoffIso)
+    .all<AssetRow>();
+
+  return result.results ?? [];
+}
+
+export async function listUnusedDraftAssetsByTokens(db: D1Database, tokens: string[]): Promise<AssetRow[]> {
+  const assets: AssetRow[] = [];
+  const uniqueTokens = [...new Set(tokens)];
+
+  for (const token of uniqueTokens) {
+    const asset = await db
+      .prepare(
+        `SELECT id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+          visibility, usage_count, created_by, created_at, updated_at, deleted_at
+         FROM assets
+         WHERE token = ?
+           AND deleted_at IS NULL
+           AND visibility = 'draft'
+           AND usage_count = 0
+         LIMIT 1`
+      )
+      .bind(token)
+      .first<AssetRow>();
+
+    if (asset) {
       assets.push(asset);
     }
   }

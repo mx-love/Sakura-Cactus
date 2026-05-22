@@ -8,58 +8,119 @@ function escapeHtml(value: string): string {
 }
 
 const ASSET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,64}$/;
+const HTML_TOKEN_PREFIX = 'SC_MARKDOWN_TOKEN_';
 
-function isSafeUrl(url: string): boolean {
+function isSafeAnchorUrl(url: string): boolean {
   const trimmed = url.trim().toLowerCase();
-  return (
-    trimmed.startsWith('/') ||
-    trimmed.startsWith('https://') ||
-    trimmed.startsWith('http://') ||
-    trimmed.startsWith('mailto:')
-  );
+  return trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('mailto:');
+}
+
+function isSafeImageUrl(url: string): boolean {
+  const trimmed = url.trim();
+  const lower = trimmed.toLowerCase();
+
+  if (lower.startsWith('https://') || lower.startsWith('http://') || trimmed.startsWith('/i/')) {
+    return true;
+  }
+
+  if (trimmed.startsWith('asset:')) {
+    return ASSET_TOKEN_PATTERN.test(trimmed.slice('asset:'.length).trim());
+  }
+
+  return false;
+}
+
+function normalizeImageUrl(url: string): string {
+  const trimmed = url.trim();
+
+  if (!trimmed.startsWith('asset:')) {
+    return trimmed;
+  }
+
+  return `/i/${trimmed.slice('asset:'.length).trim()}`;
 }
 
 function renderImage(alt: string, rawUrl: string): string {
   const url = rawUrl.trim();
 
-  if (url.startsWith('asset:')) {
-    const token = url.slice('asset:'.length).trim();
-
-    if (!ASSET_TOKEN_PATTERN.test(token)) {
-      return escapeHtml(alt);
-    }
-
-    return `<img src="/i/${escapeHtml(token)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
-  }
-
-  if (!isSafeUrl(url)) {
+  if (!isSafeImageUrl(url)) {
     return escapeHtml(alt);
   }
 
-  return `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+  return `<img src="${escapeHtml(normalizeImageUrl(url))}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+}
+
+function renderLink(label: string, rawUrl: string): string {
+  const url = rawUrl.trim();
+
+  if (!isSafeAnchorUrl(url)) {
+    return escapeHtml(label);
+  }
+
+  const externalAttrs = url.startsWith('http://') || url.startsWith('https://') ? ' rel="noopener noreferrer"' : '';
+  return `<a href="${escapeHtml(url)}"${externalAttrs}>${escapeHtml(label)}</a>`;
+}
+
+export function extractFirstImageUrl(markdown: string): string | null {
+  const pattern = /!\[[^\]]*]\(([^)]+)\)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(markdown)) !== null) {
+    const url = match[1].trim();
+
+    if (url.startsWith('asset:')) {
+      const token = url.slice('asset:'.length).trim();
+      return ASSET_TOKEN_PATTERN.test(token) ? `/i/${token}` : null;
+    }
+
+    if (isSafeImageUrl(url)) {
+      return normalizeImageUrl(url);
+    }
+  }
+
+  return null;
 }
 
 function renderInline(markdown: string): string {
-  let html = escapeHtml(markdown);
+  const htmlTokens: string[] = [];
 
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  function stash(html: string): string {
+    const token = `${HTML_TOKEN_PREFIX}${htmlTokens.length}__`;
+    htmlTokens.push(html);
+    return token;
+  }
+
+  let tokenizedMarkdown = markdown;
+
+  tokenizedMarkdown = tokenizedMarkdown.replace(/`([^`]+)`/g, (_match, value: string) => {
+    return stash(`<code>${escapeHtml(value)}</code>`);
+  });
+  tokenizedMarkdown = tokenizedMarkdown.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt: string, rawUrl: string) => {
+    return stash(renderImage(alt, rawUrl));
+  });
+  tokenizedMarkdown = tokenizedMarkdown.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, rawUrl: string) => {
+    return stash(renderLink(label, rawUrl));
+  });
+
+  let html = escapeHtml(tokenizedMarkdown);
+
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt: string, rawUrl: string) => {
-    return renderImage(alt, rawUrl);
-  });
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, rawUrl: string) => {
-    const url = rawUrl.trim();
+  html = html.replace(/(^|[\s(])((?:https?:\/\/)[^\s<]+)/g, (_match, prefix: string, rawUrl: string) => {
+    const url = rawUrl.replace(/[),.;!?]+$/, '');
+    const trailing = rawUrl.slice(url.length);
 
-    if (!isSafeUrl(url)) {
-      return label;
+    if (!isSafeAnchorUrl(url)) {
+      return `${prefix}${rawUrl}`;
     }
 
-    const externalAttrs = url.startsWith('http://') || url.startsWith('https://') ? ' rel="noopener noreferrer"' : '';
-    return `<a href="${escapeHtml(url)}"${externalAttrs}>${label}</a>`;
+    return `${prefix}${stash(renderLink(url, url))}${trailing}`;
   });
 
-  return html;
+  return html.replace(new RegExp(`${HTML_TOKEN_PREFIX}(\\d+)__`, 'g'), (_match, index: string) => {
+    return htmlTokens[Number(index)] ?? '';
+  });
 }
 
 export function extractAssetTokens(markdown: string): string[] {
@@ -78,18 +139,50 @@ function renderParagraph(lines: string[]): string {
   return `<p>${renderInline(lines.join(' '))}</p>`;
 }
 
-function renderList(items: string[], ordered: boolean): string {
-  const tag = ordered ? 'ol' : 'ul';
-  return `<${tag}>${items.map((item) => `<li>${renderInline(item)}</li>`).join('')}</${tag}>`;
+function renderListItem(item: string): string {
+  const task = item.match(/^\[( |x|X)]\s+(.+)$/);
+
+  if (!task) {
+    return `<li>${renderInline(item)}</li>`;
+  }
+
+  const checked = task[1].toLowerCase() === 'x';
+  const marker = checked ? '☑' : '☐';
+  return `<li><span class="sc-task-checkbox" aria-hidden="true">${marker}</span>${renderInline(task[2])}</li>`;
 }
 
-export function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<(iframe|object|embed|style)\b[^>]*>.*?<\/\1>/gis, '')
-    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/\s+(href|src)\s*=\s*(['"])\s*javascript:[^'"]*\2/gi, ' $1="#"')
-    .replace(/\s+(href|src)\s*=\s*javascript:[^\s>]+/gi, ' $1="#"');
+function renderList(items: string[], ordered: boolean): string {
+  const tag = ordered ? 'ol' : 'ul';
+  return `<${tag}>${items.map((item) => renderListItem(item)).join('')}</${tag}>`;
+}
+
+function parseTableRow(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+}
+
+function isTableSeparator(line: string): boolean {
+  const cells = parseTableRow(line);
+  return cells.length > 1 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function renderTable(lines: string[]): string {
+  const [headerLine, _separator, ...bodyLines] = lines;
+  const headerCells = parseTableRow(headerLine);
+  const bodyRows = bodyLines.map(parseTableRow);
+  const thead = `<thead><tr>${headerCells.map((cell) => `<th>${renderInline(cell)}</th>`).join('')}</tr></thead>`;
+  const tbody =
+    bodyRows.length > 0
+      ? `<tbody>${bodyRows
+          .map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`)
+          .join('')}</tbody>`
+      : '';
+
+  return `<table>${thead}${tbody}</table>`;
 }
 
 export function renderMarkdown(markdown: string): string {
@@ -120,7 +213,9 @@ export function renderMarkdown(markdown: string): string {
     }
   }
 
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
     if (line.trim().startsWith('```')) {
       flushParagraph();
       flushLists();
@@ -146,6 +241,22 @@ export function renderMarkdown(markdown: string): string {
     if (!trimmed) {
       flushParagraph();
       flushLists();
+      continue;
+    }
+
+    if (index + 1 < lines.length && trimmed.includes('|') && isTableSeparator(lines[index + 1])) {
+      flushParagraph();
+      flushLists();
+      const tableLines = [trimmed, lines[index + 1].trim()];
+      index += 2;
+
+      while (index < lines.length && lines[index].trim().includes('|') && lines[index].trim()) {
+        tableLines.push(lines[index].trim());
+        index += 1;
+      }
+
+      index -= 1;
+      output.push(renderTable(tableLines));
       continue;
     }
 
@@ -195,7 +306,7 @@ export function renderMarkdown(markdown: string): string {
   flushParagraph();
   flushLists();
 
-  return sanitizeHtml(output.join('\n'));
+  return output.join('\n');
 }
 
 export function calculateWordCount(markdown: string): number {

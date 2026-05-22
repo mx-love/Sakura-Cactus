@@ -118,6 +118,24 @@ export async function findActiveSessionByTokenHash(
   };
 }
 
+export async function findActiveSessionRecordByTokenHash(
+  db: D1Database,
+  tokenHash: string,
+  now = nowIso()
+): Promise<SessionRow | null> {
+  return db
+    .prepare(
+      `SELECT id, user_id, token_hash, user_agent, ip_hash, expires_at, created_at, revoked_at
+       FROM sessions
+       WHERE token_hash = ?
+         AND revoked_at IS NULL
+         AND expires_at > ?
+       LIMIT 1`
+    )
+    .bind(tokenHash, now)
+    .first<SessionRow>();
+}
+
 export async function revokeSessionByTokenHash(db: D1Database, tokenHash: string): Promise<void> {
   await db
     .prepare('UPDATE sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL')

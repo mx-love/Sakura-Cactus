@@ -39,7 +39,7 @@ export function PostRowActions({ postId, status }: PostRowActionsProps) {
       });
 
       if (response.ok) {
-        window.location.assign('/admin/posts');
+        window.location.assign('/articles');
       }
     } finally {
       setIsSubmitting(false);
@@ -50,7 +50,7 @@ export function PostRowActions({ postId, status }: PostRowActionsProps) {
     <div className="flex flex-wrap gap-2">
       <a
         className="sc-button sc-button-secondary sc-button-small"
-        href={`/admin/posts/${postId}`}
+        href={`/write?post=${postId}`}
       >
         Edit
       </a>

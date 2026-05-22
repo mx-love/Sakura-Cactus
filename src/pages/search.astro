@@ -1,0 +1,141 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getPublicPosts } from '@/features/posts/post.service';
+
+export const prerender = false;
+
+const posts = await getPublicPosts();
+const searchPosts = posts.map((post) => ({
+  title: post.title,
+  excerpt: post.excerpt ?? '',
+  slug: post.slug,
+  publishedAt: post.publishedAt,
+  tags: post.tags.map((tag) => tag.name)
+}));
+const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
+---
+
+<SiteLayout title="搜索 | Sakura Cactus" description="搜索公开文章。">
+  <section class="sc-page">
+    <div class="sc-public-shell">
+      <nav class="sc-breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>»</span>
+        <span>搜索</span>
+      </nav>
+
+      <header class="sc-page-header">
+        <h1>搜索</h1>
+        <p>搜索公开文章。</p>
+      </header>
+
+      <div class="sc-search">
+        <label class="sc-search-label" for="search-input">搜索文章</label>
+        <input id="search-input" class="sc-search-input" type="search" placeholder="输入标题、简介或标签" autocomplete="off" />
+        <p id="search-count" class="sc-search-count"></p>
+      </div>
+
+      <div id="search-results" class="sc-post-list"></div>
+
+      <template id="search-empty-template">
+        <div class="sc-empty">
+          <p>没有找到匹配的文章。</p>
+        </div>
+      </template>
+
+      <script id="search-posts" type="application/json" set:html={searchJson}></script>
+      <script is:inline>
+        const postsElement = document.getElementById('search-posts');
+        const input = document.getElementById('search-input');
+        const results = document.getElementById('search-results');
+        const count = document.getElementById('search-count');
+        const emptyTemplate = document.getElementById('search-empty-template');
+        const posts = JSON.parse(postsElement?.textContent || '[]');
+        const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+
+        function createCalendarIcon() {
+          const span = document.createElement('span');
+          span.className = 'sc-calendar-icon';
+          span.setAttribute('aria-hidden', 'true');
+          span.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4" /><path d="M16 2v4" /><path d="M3 10h18" /><rect x="3" y="4" width="18" height="18" rx="2" /></svg>';
+          return span;
+        }
+
+        function render(items) {
+          if (!results || !count || !emptyTemplate) return;
+
+          results.textContent = '';
+          count.textContent = items.length ? `${items.length} 篇文章` : '';
+
+          if (items.length === 0) {
+            results.append(emptyTemplate.content.cloneNode(true));
+            return;
+          }
+
+          for (const post of items) {
+            const article = document.createElement('article');
+            article.className = 'sc-post-entry';
+
+            const title = document.createElement('h2');
+            const link = document.createElement('a');
+            link.href = `/posts/${post.slug}`;
+            link.textContent = post.title;
+            title.append(link);
+            article.append(title);
+
+            if (post.publishedAt) {
+              const meta = document.createElement('p');
+              meta.className = 'sc-post-meta';
+              const time = document.createElement('time');
+              time.dateTime = post.publishedAt;
+              time.textContent = dateFormatter.format(new Date(post.publishedAt));
+              meta.append(createCalendarIcon(), time);
+              article.append(meta);
+            }
+
+            if (post.excerpt) {
+              const excerpt = document.createElement('p');
+              excerpt.className = 'sc-post-excerpt';
+              excerpt.textContent = post.excerpt;
+              article.append(excerpt);
+            }
+
+            if (post.tags.length) {
+              const tagList = document.createElement('div');
+              tagList.className = 'sc-tag-list';
+              for (const tag of post.tags) {
+                const tagItem = document.createElement('span');
+                tagItem.className = 'sc-tag-link sc-tag-link-static';
+                tagItem.textContent = tag;
+                tagList.append(tagItem);
+              }
+              article.append(tagList);
+            }
+
+            results.append(article);
+          }
+        }
+
+        function search() {
+          const query = input?.value.trim().toLowerCase() || '';
+          if (!query) {
+            render(posts);
+            return;
+          }
+
+          render(posts.filter((post) => {
+            const haystack = [post.title, post.excerpt, ...post.tags].join(' ').toLowerCase();
+            return haystack.includes(query);
+          }));
+        }
+
+        input?.addEventListener('input', search);
+        render(posts);
+      </script>
+    </div>
+  </section>
+</SiteLayout>

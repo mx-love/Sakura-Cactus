@@ -13,15 +13,14 @@ export class PostValidationError extends Error {
 export const POST_STATUSES: PostStatus[] = ['draft', 'published', 'archived', 'deleted'];
 export const POST_VISIBILITIES: PostVisibility[] = ['public', 'private'];
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 export interface NormalizedPostInput {
   title: string;
-  slug: string;
   excerpt: string | null;
   contentMarkdown: string;
   status: PostStatus;
   visibility: PostVisibility;
+  publishedAt: string | null;
+  tagNames: string[];
   seoTitle: string | null;
   seoDescription: string | null;
 }
@@ -39,25 +38,37 @@ function normalizeOptionalText(value: unknown, maxLength: number): string | null
   return normalized.length > 0 ? normalized.slice(0, maxLength) : null;
 }
 
-export function slugifyTitle(title: string): string {
-  const normalized = title
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-{2,}/g, '-');
+function normalizePublishedAt(value: unknown): string | null {
+  if (value == null || value === '') {
+    return null;
+  }
 
-  return normalized || `post-${Date.now()}`;
+  if (typeof value !== 'string') {
+    throw new PostValidationError('INVALID_PUBLISHED_AT', 'Invalid published time.');
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new PostValidationError('INVALID_PUBLISHED_AT', 'Invalid published time.');
+  }
+
+  return date.toISOString();
 }
 
-export function assertValidSlug(slug: string): void {
-  if (!SLUG_PATTERN.test(slug)) {
-    throw new PostValidationError(
-      'INVALID_SLUG',
-      'Slug can only contain lowercase letters, numbers, and hyphens.'
-    );
+function parseTagNames(value: unknown): string[] {
+  if (value == null) {
+    return [];
   }
+
+  const raw = Array.isArray(value) ? value.join(',') : String(value);
+  const names = raw
+    .split(/[,，、\n\r\t ]+/)
+    .map((tag) => tag.trim().replace(/^#+/, '').trim())
+    .filter(Boolean)
+    .map((tag) => tag.slice(0, 40));
+
+  return [...new Set(names)].slice(0, 12);
 }
 
 export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): NormalizedPostInput {
@@ -76,8 +87,7 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
   }
 
   const title = body.title.trim().slice(0, 200);
-  const requestedSlug = typeof body.slug === 'string' ? body.slug.trim() : '';
-  const slug = requestedSlug.length > 0 ? requestedSlug : slugifyTitle(title);
+  const excerpt = normalizeOptionalText(body.excerpt, 500);
   const status = typeof body.status === 'string' ? (body.status as PostStatus) : defaultStatus;
   const visibility = typeof body.visibility === 'string' ? (body.visibility as PostVisibility) : 'public';
 
@@ -89,16 +99,15 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
     throw new PostValidationError('INVALID_VISIBILITY', 'Invalid post visibility.');
   }
 
-  assertValidSlug(slug);
-
   return {
     title,
-    slug,
-    excerpt: normalizeOptionalText(body.excerpt, 500),
+    excerpt,
     contentMarkdown: body.contentMarkdown.slice(0, 200_000),
     status,
     visibility,
-    seoTitle: normalizeOptionalText(body.seoTitle ?? body.seo_title, 200),
-    seoDescription: normalizeOptionalText(body.seoDescription ?? body.seo_description, 300)
+    publishedAt: normalizePublishedAt(body.publishedAt ?? body.published_at),
+    tagNames: parseTagNames(body.tags ?? body.tagNames),
+    seoTitle: title,
+    seoDescription: excerpt
   };
 }

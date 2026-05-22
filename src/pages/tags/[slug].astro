@@ -1,10 +1,17 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicPosts } from '@/features/posts/post.service';
+import { getPublicPostsByTagSlug, getPublicTags } from '@/features/tags/tag.service';
 
 export const prerender = false;
 
-const posts = await getPublicPosts();
+const slug = Astro.params.slug;
+const tags = await getPublicTags();
+const tag = slug ? tags.find((item) => item.slug === slug) : null;
+const posts = slug ? await getPublicPostsByTagSlug(slug) : [];
+
+if (!slug || !tag) {
+  return new Response('Not found', { status: 404 });
+}
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -17,26 +24,28 @@ function formatDate(value: string | null) {
 }
 ---
 
-<SiteLayout title="文章 | Sakura Cactus" description="我发布的所有文章。">
+<SiteLayout title={`${tag.name} | Sakura Cactus`} description={`${tag.name} 标签下的公开文章。`}>
   <section class="sc-page">
-    <div class="sc-public-shell sc-list-shell">
+    <div class="sc-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
         <span>»</span>
-        <span>文章</span>
+        <a href="/tags">标签</a>
+        <span>»</span>
+        <span>{tag.name}</span>
       </nav>
 
-      <header class="sc-page-header sc-list-header">
-        <h1>文章</h1>
-        <p>我发布的所有文章。</p>
+      <header class="sc-page-header">
+        <h1>{tag.name}</h1>
+        <p>{tag.post_count} 篇公开文章</p>
       </header>
 
       {posts.length === 0 ? (
         <div class="sc-empty">
-          <p>暂无公开文章。</p>
+          <p>这个标签下暂无公开文章。</p>
         </div>
       ) : (
-        <div class="sc-post-list sc-compact-post-list">
+        <div class="sc-post-list">
           {posts.map((post) => (
             <article class="sc-post-entry">
               <h2>
@@ -56,13 +65,6 @@ function formatDate(value: string | null) {
                 </p>
               ) : null}
               {post.excerpt ? <p class="sc-post-excerpt">{post.excerpt}</p> : null}
-              {post.tags.length > 0 ? (
-                <div class="sc-tag-list">
-                  {post.tags.map((tag) => (
-                    <a class="sc-tag-link" href={`/tags/${tag.slug}`}>{tag.name}</a>
-                  ))}
-                </div>
-              ) : null}
             </article>
           ))}
         </div>

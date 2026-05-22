@@ -13,7 +13,7 @@ interface ApiErrorResponse {
 }
 
 export function LoginForm({ next = '/write' }: LoginFormProps) {
-  const [account, setAccount] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +32,7 @@ export function LoginForm({ next = '/write' }: LoginFormProps) {
         },
         credentials: 'same-origin',
         body: JSON.stringify({
-          account,
+          username,
           password
         })
       });
@@ -52,15 +52,15 @@ export function LoginForm({ next = '/write' }: LoginFormProps) {
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div className="space-y-2">
-        <label className="block text-sm font-bold text-[var(--color-text)]" htmlFor="account">
-          账号
+        <label className="block text-sm font-bold text-[var(--color-text)]" htmlFor="username">
+          用户名
         </label>
         <input
-          id="account"
-          name="account"
+          id="username"
+          name="username"
           autoComplete="username"
-          value={account}
-          onChange={(event) => setAccount(event.target.value)}
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
           className="sc-input"
           required
         />

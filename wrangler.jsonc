@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "sakura-cactus",
+  "main": "./src/worker.ts",
   "compatibility_date": "2026-05-19",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
@@ -10,6 +11,9 @@
   },
   "observability": {
     "enabled": true
+  },
+  "triggers": {
+    "crons": ["0 3 * * *"]
   },
   "d1_databases": [
     {

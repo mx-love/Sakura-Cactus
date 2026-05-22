@@ -5,8 +5,20 @@ import { getDb } from '@/lib/db';
 import { SESSION_COOKIE_NAME, SESSION_TOKEN_BYTES, SESSION_TTL_SECONDS } from './auth.constants';
 import { createRandomToken, sha256Base64Url } from './crypto.service';
 import { verifyPassword } from './password.service';
-import { createSession, findActiveSessionByTokenHash, revokeSessionByTokenHash } from './session.repo';
-import { findUserByAccount, updateLastLogin } from './user.repo';
+import { createSession, findActiveSessionRecordByTokenHash, revokeSessionByTokenHash } from './session.repo';
+import { ensureEnvironmentAdminUser, ENV_ADMIN_USER_ID, updateLastLogin } from './user.repo';
+
+let warnedAboutPlainAdminPassword = false;
+
+export class AuthConfigurationError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'AuthConfigurationError';
+  }
+}
 
 export interface PublicAdminUser {
   id: string;
@@ -31,14 +43,74 @@ export function toPublicAdminUser(user: UserRow): PublicAdminUser {
   };
 }
 
+export function getEnvironmentAdminUsername(): string {
+  const username = env.ADMIN_USERNAME?.trim();
+
+  if (!username) {
+    throw new AuthConfigurationError('MISSING_ADMIN_USERNAME', 'ADMIN_USERNAME must be set.');
+  }
+
+  return username;
+}
+
+export function getEnvironmentAdminPassword(): string {
+  const password = env.ADMIN_PASSWORD;
+
+  if (!password) {
+    throw new AuthConfigurationError('MISSING_ADMIN_PASSWORD', 'ADMIN_PASSWORD_HASH or ADMIN_PASSWORD must be set.');
+  }
+
+  if (!env.ADMIN_PASSWORD_HASH && !import.meta.env.DEV && !warnedAboutPlainAdminPassword) {
+    console.warn('[Sakura Cactus] ADMIN_PASSWORD is set without ADMIN_PASSWORD_HASH. Use ADMIN_PASSWORD_HASH in production.');
+    warnedAboutPlainAdminPassword = true;
+  }
+
+  return password;
+}
+
+export async function verifyEnvironmentAdminPassword(password: string): Promise<boolean> {
+  const passwordHash = env.ADMIN_PASSWORD_HASH;
+
+  if (passwordHash) {
+    return verifyPassword(password, passwordHash);
+  }
+
+  return password === getEnvironmentAdminPassword();
+}
+
+export function getEnvironmentAdminUser(): PublicAdminUser {
+  const username = getEnvironmentAdminUsername();
+
+  return {
+    id: ENV_ADMIN_USER_ID,
+    email: null,
+    username,
+    displayName: username,
+    role: 'admin'
+  };
+}
+
 export function getSessionSecret(): string {
   const secret = env.SESSION_SECRET;
 
-  if (!secret || secret.length < 32) {
-    throw new Error('SESSION_SECRET must be set and at least 32 characters long.');
+  if (secret && secret.length >= 32) {
+    return secret;
   }
 
-  return secret;
+  if (env.ADMIN_PASSWORD_HASH) {
+    return `admin-password-hash:${env.ADMIN_PASSWORD_HASH}`;
+  }
+
+  if (env.ADMIN_PASSWORD) {
+    if (!import.meta.env.DEV && !warnedAboutPlainAdminPassword) {
+      console.warn('[Sakura Cactus] ADMIN_PASSWORD is set without ADMIN_PASSWORD_HASH. Use ADMIN_PASSWORD_HASH in production.');
+      warnedAboutPlainAdminPassword = true;
+    }
+
+    return `${import.meta.env.DEV ? 'dev' : 'plain'}-admin-password:${env.ADMIN_PASSWORD}`;
+  }
+
+  throw new AuthConfigurationError('MISSING_SESSION_SECRET_SOURCE', 'ADMIN_PASSWORD_HASH must be set, or set SESSION_SECRET explicitly.');
 }
 
 export function getCookieValue(request: Request, name: string): string | null {
@@ -100,17 +172,13 @@ export async function hashClientIp(request: Request, secret: string): Promise<st
 
 export async function loginAdmin(context: APIContext, account: string, password: string): Promise<LoginResult | null> {
   const db = getDb(context);
-  const user = await findUserByAccount(db, account);
+  const expectedUsername = getEnvironmentAdminUsername();
 
-  if (!user || user.status !== 'active') {
+  if (account !== expectedUsername || !(await verifyEnvironmentAdminPassword(password))) {
     return null;
   }
 
-  const passwordMatches = await verifyPassword(password, user.password_hash);
-
-  if (!passwordMatches) {
-    return null;
-  }
+  const sessionOwner = await ensureEnvironmentAdminUser(db);
 
   const secret = getSessionSecret();
   const token = createRandomToken(SESSION_TOKEN_BYTES);
@@ -119,15 +187,15 @@ export async function loginAdmin(context: APIContext, account: string, password:
   const ipHash = await hashClientIp(context.request, secret);
 
   await createSession(db, {
-    userId: user.id,
+    userId: sessionOwner.id,
     tokenHash,
     userAgent,
     ipHash
   });
-  await updateLastLogin(db, user.id);
+  await updateLastLogin(db, sessionOwner.id);
 
   return {
-    user: toPublicAdminUser(user),
+    user: getEnvironmentAdminUser(),
     cookie: createSessionCookie(token)
   };
 }
@@ -141,13 +209,13 @@ export async function getCurrentAdminUser(context: APIContext): Promise<PublicAd
 
   const db = getDb(context);
   const tokenHash = await hashSessionToken(token, getSessionSecret());
-  const session = await findActiveSessionByTokenHash(db, tokenHash);
+  const session = await findActiveSessionRecordByTokenHash(db, tokenHash);
 
   if (!session) {
     return null;
   }
 
-  return toPublicAdminUser(session.user);
+  return getEnvironmentAdminUser();
 }
 
 export async function logoutAdmin(context: APIContext): Promise<void> {

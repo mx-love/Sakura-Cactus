@@ -1,13 +1,16 @@
 # Sakura Cactus
 
-Sakura Cactus is a Cloudflare-native personal blog system built with Astro, Cloudflare Workers, D1, R2, TypeScript, React, and Tailwind CSS.
+Sakura Cactus is a Cloudflare Workers personal blog system built with Astro, Cloudflare Workers, D1, R2, TypeScript, React, and Tailwind CSS.
 
 The project keeps code and content separate:
 
-- Code is committed to GitHub and deployed by Cloudflare.
-- Posts are created in `/admin` and stored in Cloudflare D1.
+- Code is committed to GitHub and deployed to Cloudflare Workers.
+- Posts are created in `/write` and stored in Cloudflare D1.
 - Images are stored in a private Cloudflare R2 bucket.
 - Public image access must go through `/i/:token`.
+- Cloudflare Workers handles Astro SSR, APIs, D1, R2, and scheduled cleanup Cron.
+
+Sakura Cactus targets Cloudflare Workers. Cloudflare Pages is not the recommended deployment target for this project.
 
 ## Current Stage
 
@@ -23,18 +26,16 @@ Implemented:
 - `/api/health`
 - Initial Wrangler bindings for D1 and R2
 - D1 initial migration schema
-- Admin password authentication
+- Environment-variable administrator authentication
 - D1-backed sessions
 - HttpOnly Secure SameSite=Lax session cookie
 - `/admin/login` and `/admin`
-- `/admin/setup`
-- `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/setup`
+- `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`
 - Server-side protection for `/admin/*` and `/api/admin/*`
-- First-admin setup guarded by `SETUP_TOKEN`
-- Login with username or email
+- Login with `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH`; local development can use `ADMIN_PASSWORD`
 - Admin post list, create, edit, publish, unpublish, and soft delete
 - D1-backed post API under `/api/admin/posts`
-- Server-rendered Markdown HTML with basic sanitization
+- Server-rendered GitHub Flavored Markdown-style HTML with basic sanitization
 - Public homepage post list
 - Public `/posts/[slug]` post detail page
 - Private R2 media upload from `/admin/media`
@@ -95,50 +96,63 @@ $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
 pnpm.cmd db:migration:apply:local
 ```
 
-Create the first local administrator through the setup page:
+Configure the local administrator through `.dev.vars`:
+
+```txt
+ADMIN_USERNAME=sakura
+ADMIN_PASSWORD=change-me
+```
+
+`ADMIN_USERNAME` can be any name you want to use for the private writing area, such as `sakura`, `owner`, or a nickname. `ADMIN_PASSWORD` is for local development convenience and must never be committed.
+
+Apply D1 migrations locally, then start the app and open `/admin/login`:
 
 ```powershell
 $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
 pnpm.cmd db:migration:apply:local
+pnpm.cmd dev
 ```
 
-Create `.dev.vars` locally:
-
-```txt
-SESSION_SECRET="replace-with-at-least-32-random-characters"
-SETUP_TOKEN="replace-with-one-time-random-setup-token"
-```
-
-Then start the app and open `/admin/setup`.
-
-The setup page is available only while the `users` table is empty. After the first administrator is created, `/admin/setup` redirects to `/admin/login`.
-
-`scripts/create-admin.ts` is retained as a backup maintenance tool:
-
-```powershell
-pnpm.cmd admin:create -- --local --email admin@example.com --username admin
-```
-
-For production, set Cloudflare secrets first and apply migrations against remote D1:
+For production, set Cloudflare Workers secrets first and apply migrations against remote D1:
 
 ```bash
+wrangler secret put ADMIN_USERNAME
+wrangler secret put ADMIN_PASSWORD_HASH
 pnpm db:migration:apply:prod
 ```
 
-Required secrets:
+`ADMIN_PASSWORD_HASH` uses Sakura Cactus' PBKDF2-SHA256 password hash format. Generate a hash for your real password locally:
 
-```txt
-SESSION_SECRET
-SETUP_TOKEN
+```bash
+node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
 ```
 
-`SESSION_SECRET` must be at least 32 characters. `SETUP_TOKEN` should be a one-time random value. For local development, put them in `.dev.vars`; do not commit that file.
+Do not commit the generated hash. Store it with `wrangler secret put ADMIN_PASSWORD_HASH`.
+
+`SESSION_SECRET` is an advanced optional override. If it is not set, Sakura Cactus derives the session signing secret from the administrator password configuration:
+
+- Production: derived from `ADMIN_PASSWORD_HASH` by default. If production only sets `ADMIN_PASSWORD`, Sakura Cactus can still derive sessions from it, but logs a warning and this is not recommended.
+- Local dev: derived from `ADMIN_PASSWORD` when `ADMIN_PASSWORD_HASH` is not set.
+
+Changing `ADMIN_PASSWORD_HASH` or local `ADMIN_PASSWORD` invalidates existing login sessions. This is acceptable for most personal blogs. If you want old sessions to stay valid after changing the admin password, set a custom `SESSION_SECRET`.
+
+Generate a long optional `SESSION_SECRET` with:
+
+```bash
+node -e "console.log(crypto.randomUUID() + crypto.randomUUID())"
+```
+
+If both `ADMIN_PASSWORD_HASH` and `ADMIN_PASSWORD` exist, Sakura Cactus uses `ADMIN_PASSWORD_HASH`. `ADMIN_PASSWORD` is kept for local development convenience. If production only sets `ADMIN_PASSWORD`, Sakura Cactus logs a warning recommending `ADMIN_PASSWORD_HASH`.
+
+Changing the administrator username or password only requires updating Cloudflare Workers Secrets. Sakura Cactus no longer uses `SETUP_TOKEN`, `/admin/setup`, or a web-based first-admin creation flow. The `users` table remains in D1 for legacy ownership/session compatibility, but administrator credentials are read from environment variables, not from D1.
 
 ## Security Notes
 
-Do not commit `.env`, `.dev.vars`, Cloudflare API tokens, R2 access keys, session secrets, Turnstile secrets, or administrator passwords.
+Do not commit `.env`, `.dev.vars`, Cloudflare API tokens, R2 access keys, session secrets, Turnstile secrets, administrator passwords, or generated password hashes. Do not put real passwords or real password hashes in `wrangler.jsonc`; use `wrangler secret put`.
 
-Admin authentication stores only password hashes and session token hashes in D1. The browser receives only an HttpOnly, Secure, SameSite=Lax cookie. Setup requires a server-side `SETUP_TOKEN` and is disabled after the first user exists.
+Admin authentication compares the submitted username against `ADMIN_USERNAME` and verifies the submitted password against `ADMIN_PASSWORD_HASH` when present. D1 stores session token hashes; administrator passwords are not stored in D1. The browser receives only an HttpOnly, Secure, SameSite=Lax cookie.
+
+Browser password managers may offer to save the password typed into `/admin/login`; that is normal browser behavior. Sakura Cactus does not save plaintext administrator passwords to D1. Production should store `ADMIN_PASSWORD_HASH` in Cloudflare Workers Secrets. After login, Sakura Cactus uses the HttpOnly session cookie rather than storing tokens in localStorage or sessionStorage.
 
 ## Post Management
 
@@ -203,15 +217,33 @@ draft/private asset with valid admin session -> 200
 
 Public assets use long immutable caching. Draft/private assets use `Cache-Control: private, no-store`.
 
+## Writing Markdown
+
+Sakura Cactus uses a clean GitHub Flavored Markdown-style writing flow. The `/write` page keeps a plain Markdown textarea and supports common long-form blog syntax:
+
+- Headings: `#`, `##`, `###`
+- Emphasis: `**bold**`, `*italic*`, `~~strikethrough~~`
+- Blockquotes
+- Ordered and unordered lists
+- Task lists: `- [ ] todo` and `- [x] done`
+- Tables
+- Inline code and fenced code blocks
+- Links and automatic `https://example.com` links
+- Markdown images
+
+Keep post content portable Markdown. Sakura Cactus does not render raw HTML in posts; HTML such as `<script>`, `<iframe>`, `<img>`, or inline event attributes is escaped and shown as text instead of being executed. If you need a small image attribution or note, use a Markdown quote:
+
+```md
+> 图片资源出自互联网收集整理，如果侵犯了您的合法权益，请联系我删除。
+```
+
 ## Editor Images
 
 In `/write` and the retained edit route `/admin/posts/[id]`, administrators can insert images without leaving the editor:
 
 - Paste an image into the Markdown textarea.
 - Drag an image file onto the Markdown textarea.
-- Upload a local image from the editor toolbar.
-- Choose from the existing gallery.
-- Insert an external image URL directly into Markdown.
+- Paste an external image URL ending in `.jpg`, `.jpeg`, `.png`, `.webp`, or `.gif`; the editor converts it to Markdown image syntax.
 
 The editor inserts this Markdown syntax:
 

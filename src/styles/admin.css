@@ -55,3 +55,344 @@
 .sc-admin-table tr + tr td {
   border-top: 1px solid var(--color-border);
 }
+
+.sc-writer-page {
+  min-height: 100vh;
+  margin: -1.25rem -1rem -2rem;
+  padding: 0 1rem;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(217, 111, 145, 0.055), transparent 26rem),
+    #f7f7f8;
+}
+
+.sc-writer {
+  width: min(100% - 2rem, 1500px);
+  margin-inline: auto;
+  padding: 1rem 0 2.5rem;
+}
+
+.sc-writer-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0;
+  background: rgba(247, 247, 248, 0.86);
+  backdrop-filter: blur(14px);
+}
+
+.sc-writer-topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sc-writer-back {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 800;
+  transition: color 140ms ease;
+}
+
+.sc-writer-back:hover {
+  color: var(--color-primary);
+}
+
+.sc-writer-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.sc-writer-error {
+  margin-top: 0.5rem;
+}
+
+.sc-writer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  gap: clamp(1rem, 2vw, 1.5rem);
+  align-items: start;
+}
+
+.sc-writer-main {
+  min-width: 0;
+}
+
+.sc-writer-canvas,
+.sc-writer-card,
+.sc-writer-danger {
+  border: 1px solid rgba(228, 228, 231, 0.78);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 45px rgba(47, 41, 44, 0.055);
+}
+
+.sc-writer-canvas {
+  min-height: 72vh;
+  overflow: hidden;
+}
+
+.sc-writer-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(238, 238, 241, 0.9);
+  padding: 0.85rem 1rem;
+}
+
+.sc-writer-tab-list {
+  display: inline-flex;
+  gap: 0.25rem;
+  border-radius: 999px;
+  background: #f6f6f7;
+  padding: 0.25rem;
+}
+
+.sc-writer-tab {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0.45rem 0.85rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 800;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.sc-writer-tab:hover {
+  color: var(--color-text);
+}
+
+.sc-writer-tab-active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.sc-writer-upload-state {
+  min-width: 3rem;
+  text-align: right;
+}
+
+.sc-writer-editor-wrap,
+.sc-writer-split {
+  min-height: calc(72vh - 4.1rem);
+}
+
+.sc-writer-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.sc-writer-textarea {
+  width: 100%;
+  min-height: calc(72vh - 4.1rem);
+  resize: vertical;
+  border: 0;
+  background: transparent;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1.9;
+  outline: none;
+}
+
+.sc-writer-textarea::placeholder {
+  color: var(--color-subtle);
+}
+
+.sc-writer-preview {
+  min-height: calc(72vh - 4.1rem);
+  overflow: auto;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: transparent;
+}
+
+.sc-writer-split .sc-writer-preview {
+  border-left: 1px solid rgba(238, 238, 241, 0.9);
+}
+
+.sc-writer-side {
+  position: sticky;
+  top: 5.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.sc-writer-card,
+.sc-writer-danger {
+  padding: 1rem;
+}
+
+.sc-writer-card-title,
+.sc-writer-danger h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.sc-writer-fields {
+  display: grid;
+  gap: 0.95rem;
+  margin-top: 0;
+}
+
+.sc-writer-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.sc-writer-field-plain {
+  gap: 0;
+}
+
+.sc-writer-field > span,
+.sc-writer-status-row > span:first-child {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.sc-writer-control {
+  border-color: transparent;
+  border-radius: 14px;
+  background: #f6f6f7;
+  font-size: 0.875rem;
+}
+
+.sc-writer-field-plain .sc-writer-control {
+  min-height: 2.8rem;
+  padding-inline: 0.9rem;
+}
+
+.sc-writer-control:focus {
+  background: white;
+}
+
+.sc-writer-summary {
+  min-height: 6.5rem;
+}
+
+.sc-writer-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sc-writer-visibility {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.sc-writer-choice {
+  min-height: 2.35rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: #f6f6f7;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 850;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.sc-writer-choice-active {
+  border-color: rgba(217, 111, 145, 0.22);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.sc-writer-publish-actions {
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 0.25rem;
+}
+
+.sc-writer-primary-action,
+.sc-writer-secondary-action {
+  width: 100%;
+}
+
+.sc-writer-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.sc-writer-danger {
+  border-color: rgba(184, 91, 106, 0.18);
+}
+
+.sc-writer-danger h2 {
+  color: var(--color-danger);
+}
+
+.sc-writer-danger button {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .sc-writer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-writer-side {
+    position: static;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .sc-writer {
+    width: min(100% - 1rem, 1500px);
+    padding-top: 0.5rem;
+  }
+
+  .sc-writer-topbar-inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sc-writer-top-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sc-writer-top-actions .sc-button {
+    flex: 1 1 8rem;
+  }
+
+  .sc-writer-tabs {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sc-writer-tab-list {
+    width: 100%;
+  }
+
+  .sc-writer-tab {
+    flex: 1;
+  }
+
+  .sc-writer-split {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-writer-split .sc-writer-preview {
+    border-top: 1px solid rgba(238, 238, 241, 0.9);
+    border-left: 0;
+  }
+}

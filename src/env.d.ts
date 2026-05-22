@@ -14,8 +14,10 @@ interface Env {
   PUBLIC_SITE_NAME: string;
   PUBLIC_SITE_URL: string;
   PUBLIC_TURNSTILE_SITE_KEY?: string;
+  ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD?: string;
+  ADMIN_PASSWORD_HASH?: string;
   SESSION_SECRET?: string;
-  SETUP_TOKEN?: string;
   CSRF_SECRET?: string;
   TURNSTILE_SECRET_KEY?: string;
   ADMIN_BOOTSTRAP_TOKEN?: string;

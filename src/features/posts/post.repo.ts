@@ -54,9 +54,12 @@ export async function listPublicPosts(db: D1Database): Promise<PostRow[]> {
        WHERE status = 'published'
          AND visibility = 'public'
          AND deleted_at IS NULL
+         AND published_at IS NOT NULL
+         AND published_at <= ?
        ORDER BY published_at DESC, updated_at DESC
        LIMIT 50`
     )
+    .bind(nowIso())
     .all<PostRow>();
 
   return result.results ?? [];
@@ -98,9 +101,11 @@ export async function findPublicPostBySlug(db: D1Database, slug: string): Promis
          AND status = 'published'
          AND visibility = 'public'
          AND deleted_at IS NULL
+         AND published_at IS NOT NULL
+         AND published_at <= ?
        LIMIT 1`
     )
-    .bind(slug)
+    .bind(slug, nowIso())
     .first<PostRow>();
 }
 
@@ -113,12 +118,12 @@ export async function slugExists(db: D1Database, slug: string, excludeId?: strin
   return Boolean(row);
 }
 
-export async function createPost(db: D1Database, input: PersistedPostInput): Promise<PostRow> {
+export async function createPost(db: D1Database, input: PersistedPostInput, slug: string): Promise<PostRow> {
   const now = nowIso();
   const status = input.status;
   const post: PostRow = {
     id: createRandomId('p'),
-    slug: input.slug,
+    slug,
     title: input.title,
     excerpt: input.excerpt,
     content_markdown: input.contentMarkdown,
@@ -130,7 +135,7 @@ export async function createPost(db: D1Database, input: PersistedPostInput): Pro
     seo_description: input.seoDescription,
     reading_time_minutes: input.readingTimeMinutes,
     word_count: input.wordCount,
-    published_at: status === 'published' ? now : null,
+    published_at: input.publishedAt ?? (status === 'published' ? now : null),
     created_at: now,
     updated_at: now,
     deleted_at: null
@@ -175,13 +180,12 @@ export async function updatePost(db: D1Database, id: string, input: PersistedPos
   }
 
   const now = nowIso();
-  const publishedAt = input.status === 'published' ? (current.published_at ?? now) : current.published_at;
+  const publishedAt = input.publishedAt ?? (input.status === 'published' ? (current.published_at ?? now) : current.published_at);
 
   await db
     .prepare(
       `UPDATE posts
-       SET slug = ?,
-           title = ?,
+       SET title = ?,
            excerpt = ?,
            content_markdown = ?,
            content_html = ?,
@@ -196,7 +200,6 @@ export async function updatePost(db: D1Database, id: string, input: PersistedPos
        WHERE id = ? AND deleted_at IS NULL`
     )
     .bind(
-      input.slug,
       input.title,
       input.excerpt,
       input.contentMarkdown,

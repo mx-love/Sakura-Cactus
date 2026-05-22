@@ -27,13 +27,15 @@ export const POST: APIRoute = async (context) => {
   }
 
   try {
-    const asset = await uploadAdminAsset(file, user);
+    const result = await uploadAdminAsset(file, user);
     return jsonOk(
       {
-        asset,
-        url: `/i/${asset.token}`
+        asset: result.asset,
+        url: `/i/${result.asset.token}`,
+        created: result.created,
+        reused: result.reused
       },
-      { status: 201 }
+      { status: result.created ? 201 : 200 }
     );
   } catch (error) {
     if (isAssetValidationError(error)) {

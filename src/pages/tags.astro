@@ -1,20 +1,40 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getPublicTags } from '@/features/tags/tag.service';
+
+export const prerender = false;
+
+const tags = await getPublicTags();
 ---
 
-<SiteLayout title="标签 | Sakura Cactus">
+<SiteLayout title="标签 | Sakura Cactus" description="按主题整理公开文章。">
   <section class="sc-page">
-    <div class="sc-shell">
-      <header class="py-10">
-        <h1 class="text-4xl font-extrabold tracking-tight">标签</h1>
-        <p class="mt-4 leading-8 text-[var(--color-muted)]">标签系统会在后续阶段接入。这里先保留 AstroPaper 风格入口。</p>
+    <div class="sc-public-shell">
+      <nav class="sc-breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>»</span>
+        <span>标签</span>
+      </nav>
+
+      <header class="sc-page-header">
+        <h1>标签</h1>
+        <p>按主题整理公开文章。</p>
       </header>
 
-      <div class="flex flex-wrap gap-2">
-        <span class="sc-badge">writing</span>
-        <span class="sc-badge">notes</span>
-        <span class="sc-badge">life</span>
-      </div>
+      {tags.length === 0 ? (
+        <div class="sc-empty">
+          <p>暂无公开标签。</p>
+        </div>
+      ) : (
+        <div class="sc-tags-index">
+          {tags.map((tag) => (
+            <a class="sc-tag-row" href={`/tags/${tag.slug}`}>
+              <span>{tag.name}</span>
+              <span>{tag.post_count} 篇</span>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   </section>
 </SiteLayout>
