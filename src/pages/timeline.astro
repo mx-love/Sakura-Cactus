@@ -1,0 +1,49 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getPublicPosts } from '@/features/posts/post.service';
+
+export const prerender = false;
+
+const posts = await getPublicPosts();
+const groups = posts.reduce<Record<string, typeof posts>>((acc, post) => {
+  const date = post.publishedAt ? new Date(post.publishedAt) : new Date(post.updatedAt);
+  const year = String(date.getFullYear());
+  acc[year] = acc[year] ?? [];
+  acc[year].push(post);
+  return acc;
+}, {});
+const years = Object.keys(groups).sort((a, b) => Number(b) - Number(a));
+---
+
+<SiteLayout title="时间轴 | Sakura Cactus">
+  <section class="sc-page">
+    <div class="sc-shell">
+      <header class="py-10">
+        <h1 class="text-4xl font-extrabold tracking-tight">时间轴</h1>
+        <p class="mt-4 leading-8 text-[var(--color-muted)]">这里只按时间记录文章，不做碎碎念或复杂信息流。</p>
+      </header>
+
+      {years.length === 0 ? (
+        <p class="rounded-md border border-dashed border-[var(--color-border)] px-4 py-5 text-sm text-[var(--color-muted)]">暂无可归档文章。</p>
+      ) : (
+        <div class="space-y-10">
+          {years.map((year) => (
+            <section>
+              <h2 class="text-2xl font-extrabold">{year}</h2>
+              <div class="mt-4 space-y-3">
+                {groups[year].map((post) => (
+                  <a class="grid gap-2 border-b border-[var(--color-border)] pb-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)]" href={`/posts/${post.slug}`}>
+                    <span class="text-[var(--color-muted)]">
+                      {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Published'}
+                    </span>
+                    <span class="font-bold hover:text-[var(--color-primary)]">{post.title}</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</SiteLayout>

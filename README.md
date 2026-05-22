@@ -11,7 +11,7 @@ The project keeps code and content separate:
 
 ## Current Stage
 
-Stage 6: UI theme and navigation optimization.
+Stage 6.7: SakuraPaper minimal blog UI correction.
 
 Implemented:
 
@@ -49,17 +49,24 @@ Implemented:
 - `post_assets` syncing when posts are saved
 - Referenced images are made public when a public post is published
 - Automatic soft delete for images that are no longer referenced by any post
-- Public site header with Home, Archive, About, and Admin links
+- Public site header with Articles, Timeline, Tags, Friends, About, search/RSS placeholders, and login entry
 - Mobile front-site menu
-- Improved homepage hero and latest post cards
-- Improved article reading layout
+- Minimal SakuraPaper-style homepage and latest post list
+- Minimal article reading layout
 - Unified admin layout and navigation
 - `/archive`, `/about`, and `/admin/settings` placeholder pages
+- Sakura Cactus design tokens for colors, radius, shadows, focus states, buttons, forms, badges, and prose
+- Reusable base CSS classes under the `.sc-*` namespace
+- `/articles`, `/timeline`, `/tags`, `/friends`, `/write`, and `/settings`
+- `/write` as the primary private writing entry
+- `/settings` as the primary private blog settings entry
+- `/admin/media` retained as a hidden media maintenance page
 
 Not implemented yet:
 
 - Full settings system
-- Full archive grouping
+- Full tag management
+- Friend link management and application flow
 
 ## Commands
 
@@ -135,7 +142,7 @@ Admin authentication stores only password hashes and session token hashes in D1.
 
 ## Post Management
 
-After signing in, open `/admin/posts` to manage posts.
+After signing in, open `/write` to create a post. Existing compatibility routes under `/admin/posts` are retained for maintenance.
 
 Supported fields:
 
@@ -166,7 +173,7 @@ Draft, private, archived, deleted, and missing posts return 404 on public detail
 
 ## Media Library
 
-After signing in, open `/admin/media` to upload and manage images.
+`/admin/media` is retained as a hidden maintenance page. Daily writing should use the image controls inside `/write`.
 
 Rules:
 
@@ -198,11 +205,13 @@ Public assets use long immutable caching. Draft/private assets use `Cache-Contro
 
 ## Editor Images
 
-In `/admin/posts/new` and `/admin/posts/[id]`, administrators can insert images without leaving the editor:
+In `/write` and the retained edit route `/admin/posts/[id]`, administrators can insert images without leaving the editor:
 
 - Paste an image into the Markdown textarea.
 - Drag an image file onto the Markdown textarea.
-- Click `Insert image` and choose from the existing gallery.
+- Upload a local image from the editor toolbar.
+- Choose from the existing gallery.
+- Insert an external image URL directly into Markdown.
 
 The editor inserts this Markdown syntax:
 

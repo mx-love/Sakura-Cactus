@@ -5,10 +5,12 @@ interface MediaAssetActionsProps {
   assetId: string;
   token: string;
   visibility: AssetVisibility;
+  usageCount?: number;
 }
 
-export function MediaAssetActions({ assetId, token, visibility }: MediaAssetActionsProps) {
+export function MediaAssetActions({ assetId, token, visibility, usageCount = 0 }: MediaAssetActionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isReferenced = usageCount > 0;
 
   async function setVisibility(nextVisibility: Exclude<AssetVisibility, 'deleted'>) {
     setIsSubmitting(true);
@@ -59,41 +61,45 @@ export function MediaAssetActions({ assetId, token, visibility }: MediaAssetActi
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <button
-        className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold"
-        onClick={copyUrl}
-        type="button"
-      >
-        Copy /i URL
-      </button>
-      {visibility !== 'public' ? (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
         <button
-          className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] disabled:opacity-60"
-          disabled={isSubmitting}
-          onClick={() => setVisibility('public')}
+          className="sc-button sc-button-secondary sc-button-small"
+          onClick={copyUrl}
           type="button"
         >
-          Set public
+          Copy URL
         </button>
-      ) : (
+        {visibility !== 'public' ? (
+          <button
+            className="sc-button sc-button-primary sc-button-small disabled:opacity-60"
+            disabled={isSubmitting}
+            onClick={() => setVisibility('public')}
+            type="button"
+          >
+            Set public
+          </button>
+        ) : (
+          <button
+            className="sc-button sc-button-secondary sc-button-small disabled:opacity-60"
+            disabled={isSubmitting}
+            onClick={() => setVisibility('draft')}
+            type="button"
+          >
+            Set draft
+          </button>
+        )}
         <button
-          className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
-          disabled={isSubmitting}
-          onClick={() => setVisibility('draft')}
+          className="sc-button sc-button-danger sc-button-small disabled:opacity-50"
+          disabled={isSubmitting || isReferenced}
+          onClick={deleteAsset}
+          title={isReferenced ? 'Remove this image from all posts before deleting it.' : 'Delete image'}
           type="button"
         >
-          Set draft
+          Delete
         </button>
-      )}
-      <button
-        className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60"
-        disabled={isSubmitting}
-        onClick={deleteAsset}
-        type="button"
-      >
-        Delete image
-      </button>
+      </div>
+      {isReferenced ? <p className="text-xs leading-5 text-[var(--color-muted)]">Remove from posts before deleting.</p> : null}
     </div>
   );
 }

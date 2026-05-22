@@ -1,45 +1,87 @@
 ---
-const navItems = [
-  { href: '/', label: 'Home' },
-  { href: '/archive', label: 'Archive' },
-  { href: '/about', label: 'About' }
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
+
+const publicNavItems = [
+  { href: '/articles', label: '文章' },
+  { href: '/timeline', label: '时间轴' },
+  { href: '/tags', label: '标签' },
+  { href: '/friends', label: '友人帐' },
+  { href: '/about', label: '关于' }
 ];
+
+const adminUser = await getCurrentAdminUser(Astro);
+const pathname = Astro.url.pathname;
+const accountHref = adminUser ? '/write' : '/admin/login';
+const accountLabel = adminUser ? '写作' : '登录';
 ---
 
-<header class="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[rgba(255,247,250,0.88)] backdrop-blur">
-  <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
-    <a class="flex items-center gap-3 text-[var(--color-text)]" href="/">
-      <span class="flex size-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-white/80 text-lg shadow-sm">
-        S
-      </span>
-      <span class="font-semibold">Sakura Cactus</span>
-    </a>
+<header class="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[rgba(255,253,253,0.86)] backdrop-blur">
+  <div class="mx-auto flex max-w-[920px] items-center justify-between gap-4 px-4 py-3">
+    <a class="text-base font-extrabold tracking-tight text-[var(--color-text)]" href="/">Sakura Cactus</a>
 
-    <nav class="hidden items-center gap-2 sm:flex">
-      {navItems.map((item) => (
-        <a class="rounded-full px-3 py-2 text-sm font-medium text-[var(--color-muted)] transition hover:bg-white/80 hover:text-[var(--color-text)]" href={item.href}>
+    <nav class="hidden items-center gap-1 md:flex">
+      {publicNavItems.map((item) => (
+        <a
+          class={`rounded-md px-2.5 py-1.5 text-sm font-semibold transition ${
+            pathname === item.href ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
+          }`}
+          href={item.href}
+        >
           {item.label}
         </a>
       ))}
-      <a class="rounded-full border border-[var(--color-border)] bg-white/80 px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm" href="/admin">
-        Admin
-      </a>
+      {adminUser ? (
+        <>
+          <a class={`rounded-md px-2.5 py-1.5 text-sm font-semibold transition ${pathname.startsWith('/write') ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`} href="/write">写作</a>
+          <a class={`rounded-md px-2.5 py-1.5 text-sm font-semibold transition ${pathname === '/settings' ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`} href="/settings">设置</a>
+        </>
+      ) : null}
     </nav>
 
-    <details class="relative sm:hidden">
-      <summary class="list-none rounded-full border border-[var(--color-border)] bg-white/80 px-3 py-2 text-sm font-semibold shadow-sm">
-        Menu
-      </summary>
-      <div class="absolute right-0 mt-2 w-44 rounded-lg border border-[var(--color-border)] bg-white p-2 shadow-lg">
-        {navItems.map((item) => (
-          <a class="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]" href={item.href}>
-            {item.label}
-          </a>
-        ))}
-        <a class="block rounded-lg px-3 py-2 text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-bg)]" href="/admin">
-          Admin
-        </a>
-      </div>
-    </details>
+    <div class="flex items-center gap-1">
+      <a class="sc-icon-link" href="#search" aria-label="搜索" title="搜索">
+        <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m21 21-4.35-4.35" />
+          <circle cx="11" cy="11" r="7" />
+        </svg>
+      </a>
+      <a class="sc-icon-link" href="#rss" aria-label="RSS" title="RSS">
+        <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 11a9 9 0 0 1 9 9" />
+          <path d="M4 4a16 16 0 0 1 16 16" />
+          <circle cx="5" cy="19" r="1" />
+        </svg>
+      </a>
+      <a class="sc-icon-link" href={accountHref} aria-label={accountLabel} title={accountLabel}>
+        <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21a8 8 0 0 0-16 0" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      </a>
+
+      <details class="relative md:hidden">
+        <summary class="sc-icon-link list-none" aria-label="菜单">
+          <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 7h16" />
+            <path d="M4 12h16" />
+            <path d="M4 17h16" />
+          </svg>
+        </summary>
+        <div class="absolute right-0 mt-2 w-44 rounded-md border border-[var(--color-border)] bg-white p-2 shadow-[var(--shadow-soft)]">
+          {publicNavItems.map((item) => (
+            <a class="block rounded-md px-3 py-2 text-sm font-semibold text-[var(--color-muted)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--color-primary)]" href={item.href}>
+              {item.label}
+            </a>
+          ))}
+          {adminUser ? (
+            <>
+              <div class="my-1 h-px bg-[var(--color-border)]"></div>
+              <a class="block rounded-md px-3 py-2 text-sm font-semibold text-[var(--color-muted)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--color-primary)]" href="/write">写作</a>
+              <a class="block rounded-md px-3 py-2 text-sm font-semibold text-[var(--color-muted)] hover:bg-[var(--color-primary-soft)] hover:text-[var(--color-primary)]" href="/settings">设置</a>
+            </>
+          ) : null}
+        </div>
+      </details>
+    </div>
   </div>
 </header>

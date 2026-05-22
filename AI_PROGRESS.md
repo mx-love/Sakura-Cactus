@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 6: UI theme and navigation optimization.
+Stage 6.7: SakuraPaper minimal blog UI correction.
 
 ## Completed
 
@@ -100,6 +100,17 @@ Stage 6: UI theme and navigation optimization.
 - [x] Removing `asset:token` Markdown from a post now updates usage and soft deletes unused assets on save.
 - [x] Media library shows `Unused`, `Used by 1 post`, or `Used by N posts`.
 - [x] Manual media deletion deletes the R2 object first, then soft deletes the D1 asset record when the asset is unreferenced.
+- [x] Added Sakura Cactus design tokens for colors, typography, radius, shadows, and focus states.
+- [x] Added reusable `.sc-*` base classes for pages, shells, cards, panels, buttons, forms, badges, prose, admin navigation, and admin tables.
+- [x] Split base prose, admin, and animation styles into dedicated CSS files.
+- [x] Lightly connected the new base styles to the public post page, admin layout, posts list, and media library.
+- [x] Corrected Stage 6.7 toward a SakuraPaper-style minimal blog UI.
+- [x] Reworked public navigation to Articles, Timeline, Tags, Friends, About, plus small search/RSS/login entries.
+- [x] Added `/articles`, `/timeline`, `/tags`, `/friends`, `/write`, and `/settings`.
+- [x] Made `/write` and `/settings` the primary authenticated writing/settings routes.
+- [x] Changed `/admin` and `/admin/settings` to compatibility redirects.
+- [x] Kept `/admin/media` as a hidden maintenance page outside the main navigation.
+- [x] Simplified the homepage, article list, timeline, tags, friends, about, login, article detail, and writing UI around narrow content-first layouts.
 
 ## Pending
 
@@ -277,6 +288,30 @@ Build completed successfully.
 ```
 
 Asset cleanup verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
+Stage 6.6 verification:
+
+```powershell
+$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+```
+
+Result:
+
+```txt
+Build completed successfully.
+```
+
+Stage 6.7 verification:
 
 ```powershell
 $env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build

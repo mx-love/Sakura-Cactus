@@ -2,14 +2,23 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 ---
 
-<SiteLayout title="About | Sakura Cactus">
-  <section class="min-h-screen bg-[var(--color-bg)] px-5 py-12 text-[var(--color-text)]">
-    <div class="mx-auto max-w-4xl rounded-[28px] border border-[var(--color-border)] bg-white/75 p-8 shadow-[var(--shadow-soft)]">
-      <p class="text-sm text-[var(--color-muted)]">About</p>
-      <h1 class="mt-2 text-3xl font-semibold">关于 Sakura Cactus</h1>
-      <p class="mt-4 max-w-2xl text-sm leading-7 text-[var(--color-muted)]">
-        这里将用于放置个人介绍、站点说明和联系方式。当前是阶段 6 的静态占位页。
-      </p>
+<SiteLayout title="关于 | Sakura Cactus">
+  <section class="sc-page">
+    <div class="sc-shell">
+      <article class="sc-prose py-10">
+        <h1>关于 Sakura Cactus</h1>
+        <p>
+          Sakura Cactus 是一个面向个人写作的极简博客系统。前台保持克制、清晰和可读，后台只保留必要的私有写作能力。
+        </p>
+        <h2>技术栈</h2>
+        <p>
+          Astro、Cloudflare Workers、D1、R2、React、TypeScript 和 Tailwind CSS。文章存储在 D1，图片存储在私有 R2，并通过 Sakura Cactus 的 token 代理访问。
+        </p>
+        <h2>签名</h2>
+        <blockquote>温柔地写，安静地发布。</blockquote>
+        <h2>联系方式</h2>
+        <p>联系方式会在后续设置系统中维护。当前先保留占位。</p>
+      </article>
     </div>
   </section>
 </SiteLayout>

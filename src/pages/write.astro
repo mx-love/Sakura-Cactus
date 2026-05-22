@@ -1,0 +1,8 @@
+---
+import AdminLayout from '@/components/layout/AdminLayout.astro';
+import { PostEditor } from '@/components/admin/PostEditor';
+---
+
+<AdminLayout title="写作 | Sakura Cactus" heading="写作" eyebrow="Private writing" wide bare>
+  <PostEditor client:load />
+</AdminLayout>

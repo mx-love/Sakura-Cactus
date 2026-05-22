@@ -1,0 +1,65 @@
+---
+import AdminLayout from '@/components/layout/AdminLayout.astro';
+---
+
+<AdminLayout title="设置 | Sakura Cactus" heading="设置" eyebrow="Blog settings">
+  <div class="space-y-10">
+    <section>
+      <h2 class="text-xl font-extrabold">站点信息</h2>
+      <div class="mt-4 grid gap-4">
+        <label class="space-y-2">
+          <span class="text-sm font-bold">站点名</span>
+          <input class="sc-input" value="Sakura Cactus" readonly />
+        </label>
+        <label class="space-y-2">
+          <span class="text-sm font-bold">副标题</span>
+          <input class="sc-input" value="温柔地写，安静地发布。" readonly />
+        </label>
+        <label class="space-y-2">
+          <span class="text-sm font-bold">Logo / Favicon</span>
+          <input class="sc-input" value="后续接入" readonly />
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-extrabold">导航</h2>
+      <div class="mt-4 grid gap-3 text-sm text-[var(--color-muted)]">
+        <label><input class="mr-2" type="checkbox" checked disabled />显示时间轴</label>
+        <label><input class="mr-2" type="checkbox" checked disabled />显示标签</label>
+        <label><input class="mr-2" type="checkbox" checked disabled />显示友人帐</label>
+        <label><input class="mr-2" type="checkbox" checked disabled />显示 RSS</label>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-extrabold">写作</h2>
+      <div class="mt-4 grid gap-3 text-sm text-[var(--color-muted)]">
+        <p>默认可见性：Public</p>
+        <p>允许外部图片链接：后续接入</p>
+        <p>允许粘贴上传：已启用</p>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-extrabold">图片</h2>
+      <div class="mt-4 grid gap-3 text-sm text-[var(--color-muted)]">
+        <p>图片无人引用时自动删除 R2 object：已启用</p>
+        <p>最大上传大小：5 MB</p>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-extrabold">友人帐</h2>
+      <p class="mt-4 text-sm leading-7 text-[var(--color-muted)]">友人帐展示已保留，申请系统和 D1 管理后续接入。</p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-extrabold">维护</h2>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button class="sc-button sc-button-secondary" type="button" disabled>清理缓存</button>
+        <button class="sc-button sc-button-secondary" type="button" disabled>导出数据</button>
+      </div>
+    </section>
+  </div>
+</AdminLayout>

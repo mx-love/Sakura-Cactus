@@ -2,17 +2,23 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { LoginForm } from '@/components/admin/LoginForm';
 
-const next = Astro.url.searchParams.get('next') ?? '/admin';
+const next = Astro.url.searchParams.get('next') ?? '/write';
 ---
 
-<SiteLayout title="Admin Login | Sakura Cactus">
-  <section class="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-6 py-12 text-[var(--color-text)]">
-    <div class="w-full max-w-sm rounded-lg border border-[var(--color-border)] bg-white/80 p-6 shadow-sm">
-      <div class="mb-6 space-y-2">
-        <h1 class="text-2xl font-semibold">Admin Login</h1>
-        <p class="text-sm leading-6 text-[var(--color-muted)]">Sign in to manage Sakura Cactus.</p>
+<SiteLayout title="登录 | Sakura Cactus" showHeader={false}>
+  <section class="sc-page flex min-h-screen items-center px-4 py-12 text-[var(--color-text)]">
+    <div class="mx-auto w-full max-w-sm">
+      <a class="mb-10 block text-center text-lg font-extrabold tracking-tight" href="/">Sakura Cactus</a>
+      <div class="rounded-lg border border-[var(--color-border)] bg-white px-5 py-6">
+        <div class="mb-6 text-center">
+          <h1 class="text-2xl font-extrabold">登录</h1>
+          <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">温柔地写，安静地发布。</p>
+        </div>
+        <LoginForm client:load next={next} />
       </div>
-      <LoginForm client:load next={next} />
+      <p class="mt-5 text-center text-xs leading-5 text-[var(--color-muted)]">
+        使用 HttpOnly Secure Cookie 保存登录会话。
+      </p>
     </div>
   </section>
 </SiteLayout>

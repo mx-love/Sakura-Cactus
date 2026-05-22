@@ -41,22 +41,6 @@ function postToState(post?: PostRow | null): PostFormState {
   };
 }
 
-function extractInsertedImageTokens(markdown: string): string[] {
-  const tokens = new Set<string>();
-  const pattern = /!\[[^\]]*]\(\s*asset:([A-Za-z0-9_-]{24,64})\s*\)/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(markdown)) !== null) {
-    tokens.add(match[1]);
-  }
-
-  return [...tokens];
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function slugifyTitle(title: string): string {
   return (
     title
@@ -71,14 +55,29 @@ function slugifyTitle(title: string): string {
 
 function statusLabel(status: Exclude<PostStatus, 'deleted'>): string {
   if (status === 'published') {
-    return 'Published';
+    return '已发布';
   }
 
   if (status === 'archived') {
-    return 'Unpublished';
+    return '已下架';
   }
 
-  return 'Draft';
+  return '草稿';
+}
+
+function isImageUrl(value: string): boolean {
+  const trimmed = value.trim();
+
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return false;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    return /\.(jpe?g|png|webp|gif)$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
 }
 
 export function PostEditor({ post }: PostEditorProps) {
@@ -89,15 +88,12 @@ export function PostEditor({ post }: PostEditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
-  const [editorMode, setEditorMode] = useState<'edit' | 'preview'>('edit');
-  const [assets, setAssets] = useState<AssetRow[]>([]);
+  const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const isExisting = useMemo(() => Boolean(postId), [postId]);
-  const insertedImageTokens = useMemo(() => extractInsertedImageTokens(form.contentMarkdown), [form.contentMarkdown]);
   const previewHtml = useMemo(() => renderMarkdown(form.contentMarkdown), [form.contentMarkdown]);
   const isPublished = form.status === 'published';
   const isBusy = isSubmitting || isUploadingImage;
+  const statusClass = form.status === 'published' ? 'sc-badge-published' : form.status === 'archived' ? 'sc-badge-archived' : 'sc-badge-draft';
 
   function updateField<K extends keyof PostFormState>(field: K, value: PostFormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -179,12 +175,18 @@ export function PostEditor({ post }: PostEditorProps) {
       .map((item) => item.getAsFile())
       .filter((file): file is File => Boolean(file));
 
-    if (files.length === 0) {
+    if (files.length > 0) {
+      event.preventDefault();
+      await uploadAndInsertImages(files);
       return;
     }
 
-    event.preventDefault();
-    await uploadAndInsertImages(files);
+    const text = event.clipboardData.getData('text/plain');
+
+    if (isImageUrl(text)) {
+      event.preventDefault();
+      insertMarkdown(`![图片说明](${text.trim()})`);
+    }
   }
 
   async function handleDrop(event: React.DragEvent<HTMLTextAreaElement>) {
@@ -196,38 +198,6 @@ export function PostEditor({ post }: PostEditorProps) {
 
     event.preventDefault();
     await uploadAndInsertImages(files);
-  }
-
-  async function openGallery() {
-    setIsGalleryOpen((current) => !current);
-
-    if (assets.length > 0 || isGalleryOpen) {
-      return;
-    }
-
-    setIsLoadingAssets(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/admin/assets', {
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        setError(await readError(response, 'Unable to load images.'));
-        return;
-      }
-
-      const payload = (await response.json()) as { ok: true; data: { assets: AssetRow[] } };
-      setAssets(payload.data.assets);
-    } finally {
-      setIsLoadingAssets(false);
-    }
-  }
-
-  function removeInsertedImage(token: string) {
-    const pattern = new RegExp(`!?\\[[^\\]]*]\\(\\s*asset:${escapeRegExp(token)}\\s*\\)\\n*`, 'g');
-    updateField('contentMarkdown', form.contentMarkdown.replace(pattern, '').trim());
   }
 
   function generateSlug() {
@@ -254,8 +224,8 @@ export function PostEditor({ post }: PostEditorProps) {
           contentMarkdown: form.contentMarkdown,
           status,
           visibility: form.visibility,
-          seoTitle: form.seoTitle,
-          seoDescription: form.seoDescription
+          seoTitle: form.title,
+          seoDescription: form.excerpt
         })
       });
 
@@ -267,10 +237,10 @@ export function PostEditor({ post }: PostEditorProps) {
       const payload = (await response.json()) as { ok: true; data: { post: PostRow } };
       setPostId(payload.data.post.id);
       setForm(postToState(payload.data.post));
-      setMessage(status === 'published' ? 'Published.' : 'Saved.');
+      setMessage(status === 'published' ? '已发布' : '已保存');
 
       if (!postId) {
-        window.history.replaceState(null, '', `/admin/posts/${payload.data.post.id}`);
+        window.history.replaceState(null, '', '/write');
       }
     } finally {
       setIsSubmitting(false);
@@ -300,7 +270,7 @@ export function PostEditor({ post }: PostEditorProps) {
 
       const payload = (await response.json()) as { ok: true; data: { post: PostRow } };
       setForm(postToState(payload.data.post));
-      setMessage('Unpublished.');
+      setMessage('已下架');
     } finally {
       setIsSubmitting(false);
     }
@@ -331,19 +301,58 @@ export function PostEditor({ post }: PostEditorProps) {
         return;
       }
 
-      window.location.assign('/admin/posts');
+      window.location.assign('/articles');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]" onSubmit={(event) => event.preventDefault()}>
+    <form className="space-y-5" onSubmit={(event) => event.preventDefault()}>
+      <div className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[rgba(255,253,253,0.9)] py-3 backdrop-blur">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <a className="text-sm font-bold text-[var(--color-primary)] hover:underline" href="/articles">
+            ← 返回文章
+          </a>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`sc-badge ${statusClass}`}>{message ?? (error ? '保存失败' : statusLabel(form.status))}</span>
+            <button
+              className="sc-button sc-button-secondary sc-button-small disabled:opacity-60"
+              disabled={isBusy}
+              onClick={() => saveWithStatus('draft')}
+              type="button"
+            >
+              保存草稿
+            </button>
+            <button
+              className="sc-button sc-button-primary sc-button-small disabled:opacity-60"
+              disabled={isBusy}
+              onClick={() => saveWithStatus('published')}
+              type="button"
+            >
+              {isPublished ? '更新' : '发布'}
+            </button>
+            {isPublished ? (
+              <button
+                className="sc-button sc-button-secondary sc-button-small disabled:opacity-60"
+                disabled={isSubmitting || !isExisting}
+                onClick={unpublish}
+                type="button"
+              >
+                下架
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {error ? <p className="sc-field-error mt-2">{error}</p> : null}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-5">
-        <div className="rounded-lg border border-[var(--color-border)] bg-white/85 p-5 shadow-sm">
+        <div className="border-b border-[var(--color-border)] pb-5">
           <input
             aria-label="Post title"
-            className="w-full border-0 bg-transparent text-3xl font-semibold leading-tight outline-none placeholder:text-[var(--color-muted)] sm:text-4xl"
+            className="w-full border-0 bg-transparent text-4xl font-extrabold leading-tight outline-none placeholder:text-[var(--color-subtle)] sm:text-5xl"
             placeholder="Untitled post"
             value={form.title}
             onChange={(event) => updateField('title', event.target.value)}
@@ -351,47 +360,48 @@ export function PostEditor({ post }: PostEditorProps) {
           />
           <textarea
             aria-label="Post excerpt"
-            className="mt-4 min-h-20 w-full resize-y border-0 bg-transparent text-base leading-7 text-[var(--color-muted)] outline-none placeholder:text-[var(--color-muted)]"
+            className="mt-5 min-h-24 w-full resize-y border-0 bg-transparent text-lg leading-8 text-[var(--color-muted)] outline-none placeholder:text-[var(--color-subtle)]"
             placeholder="Write a short subtitle or summary..."
             value={form.excerpt}
             onChange={(event) => updateField('excerpt', event.target.value)}
           />
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-white/85 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
-            <div className="flex rounded-lg border border-[var(--color-border)] bg-white p-1">
+        <div className="rounded-md border border-[var(--color-border)] bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-3 py-2">
+            <div className="flex gap-1">
               <button
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold ${editorMode === 'edit' ? 'bg-[var(--color-text)] text-white' : 'text-[var(--color-muted)]'}`}
+                className={`rounded-md px-3 py-1.5 text-sm font-bold transition ${editorMode === 'edit' ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
                 onClick={() => setEditorMode('edit')}
                 type="button"
               >
                 Edit
               </button>
               <button
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold ${editorMode === 'preview' ? 'bg-[var(--color-text)] text-white' : 'text-[var(--color-muted)]'}`}
+                className={`rounded-md px-3 py-1.5 text-sm font-bold transition ${editorMode === 'preview' ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
                 onClick={() => setEditorMode('preview')}
                 type="button"
               >
                 Preview
               </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
               <button
-                className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--color-text)]"
-                onClick={openGallery}
+                className={`rounded-md px-3 py-1.5 text-sm font-bold transition ${editorMode === 'split' ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
+                onClick={() => setEditorMode('split')}
                 type="button"
               >
-                Insert image
+                Split
               </button>
-              {isUploadingImage ? <span className="text-xs text-[var(--color-muted)]">Uploading image...</span> : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {isUploadingImage ? <span className="sc-badge">上传中</span> : null}
             </div>
           </div>
 
-          {editorMode === 'edit' ? (
+          {editorMode === 'edit' || editorMode === 'split' ? (
+            <div className={editorMode === 'split' ? 'grid lg:grid-cols-2' : ''}>
             <textarea
               ref={textareaRef}
-              className="min-h-[560px] w-full resize-y border-0 bg-white/70 px-5 py-4 font-mono text-sm leading-7 outline-none placeholder:text-[var(--color-muted)]"
+              className="min-h-[620px] w-full resize-y border-0 bg-white px-4 py-4 font-mono text-sm leading-8 outline-none placeholder:text-[var(--color-muted)]"
               placeholder="Write Markdown here. Paste or drop images to upload."
               value={form.contentMarkdown}
               onChange={(event) => updateField('contentMarkdown', event.target.value)}
@@ -400,168 +410,53 @@ export function PostEditor({ post }: PostEditorProps) {
               onPaste={handlePaste}
               required
             />
+            {editorMode === 'split' ? (
+              <div className="sc-prose prose-content min-h-[620px] border-t border-[var(--color-border)] px-4 py-4 lg:border-l lg:border-t-0" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            ) : null}
+            </div>
           ) : (
-            <div className="prose-content min-h-[560px] bg-white/70 px-5 py-4" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            <div className="sc-prose prose-content min-h-[620px] bg-white px-4 py-4" dangerouslySetInnerHTML={{ __html: previewHtml }} />
           )}
         </div>
 
-        {isGalleryOpen ? (
-          <div className="rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold">Insert from gallery</h2>
-              {isLoadingAssets ? <span className="text-xs text-[var(--color-muted)]">Loading...</span> : null}
-            </div>
-            {assets.length === 0 ? (
-              <p className="text-sm text-[var(--color-muted)]">No images available.</p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-3">
-                {assets.map((asset) => (
-                  <button
-                    className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-white text-left transition hover:border-[var(--color-primary)]"
-                    key={asset.id}
-                    onClick={() => insertMarkdown(`![图片说明](asset:${asset.token})`)}
-                    type="button"
-                  >
-                    <img
-                      alt={asset.original_filename ?? asset.id}
-                      className="aspect-[4/3] w-full object-cover"
-                      loading="lazy"
-                      src={`/i/${asset.token}`}
-                    />
-                    <span className="block truncate px-2 py-2 text-xs text-[var(--color-muted)]">
-                      {asset.original_filename ?? asset.token}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
       </div>
 
-      <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-        <div className="rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold">Status</span>
-            <span className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--color-muted)]">
-              {statusLabel(form.status)}
-            </span>
-          </div>
-
-          {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
-          {message ? <p className="mt-3 text-sm text-green-700">{message}</p> : null}
-
-          <div className="mt-4 flex flex-col gap-2">
-            {isPublished ? (
-              <>
-                <button
-                  className="rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                  disabled={isBusy}
-                  onClick={() => saveWithStatus('published')}
-                  type="button"
-                >
-                  Update
-                </button>
-                <button
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)] disabled:opacity-60"
-                  disabled={isSubmitting || !isExisting}
-                  onClick={unpublish}
-                  type="button"
-                >
-                  Unpublish
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className="rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                  disabled={isBusy}
-                  onClick={() => saveWithStatus('draft')}
-                  type="button"
-                >
-                  Save draft
-                </button>
-                <button
-                  className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] disabled:opacity-60"
-                  disabled={isBusy}
-                  onClick={() => saveWithStatus('published')}
-                  type="button"
-                >
-                  Publish
-                </button>
-              </>
-            )}
-
-            {isExisting ? (
-              <button
-                className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-60"
-                disabled={isSubmitting}
-                onClick={deletePost}
-                type="button"
-              >
-                Delete
-              </button>
-            ) : null}
-
-            <a
-              className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-2 text-center text-sm font-semibold text-[var(--color-text)]"
-              href="/admin/posts"
-            >
-              Back to posts
-            </a>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-          <h2 className="text-sm font-semibold">Article settings</h2>
+      <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+        <div className="rounded-md border border-[var(--color-border)] bg-white p-4">
+          <h2 className="text-sm font-bold">文章设置</h2>
 
           <div className="mt-4 space-y-4">
             <div className="space-y-2">
-              <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">Visibility</span>
+              <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">可见性</span>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  className={`rounded-lg border px-3 py-2 text-sm font-semibold ${form.visibility === 'public' ? 'border-[var(--color-text)] bg-[var(--color-text)] text-white' : 'border-[var(--color-border)] bg-white text-[var(--color-text)]'}`}
+                  className={`rounded-2xl border px-3 py-2 text-sm font-black ${form.visibility === 'public' ? 'border-[var(--color-text)] bg-[var(--color-text)] text-white' : 'border-[var(--color-border)] bg-white text-[var(--color-text)]'}`}
                   onClick={() => updateField('visibility', 'public')}
                   type="button"
                 >
-                  Public
+                  公开
                 </button>
                 <button
-                  className={`rounded-lg border px-3 py-2 text-sm font-semibold ${form.visibility === 'private' ? 'border-[var(--color-text)] bg-[var(--color-text)] text-white' : 'border-[var(--color-border)] bg-white text-[var(--color-text)]'}`}
+                  className={`rounded-2xl border px-3 py-2 text-sm font-black ${form.visibility === 'private' ? 'border-[var(--color-text)] bg-[var(--color-text)] text-white' : 'border-[var(--color-border)] bg-white text-[var(--color-text)]'}`}
                   onClick={() => updateField('visibility', 'private')}
                   type="button"
                 >
-                  Private
+                  仅自己
                 </button>
               </div>
             </div>
 
-            <label className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2">
-              <input
-                checked={form.visibility === 'public'}
-                className="mt-1"
-                onChange={(event) => updateField('visibility', event.target.checked ? 'public' : 'private')}
-                type="checkbox"
-              />
-              <span className="text-sm">
-                Show in post list
-                <span className="block text-xs leading-5 text-[var(--color-muted)]">
-                  Public published posts appear on the homepage.
-                </span>
-              </span>
-            </label>
-
             <label className="space-y-2">
-              <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">Slug / Alias</span>
+              <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">Slug</span>
               <div className="flex gap-2">
                 <input
-                  className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
+                  className="sc-input min-w-0 flex-1 text-sm"
                   value={form.slug}
                   onChange={(event) => updateField('slug', event.target.value)}
                   placeholder="auto-generated-from-title"
                 />
                 <button
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold"
+                  className="sc-button sc-button-secondary sc-button-small"
                   onClick={generateSlug}
                   type="button"
                 >
@@ -570,59 +465,27 @@ export function PostEditor({ post }: PostEditorProps) {
               </div>
             </label>
 
-            <label className="space-y-2">
-              <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">Published at</span>
-              <input
-                className="w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-muted)]"
-                readOnly
-                value={form.publishedAt ? new Date(form.publishedAt).toLocaleString() : 'Set when published'}
-              />
-            </label>
-
-            <details className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-2">
-              <summary className="cursor-pointer text-sm font-semibold">Advanced SEO</summary>
-              <div className="mt-3 space-y-3">
-                <label className="space-y-2">
-                  <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">SEO Title</span>
-                  <input
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
-                    value={form.seoTitle}
-                    onChange={(event) => updateField('seoTitle', event.target.value)}
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="block text-xs font-semibold uppercase text-[var(--color-muted)]">SEO Description</span>
-                  <textarea
-                    className="min-h-24 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
-                    value={form.seoDescription}
-                    onChange={(event) => updateField('seoDescription', event.target.value)}
-                  />
-                </label>
-              </div>
-            </details>
+            <p className="text-xs leading-5 text-[var(--color-muted)]">
+              公开发布后会显示在文章列表。
+            </p>
           </div>
         </div>
 
-        {insertedImageTokens.length > 0 ? (
-          <div className="rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-            <h2 className="text-sm font-semibold">Inserted images</h2>
-            <div className="mt-3 space-y-2">
-              {insertedImageTokens.map((token) => (
-                <div className="rounded-lg border border-[var(--color-border)] bg-white p-3" key={token}>
-                  <span className="block truncate text-xs text-[var(--color-muted)]">asset:{token}</span>
-                  <button
-                    className="mt-2 text-xs font-semibold text-red-700"
-                    onClick={() => removeInsertedImage(token)}
-                    type="button"
-                  >
-                    Remove from post
-                  </button>
-                </div>
-              ))}
-            </div>
+        {isExisting ? (
+          <div className="rounded-[24px] border border-[var(--color-danger-soft)] bg-white/62 p-4">
+            <h2 className="text-sm font-bold text-[var(--color-danger)]">危险区域</h2>
+            <button
+              className="sc-button sc-button-danger mt-3 w-full disabled:opacity-60"
+              disabled={isSubmitting}
+              onClick={deletePost}
+              type="button"
+            >
+              删除文章
+            </button>
           </div>
         ) : null}
       </aside>
+      </div>
     </form>
   );
 }

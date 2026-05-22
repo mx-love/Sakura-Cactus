@@ -31,49 +31,56 @@ function formatUsage(count: number): string {
 }
 ---
 
-<AdminLayout title="Media | Sakura Cactus" heading="Media">
+<AdminLayout title="图片维护 | Sakura Cactus" heading="图片维护" eyebrow="Hidden maintenance">
   <div class="space-y-6">
-      <div class="rounded-[24px] border border-[var(--color-border)] bg-white/82 p-5 shadow-[var(--shadow-soft)]">
+      <section class="sc-card-polished p-5 sm:p-6">
+        <div class="mb-5">
+          <p class="text-sm font-bold text-[var(--color-muted)]">Private media library</p>
+          <h2 class="mt-1 text-2xl font-black">Upload and reuse images</h2>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+            Images are stored in private R2 and exposed through Sakura Cactus token URLs only.
+          </p>
+        </div>
         <MediaUploader client:load />
-      </div>
+      </section>
 
       {
         assets.length === 0 ? (
-          <div class="rounded-[24px] border border-[var(--color-border)] bg-white/82 p-8 text-center shadow-[var(--shadow-soft)]">
-            <p class="font-semibold">No images uploaded yet</p>
-            <p class="mt-2 text-sm text-[var(--color-muted)]">Upload images here, or paste them directly into the post editor.</p>
+          <div class="sc-card-polished p-10 text-center">
+            <p class="mt-5 text-xl font-black">No images uploaded yet</p>
+            <p class="mx-auto mt-2 max-w-md text-sm leading-7 text-[var(--color-muted)]">Upload images here, or paste them directly into the post editor.</p>
           </div>
         ) : (
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {assets.map((asset) => (
-              <article class="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-white/82 shadow-[var(--shadow-soft)]">
-                <div class="aspect-[4/3] bg-white">
+              <article class="sc-card group overflow-hidden transition hover:-translate-y-1 hover:bg-white/90">
+                <div class="aspect-[4/3] overflow-hidden bg-white">
                   <img
                     alt={asset.original_filename ?? asset.id}
-                    class="h-full w-full object-cover"
+                    class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                     loading="lazy"
                     src={`/i/${asset.token}`}
                   />
                 </div>
-                <div class="space-y-3 p-4">
+                <div class="space-y-4 p-4">
                   <div>
-                    <h2 class="truncate text-sm font-semibold">{asset.original_filename ?? asset.id}</h2>
+                    <h2 class="truncate text-sm font-black">{asset.original_filename ?? asset.id}</h2>
                     <p class="mt-1 text-xs text-[var(--color-muted)]">
                       {asset.mime_type} · {formatSize(asset.size_bytes)}
                     </p>
                   </div>
                   <div class="flex flex-wrap gap-2 text-xs text-[var(--color-muted)]">
-                    <span class="rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1 font-semibold text-[var(--color-text)]">
+                    <span class={`sc-badge sc-badge-${asset.visibility}`}>
                       {asset.visibility}
                     </span>
-                    <span class="rounded-full border border-[var(--color-border)] bg-white px-2 py-1">
+                    <span class={`sc-badge ${asset.usage_count === 0 ? 'sc-badge-unused' : 'sc-badge-used'}`}>
                       {formatUsage(asset.usage_count)}
                     </span>
-                    <span class="rounded-full border border-[var(--color-border)] bg-white px-2 py-1">
+                    <span class="sc-badge">
                       /i/{asset.token}
                     </span>
                   </div>
-                  <MediaAssetActions client:load assetId={asset.id} token={asset.token} visibility={asset.visibility} />
+                  <MediaAssetActions client:load assetId={asset.id} token={asset.token} visibility={asset.visibility} usageCount={asset.usage_count} />
                 </div>
               </article>
             ))}

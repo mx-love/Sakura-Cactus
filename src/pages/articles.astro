@@ -1,0 +1,37 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getPublicPosts } from '@/features/posts/post.service';
+
+export const prerender = false;
+
+const posts = await getPublicPosts();
+---
+
+<SiteLayout title="文章 | Sakura Cactus">
+  <section class="sc-page">
+    <div class="sc-shell">
+      <header class="py-10">
+        <h1 class="text-4xl font-extrabold tracking-tight">文章</h1>
+        <p class="mt-4 leading-8 text-[var(--color-muted)]">按发布时间倒序整理的公开文章。</p>
+      </header>
+
+      {posts.length === 0 ? (
+        <p class="rounded-md border border-dashed border-[var(--color-border)] px-4 py-5 text-sm text-[var(--color-muted)]">暂无公开文章。</p>
+      ) : (
+        <div class="sc-post-list">
+          {posts.map((post) => (
+            <article class="sc-post-item">
+              <p class="text-sm text-[var(--color-muted)]">
+                {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Published'}
+              </p>
+              <h2 class="mt-2 text-2xl font-extrabold tracking-tight">
+                <a class="hover:text-[var(--color-primary)]" href={`/posts/${post.slug}`}>{post.title}</a>
+              </h2>
+              {post.excerpt ? <p class="mt-3 leading-7 text-[var(--color-muted)]">{post.excerpt}</p> : null}
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</SiteLayout>

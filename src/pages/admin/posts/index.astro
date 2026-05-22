@@ -7,54 +7,78 @@ const posts = await getAdminPosts();
 ---
 
 <AdminLayout title="Posts | Sakura Cactus" heading="Posts">
-  <div class="space-y-5">
-    <div class="flex justify-end">
-      <a class="rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white" href="/admin/posts/new">
-        New post
-      </a>
+  <div class="space-y-6">
+    <div class="sc-card-polished flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div>
+        <p class="text-sm font-bold text-[var(--color-muted)]">Writing desk</p>
+        <h2 class="mt-1 text-2xl font-black">All posts</h2>
+        <p class="mt-2 text-sm leading-6 text-[var(--color-muted)]">Draft, publish, unpublish, and edit your personal archive.</p>
+      </div>
+      <a class="sc-button sc-button-primary" href="/admin/posts/new">New post</a>
     </div>
-    <div class="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-white/82 shadow-[var(--shadow-soft)]">
-        {
-          posts.length === 0 ? (
-            <div class="p-8 text-center">
-              <p class="font-semibold">No posts yet</p>
-              <p class="mt-2 text-sm text-[var(--color-muted)]">Create your first draft from the button above.</p>
-            </div>
-          ) : (
+
+    {
+      posts.length === 0 ? (
+        <div class="sc-card-polished p-10 text-center">
+          <p class="mt-5 text-xl font-black">No posts yet</p>
+          <p class="mx-auto mt-2 max-w-md text-sm leading-7 text-[var(--color-muted)]">Create the first draft and shape it in the writing editor.</p>
+          <a class="sc-button sc-button-primary mt-6" href="/admin/posts/new">Start writing</a>
+        </div>
+      ) : (
+        <>
+          <div class="sc-card hidden overflow-hidden lg:block">
             <div class="overflow-x-auto">
-              <table class="w-full min-w-[760px] text-left text-sm">
-                <thead class="border-b border-[var(--color-border)] text-xs uppercase text-[var(--color-muted)]">
+              <table class="sc-admin-table w-full min-w-[820px] text-left text-sm">
+                <thead>
                   <tr>
-                    <th class="px-4 py-3">Title</th>
-                    <th class="px-4 py-3">Slug</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">Visibility</th>
-                    <th class="px-4 py-3">Updated</th>
-                    <th class="px-4 py-3">Published</th>
-                    <th class="px-4 py-3">Actions</th>
+                    <th>Title</th>
+                    <th>Slug</th>
+                    <th>Status</th>
+                    <th>Visibility</th>
+                    <th>Updated</th>
+                    <th>Published</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {posts.map((post) => (
-                    <tr class="border-b border-[var(--color-border)] last:border-0">
-                      <td class="px-4 py-3 font-medium">{post.title}</td>
-                      <td class="px-4 py-3 text-[var(--color-muted)]">{post.slug}</td>
-                      <td class="px-4 py-3">{post.status}</td>
-                      <td class="px-4 py-3">{post.visibility}</td>
-                      <td class="px-4 py-3 text-[var(--color-muted)]">{new Date(post.updated_at).toLocaleString()}</td>
-                      <td class="px-4 py-3 text-[var(--color-muted)]">
-                        {post.published_at ? new Date(post.published_at).toLocaleString() : '-'}
+                    <tr>
+                      <td>
+                        <a class="font-black hover:text-[var(--color-danger)]" href={`/admin/posts/${post.id}`}>{post.title}</a>
                       </td>
-                      <td class="px-4 py-3">
-                        <PostRowActions client:load postId={post.id} status={post.status} />
-                      </td>
+                      <td class="max-w-48 truncate text-[var(--color-muted)]">/{post.slug}</td>
+                      <td><span class={`sc-badge sc-badge-${post.status}`}>{post.status}</span></td>
+                      <td><span class={`sc-badge sc-badge-${post.visibility}`}>{post.visibility}</span></td>
+                      <td class="text-[var(--color-muted)]">{new Date(post.updated_at).toLocaleString()}</td>
+                      <td class="text-[var(--color-muted)]">{post.published_at ? new Date(post.published_at).toLocaleString() : '-'}</td>
+                      <td><PostRowActions client:load postId={post.id} status={post.status} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          )
-        }
-    </div>
+          </div>
+
+          <div class="grid gap-4 lg:hidden">
+            {posts.map((post) => (
+              <article class="sc-card p-5">
+                <div class="flex flex-wrap gap-2">
+                  <span class={`sc-badge sc-badge-${post.status}`}>{post.status}</span>
+                  <span class={`sc-badge sc-badge-${post.visibility}`}>{post.visibility}</span>
+                </div>
+                <h3 class="mt-3 text-xl font-black">
+                  <a href={`/admin/posts/${post.id}`}>{post.title}</a>
+                </h3>
+                <p class="mt-1 truncate text-sm text-[var(--color-muted)]">/{post.slug}</p>
+                <p class="mt-4 text-xs text-[var(--color-muted)]">Updated {new Date(post.updated_at).toLocaleString()}</p>
+                <div class="mt-4">
+                  <PostRowActions client:load postId={post.id} status={post.status} />
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      )
+    }
   </div>
 </AdminLayout>

@@ -8,6 +8,8 @@
 - [x] Stage 4: add post management.
 - [x] Stage 5: add private R2 media library.
 - [x] Stage 6: add Sakura Cactus theme and navigation.
+- [x] Stage 6.6: add design tokens and base component styles.
+- [x] Stage 6.7: SakuraPaper minimal blog UI correction.
 
 ## P1
 
@@ -15,6 +17,8 @@
 - [ ] Consider reverting assets to draft when no published public posts reference them.
 - [ ] Add 30-second draft autosave in the post editor.
 - [ ] Warn before leaving the post editor with unsaved changes.
+- [ ] Connect real tag management.
+- [ ] Connect friend link management.
 
 ## P2
 

@@ -1,8 +1,3 @@
 ---
-import AdminLayout from '@/components/layout/AdminLayout.astro';
-import { PostEditor } from '@/components/admin/PostEditor';
+return Astro.redirect('/write');
 ---
-
-<AdminLayout title="New Post | Sakura Cactus" heading="New post" eyebrow="Posts" wide>
-  <PostEditor client:load />
-</AdminLayout>
