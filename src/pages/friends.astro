@@ -1,18 +1,462 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { getAdminFriendLinks, getApprovedFriendLinks } from '@/features/friends/friend.service';
+import { getSiteSettings } from '@/features/settings/settings.service';
+
+export const prerender = false;
+
+const adminUser = await getCurrentAdminUser(Astro);
+const settings = await getSiteSettings();
+const isAdmin = Boolean(adminUser);
+const canApply = settings.friendApplyEnabled && !isAdmin;
+const friends = isAdmin ? await getAdminFriendLinks() : await getApprovedFriendLinks();
+const friendsJson = JSON.stringify(friends).replaceAll('<', '\\u003c');
+
+function getInitial(name: string): string {
+  return name.trim().slice(0, 1).toUpperCase() || '友';
+}
+
+function displayNumber(index: number): string {
+  return `No. ${String(index + 1).padStart(2, '0')}`;
+}
+
+function statusText(status: string): string {
+  if (status === 'pending') {
+    return '待审核';
+  }
+
+  if (status === 'hidden') {
+    return '隐藏';
+  }
+
+  return '显示';
+}
 ---
 
-<SiteLayout title="友人帐 | Sakura Cactus">
+<SiteLayout title="友人帐 | Sakura Cactus" description="在这里收藏一些同行的纸页与风。">
   <section class="sc-page">
-    <div class="sc-shell">
-      <header class="py-10">
-        <h1 class="text-4xl font-extrabold tracking-tight">友人帐</h1>
-        <p class="mt-4 leading-8 text-[var(--color-muted)]">这里会放置朋友们的站点。第一版只做展示结构，暂不实现申请系统。</p>
+    <div class="sc-shell sc-friends-shell">
+      <nav class="sc-breadcrumb" aria-label="Breadcrumb">
+        <a href="/">首页</a>
+        <span>»</span>
+        <span>友人帐</span>
+      </nav>
+
+      <header class="sc-friends-header">
+        <div>
+          <h1>友人帐</h1>
+          <p>在这里收藏一些同行的纸页与风。</p>
+        </div>
+        {isAdmin ? (
+          <button class="sc-button sc-button-primary sc-friend-add-button" id="friend-add-button" type="button">添加友人</button>
+        ) : canApply ? (
+          <button class="sc-button sc-button-secondary sc-friend-add-button" id="friend-apply-button" type="button">申请友链</button>
+        ) : null}
       </header>
 
-      <div class="rounded-md border border-dashed border-[var(--color-border)] px-4 py-5 text-sm text-[var(--color-muted)]">
-        友链列表暂时为空。后续会接入 D1 管理和申请流程。
+      <div id="friend-grid-root">
+        {friends.length === 0 ? (
+          <p class="sc-empty-state">还没有友链。</p>
+        ) : (
+          <div class="sc-friend-grid">
+            {friends.map((friend, index) => (
+              <article class={`sc-friend-card ${friend.status !== 'approved' ? 'sc-friend-card-hidden' : ''}`}>
+                <a class="sc-friend-card-link" href={friend.url} target="_blank" rel="noreferrer">
+                  {friend.avatar_url ? (
+                    <img class="sc-friend-avatar" src={friend.avatar_url} alt="" loading="lazy" />
+                  ) : (
+                    <span class="sc-friend-avatar sc-friend-avatar-placeholder">{getInitial(friend.name)}</span>
+                  )}
+                  <span class="sc-friend-body">
+                    <span class="sc-friend-number">{displayNumber(index)}</span>
+                    <strong>{friend.name}</strong>
+                    {friend.description ? <span>{friend.description}</span> : <span class="sc-friend-muted">{friend.url}</span>}
+                  </span>
+                </a>
+                {isAdmin ? (
+                  <div class="sc-friend-card-actions">
+                    {friend.status !== 'approved' ? <span class="sc-badge sc-badge-private">{statusText(friend.status)}</span> : null}
+                    <button type="button" data-edit={friend.id}>编辑</button>
+                    <button type="button" data-toggle={friend.id}>{friend.status === 'approved' ? '隐藏' : '显示'}</button>
+                    <button type="button" data-delete={friend.id}>删除</button>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   </section>
+
+  {isAdmin || canApply ? (
+    <>
+      <div class="sc-friend-modal" id="friend-modal" hidden>
+        <button class="sc-friend-modal-backdrop" type="button" data-close-modal aria-label="关闭"></button>
+        <section class="sc-friend-modal-panel" role="dialog" aria-modal="true" aria-labelledby="friend-modal-title">
+          <header>
+            <h2 id="friend-modal-title">{isAdmin ? '添加友人' : '申请友链'}</h2>
+            <button type="button" data-close-modal aria-label="关闭">关闭</button>
+          </header>
+          <form class="sc-friend-form" id="friend-form">
+            <input id="friend-id" name="id" type="hidden" />
+            <label>
+              <span>名称</span>
+              <input class="sc-input" id="friend-name" name="name" required maxlength="80" />
+            </label>
+            <label>
+              <span>链接</span>
+              <input class="sc-input" id="friend-url" name="url" inputmode="url" placeholder="https://example.com" required maxlength="500" />
+            </label>
+            <label>
+              <span>头像 URL</span>
+              <input class="sc-input" id="friend-avatar-url" name="avatarUrl" inputmode="url" placeholder="https://example.com/avatar.png" maxlength="500" />
+            </label>
+            <label>
+              <span>简介</span>
+              <input class="sc-input" id="friend-description" name="description" maxlength="200" />
+            </label>
+            {isAdmin ? (
+              <label>
+                <span>状态</span>
+                <select class="sc-select" id="friend-status" name="status">
+                  <option value="approved">显示</option>
+                  <option value="hidden">隐藏</option>
+                  <option value="pending">待审核</option>
+                </select>
+              </label>
+            ) : null}
+            <div class="sc-friend-form-actions">
+              <button class="sc-button sc-button-primary" id="friend-save-button" type="submit">{isAdmin ? '保存友链' : '提交申请'}</button>
+              <button class="sc-button sc-button-secondary" type="button" data-close-modal>取消</button>
+            </div>
+            <p class="sc-friend-admin-message" id="friend-message" role="status"></p>
+          </form>
+        </section>
+      </div>
+
+      <script id="sc-friends-data" type="application/json" set:html={friendsJson}></script>
+      <script>
+        const isFriendAdmin = Boolean(document.getElementById('friend-add-button'));
+        const dataElement = document.getElementById('sc-friends-data');
+        let friendLinks = dataElement ? JSON.parse(dataElement.textContent || '[]') : [];
+
+        const gridRoot = document.getElementById('friend-grid-root');
+        const addButton = document.getElementById('friend-add-button');
+        const applyButton = document.getElementById('friend-apply-button');
+        const modal = document.getElementById('friend-modal');
+        const form = document.getElementById('friend-form');
+        const message = document.getElementById('friend-message');
+        const saveButton = document.getElementById('friend-save-button');
+        const modalTitle = document.getElementById('friend-modal-title');
+
+        const fields = {
+          id: document.getElementById('friend-id'),
+          name: document.getElementById('friend-name'),
+          url: document.getElementById('friend-url'),
+          avatarUrl: document.getElementById('friend-avatar-url'),
+          description: document.getElementById('friend-description'),
+          status: document.getElementById('friend-status')
+        };
+
+        function getInitial(name) {
+          return String(name || '友').trim().slice(0, 1).toUpperCase() || '友';
+        }
+
+        function displayNumber(index) {
+          return `No. ${String(index + 1).padStart(2, '0')}`;
+        }
+
+        function getStatusText(status) {
+          if (status === 'pending') {
+            return '待审核';
+          }
+
+          if (status === 'hidden') {
+            return '隐藏';
+          }
+
+          return '显示';
+        }
+
+        function escapeHtml(value) {
+          return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+        }
+
+        function escapeAttribute(value) {
+          return escapeHtml(value);
+        }
+
+        function setMessage(text, isError = false) {
+          if (!message) {
+            return;
+          }
+
+          message.textContent = text;
+          message.dataset.state = isError ? 'error' : 'success';
+        }
+
+        function clearForm() {
+          fields.id.value = '';
+          fields.name.value = '';
+          fields.url.value = '';
+          fields.avatarUrl.value = '';
+          fields.description.value = '';
+
+          if (fields.status) {
+            fields.status.value = 'approved';
+          }
+
+          saveButton.textContent = isFriendAdmin ? '保存友链' : '提交申请';
+          modalTitle.textContent = isFriendAdmin ? '添加友人' : '申请友链';
+          setMessage('');
+        }
+
+        function openModal(friend = null) {
+          clearForm();
+
+          if (friend) {
+            fields.id.value = friend.id;
+            fields.name.value = friend.name;
+            fields.url.value = friend.url;
+            fields.avatarUrl.value = friend.avatar_url || '';
+            fields.description.value = friend.description || '';
+
+            if (fields.status) {
+              fields.status.value = friend.status;
+            }
+
+            saveButton.textContent = '更新友链';
+            modalTitle.textContent = '编辑友人';
+          }
+
+          modal.hidden = false;
+          window.requestAnimationFrame(() => fields.name.focus());
+        }
+
+        function closeModal() {
+          modal.hidden = true;
+        }
+
+        function renderFriends() {
+          if (!gridRoot || !isFriendAdmin) {
+            return;
+          }
+
+          if (friendLinks.length === 0) {
+            gridRoot.innerHTML = '<p class="sc-empty-state">还没有友链。</p>';
+            return;
+          }
+
+          gridRoot.innerHTML = `
+            <div class="sc-friend-grid">
+              ${friendLinks
+                .map((friend, index) => {
+                  const avatar = friend.avatar_url
+                    ? `<img class="sc-friend-avatar" src="${escapeAttribute(friend.avatar_url)}" alt="" loading="lazy" />`
+                    : `<span class="sc-friend-avatar sc-friend-avatar-placeholder">${escapeHtml(getInitial(friend.name))}</span>`;
+                  const description = friend.description || friend.url;
+                  const statusBadge = friend.status !== 'approved' ? `<span class="sc-badge sc-badge-private">${getStatusText(friend.status)}</span>` : '';
+
+                  return `
+                    <article class="sc-friend-card ${friend.status !== 'approved' ? 'sc-friend-card-hidden' : ''}">
+                      <a class="sc-friend-card-link" href="${escapeAttribute(friend.url)}" target="_blank" rel="noreferrer">
+                        ${avatar}
+                        <span class="sc-friend-body">
+                          <span class="sc-friend-number">${displayNumber(index)}</span>
+                          <strong>${escapeHtml(friend.name)}</strong>
+                          <span>${escapeHtml(description)}</span>
+                        </span>
+                      </a>
+                      <div class="sc-friend-card-actions">
+                        ${statusBadge}
+                        <button type="button" data-edit="${escapeAttribute(friend.id)}">编辑</button>
+                        <button type="button" data-toggle="${escapeAttribute(friend.id)}">${friend.status === 'approved' ? '隐藏' : '显示'}</button>
+                        <button type="button" data-delete="${escapeAttribute(friend.id)}">删除</button>
+                      </div>
+                    </article>
+                  `;
+                })
+                .join('')}
+            </div>
+          `;
+        }
+
+        async function readError(response, fallback) {
+          const payload = await response.json().catch(() => null);
+          return payload?.error?.message || fallback;
+        }
+
+        async function refreshFriends() {
+          const response = await fetch('/api/admin/friends', { credentials: 'same-origin' });
+
+          if (!response.ok) {
+            throw new Error(await readError(response, '无法读取友链。'));
+          }
+
+          const payload = await response.json();
+          friendLinks = payload.data.friends;
+          renderFriends();
+        }
+
+        async function saveFriend(payload, id = '') {
+          const response = await fetch(id ? `/api/admin/friends/${encodeURIComponent(id)}` : '/api/admin/friends', {
+            method: id ? 'PATCH' : 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            throw new Error(await readError(response, '保存失败。'));
+          }
+        }
+
+        async function applyFriend(payload) {
+          const response = await fetch('/api/friends/apply', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            throw new Error(await readError(response, '提交失败。'));
+          }
+        }
+
+        addButton?.addEventListener('click', () => openModal());
+        applyButton?.addEventListener('click', () => openModal());
+
+        modal?.addEventListener('click', (event) => {
+          const target = event.target;
+
+          if (target instanceof HTMLElement && target.hasAttribute('data-close-modal')) {
+            closeModal();
+          }
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && modal && !modal.hidden) {
+            closeModal();
+          }
+        });
+
+        form?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          saveButton.disabled = true;
+          saveButton.textContent = isFriendAdmin ? (fields.id.value ? '更新中...' : '保存中...') : '提交中...';
+          setMessage('');
+
+          try {
+            const payload = {
+              name: fields.name.value,
+              url: fields.url.value,
+              avatarUrl: fields.avatarUrl.value,
+              description: fields.description.value,
+              status: fields.status ? fields.status.value : undefined
+            };
+
+            if (isFriendAdmin) {
+              await saveFriend(payload, fields.id.value);
+              await refreshFriends();
+              closeModal();
+            } else {
+              await applyFriend(payload);
+              setMessage('已提交，等待审核。');
+              form.reset();
+            }
+          } catch (error) {
+            setMessage(error instanceof Error ? error.message : '保存失败。', true);
+          } finally {
+            saveButton.disabled = false;
+            saveButton.textContent = isFriendAdmin ? (fields.id.value ? '更新友链' : '保存友链') : '提交申请';
+          }
+        });
+
+        gridRoot?.addEventListener('click', async (event) => {
+          const target = event.target;
+
+          if (!(target instanceof HTMLElement) || !isFriendAdmin) {
+            return;
+          }
+
+          const editId = target.dataset.edit;
+          const toggleId = target.dataset.toggle;
+          const deleteId = target.dataset.delete;
+
+          if (editId) {
+            const friend = friendLinks.find((item) => item.id === editId);
+
+            if (friend) {
+              openModal(friend);
+            }
+
+            return;
+          }
+
+          if (toggleId) {
+            const friend = friendLinks.find((item) => item.id === toggleId);
+
+            if (!friend) {
+              return;
+            }
+
+            target.setAttribute('disabled', 'true');
+
+            try {
+              await saveFriend(
+                {
+                  name: friend.name,
+                  url: friend.url,
+                  avatarUrl: friend.avatar_url || '',
+                  description: friend.description || '',
+                  status: friend.status === 'approved' ? 'hidden' : 'approved'
+                },
+                friend.id
+              );
+              await refreshFriends();
+            } catch {
+              target.removeAttribute('disabled');
+            }
+
+            return;
+          }
+
+          if (deleteId) {
+            if (!window.confirm('确定删除这条友链吗？')) {
+              return;
+            }
+
+            target.setAttribute('disabled', 'true');
+
+            try {
+              const response = await fetch(`/api/admin/friends/${encodeURIComponent(deleteId)}`, {
+                method: 'DELETE',
+                credentials: 'same-origin'
+              });
+
+              if (!response.ok) {
+                throw new Error(await readError(response, '删除失败。'));
+              }
+
+              await refreshFriends();
+            } catch {
+              target.removeAttribute('disabled');
+            }
+          }
+        });
+      </script>
+    </>
+  ) : null}
 </SiteLayout>

@@ -5,6 +5,7 @@ export type PostVisibility = 'public' | 'private';
 export type AssetVisibility = 'draft' | 'public' | 'private' | 'deleted';
 export type AssetRole = 'inline' | 'cover';
 export type SettingType = 'string' | 'number' | 'boolean' | 'json';
+export type FriendLinkStatus = 'approved' | 'hidden' | 'pending';
 
 export interface UserRow {
   id: string;
@@ -94,6 +95,30 @@ export interface SettingRow {
   key: string;
   value: string;
   type: SettingType;
+  updated_at: string;
+}
+
+export interface FriendLinkRow {
+  id: string;
+  name: string;
+  url: string;
+  avatar_url: string | null;
+  description: string | null;
+  status: FriendLinkStatus;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SiteSettingRow {
+  key: string;
+  value: string;
+  updated_at: string;
+}
+
+export interface PostViewCountRow {
+  post_id: string;
+  count: number;
   updated_at: string;
 }
 

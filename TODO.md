@@ -13,6 +13,8 @@
 - [x] Add RSS feed and sitemap.
 - [x] Refine public navigation and discovery pages.
 - [x] Add lightweight local search overlay.
+- [x] Add friend links V1.
+- [x] Add site settings controls.
 
 ## P1
 
@@ -22,7 +24,8 @@
 - [ ] Warn before leaving the post editor with unsaved changes.
 - [ ] Add full-content RSS after safe absolute URL rewriting for rendered HTML.
 - [ ] Connect real tag management.
-- [ ] Connect friend link management.
+- [ ] Add friend link health monitoring flow.
+- [ ] Add external comment provider integration.
 
 ## P2
 

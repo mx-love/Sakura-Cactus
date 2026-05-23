@@ -1,6 +1,7 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { getSiteSettings } from '@/features/settings/settings.service';
 
 export const prerender = false;
 
@@ -10,85 +11,8 @@ if (!adminUser) {
   return Astro.redirect(`/admin/login?next=${encodeURIComponent('/settings')}`);
 }
 
-const friendSettings = [
-  {
-    title: '友链申请',
-    description: '允许其他用户申请友链，需要审核。',
-    control: 'switch',
-    status: '后续接入'
-  },
-  {
-    title: '友链健康监测',
-    description: '启用朋友链接可访问性检查。',
-    control: 'switch',
-    status: '后续接入'
-  },
-  {
-    title: '友链健康监测 User-Agent',
-    description: '设置友链可访问性检查时使用的 User-Agent。',
-    control: 'button',
-    action: '更新',
-    status: '后续接入'
-  }
-];
-
-const otherSettings = [
-  {
-    title: '启用右上角登录按钮',
-    description: '开启后右上角显示登录入口。',
-    control: 'switch',
-    checked: true,
-    status: 'V1 固定启用'
-  },
-  {
-    title: '启用评论',
-    description: '开启/关闭文章底部评论入口与评论区。',
-    control: 'switch',
-    status: '后续接入'
-  },
-  {
-    title: '启用访问量统计',
-    description: '启用统计文章 PV 与 UV 功能。',
-    control: 'switch',
-    status: '计划实现'
-  },
-  {
-    title: 'RSS 订阅链接',
-    description: '启用站点底部 RSS 订阅链接。',
-    control: 'button',
-    action: '查看',
-    status: '后续接入'
-  },
-  {
-    title: '网站图标',
-    description: '设置显示于浏览器地址栏的图标 Favicon。',
-    control: 'button',
-    action: '上传',
-    status: '计划实现'
-  },
-  {
-    title: '站点底部内容',
-    description: '设置显示于站点底部的内容 HTML。',
-    control: 'button',
-    action: '更新',
-    status: '后续接入'
-  },
-  {
-    title: '清除缓存',
-    description: '清除缓存文件或过期临时内容，不会删除真实文章、图片或数据。',
-    control: 'button',
-    action: '清除',
-    status: '后续接入',
-    danger: true
-  },
-  {
-    title: '从 WordPress 导入',
-    description: '上传 WordPress 导出的 XML 文件。',
-    control: 'button',
-    action: '上传',
-    status: '计划实现'
-  }
-];
+const settings = await getSiteSettings();
+const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
 ---
 
 <SiteLayout title="设置 | Sakura Cactus" description="Sakura Cactus 设置">
@@ -96,62 +20,177 @@ const otherSettings = [
     <div class="sc-settings-shell">
       <header class="sc-settings-header">
         <h1>设置</h1>
-        <p>这些开关和操作会在后续版本逐步接入。</p>
       </header>
 
-      <div class="sc-settings-container">
+      <div class="sc-settings-container sc-settings-rows-container">
         <section class="sc-settings-group">
-          <h2>友链设置</h2>
-          <div class="sc-settings-list">
-            {friendSettings.map((item) => (
-              <article class="sc-settings-row">
-                <div class="sc-settings-copy">
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                </div>
-                <div class="sc-settings-control">
-                  {item.control === 'switch' ? (
-                    <label class="sc-switch">
-                      <input type="checkbox" checked={Boolean(item.checked)} disabled />
-                      <span></span>
-                    </label>
-                  ) : (
-                    <button class="sc-settings-button" type="button" disabled>{item.action}</button>
-                  )}
-                  <small>{item.status}</small>
-                </div>
-              </article>
-            ))}
+          <h2>友人帐设置</h2>
+          <div class="sc-settings-row-list">
+            <article class="sc-settings-compact-row">
+              <div>
+                <h3>友链申请</h3>
+                <p>开启后访客可以提交友链申请，提交后需要审核。</p>
+              </div>
+              <label class="sc-switch">
+                <input id="friend-apply-enabled" type="checkbox" checked={settings.friendApplyEnabled} />
+                <span></span>
+              </label>
+            </article>
+            <article class="sc-settings-compact-row">
+              <div>
+                <h3>友链健康监测</h3>
+                <p>定期检查友链可访问性。</p>
+              </div>
+              <span class="sc-settings-status">后续</span>
+            </article>
           </div>
         </section>
 
         <section class="sc-settings-group">
           <h2>其他设置</h2>
-          <div class="sc-settings-list">
-            {otherSettings.map((item) => (
-              <article class="sc-settings-row">
-                <div class="sc-settings-copy">
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                </div>
-                <div class="sc-settings-control">
-                  {item.control === 'switch' ? (
-                    <label class="sc-switch">
-                      <input type="checkbox" checked={Boolean(item.checked)} disabled />
-                      <span></span>
-                    </label>
-                  ) : (
-                    <button class={item.danger ? 'sc-settings-button sc-settings-button-danger' : 'sc-settings-button'} type="button" disabled>
-                      {item.action}
-                    </button>
-                  )}
-                  <small>{item.status}</small>
-                </div>
-              </article>
-            ))}
+          <div class="sc-settings-row-list">
+            <article class="sc-settings-compact-row sc-settings-compact-row-top">
+              <div>
+                <h3>评论</h3>
+                <p>开启或关闭文章底部评论入口。</p>
+              </div>
+              <label class="sc-switch">
+                <input id="comment-enabled" type="checkbox" checked={settings.commentEnabled} />
+                <span></span>
+              </label>
+            </article>
+
+            <article class="sc-settings-compact-row">
+              <div>
+                <h3>访问量统计</h3>
+                <p>关闭时不统计、不显示；开启时记录并显示文章 PV。</p>
+              </div>
+              <label class="sc-switch">
+                <input id="view-count-enabled" type="checkbox" checked={settings.viewCountEnabled} />
+                <span></span>
+              </label>
+            </article>
+
+            <article class="sc-settings-compact-row">
+              <div>
+                <h3>网站图标</h3>
+                <p>使用外部 favicon URL，不上传图片。</p>
+              </div>
+              <input class="sc-input sc-settings-url-input" id="favicon-url" placeholder="https://example.com/favicon.png" value={settings.faviconUrl} />
+            </article>
+
+            <article class="sc-settings-compact-row">
+              <div>
+                <h3>站点维护</h3>
+                <p>清理超过 24 小时、未引用的临时图片。不会删除文章、清空 R2 或清空 D1。</p>
+                {settings.maintenanceLastRunAt ? <small>上次执行：{new Date(settings.maintenanceLastRunAt).toLocaleString()}</small> : null}
+              </div>
+              <button class="sc-settings-link" id="cleanup-assets-button" type="button">清理过期图片</button>
+            </article>
+
+            <article class="sc-settings-compact-row">
+              <div>
+                <h3>WordPress 导入</h3>
+              </div>
+              <span class="sc-settings-status">待定</span>
+            </article>
+          </div>
+
+          <div class="sc-settings-savebar">
+            <button class="sc-button sc-button-primary" id="settings-save-button" type="button">保存设置</button>
+            <p id="settings-message" role="status"></p>
           </div>
         </section>
       </div>
     </div>
   </section>
+
+  <script id="sc-settings-data" type="application/json" set:html={settingsJson}></script>
+  <script>
+    const message = document.getElementById('settings-message');
+    const saveButton = document.getElementById('settings-save-button');
+    const cleanupButton = document.getElementById('cleanup-assets-button');
+
+    function setMessage(text, isError = false) {
+      if (!message) {
+        return;
+      }
+
+      message.textContent = text;
+      message.dataset.state = isError ? 'error' : 'success';
+    }
+
+    function fieldValue(id) {
+      const field = document.getElementById(id);
+      return field && 'value' in field ? field.value : '';
+    }
+
+    function checkedValue(id) {
+      const field = document.getElementById(id);
+      return field instanceof HTMLInputElement ? field.checked : false;
+    }
+
+    async function readError(response, fallback) {
+      const payload = await response.json().catch(() => null);
+      return payload?.error?.message || fallback;
+    }
+
+    saveButton?.addEventListener('click', async () => {
+      saveButton.disabled = true;
+      saveButton.textContent = '保存中...';
+      setMessage('');
+
+      try {
+        const response = await fetch('/api/admin/settings', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            friendApplyEnabled: checkedValue('friend-apply-enabled'),
+            commentEnabled: checkedValue('comment-enabled'),
+            viewCountEnabled: checkedValue('view-count-enabled'),
+            faviconUrl: fieldValue('favicon-url')
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(await readError(response, '保存失败。'));
+        }
+
+        setMessage('已保存');
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : '保存失败。', true);
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = '保存设置';
+      }
+    });
+
+    cleanupButton?.addEventListener('click', async () => {
+      cleanupButton.disabled = true;
+      cleanupButton.textContent = '清理中...';
+      setMessage('');
+
+      try {
+        const response = await fetch('/api/admin/maintenance/cleanup-assets', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+          throw new Error(await readError(response, '清理失败。'));
+        }
+
+        const payload = await response.json();
+        setMessage(`已清理 ${payload.data.stats.deleted} 个，失败 ${payload.data.stats.failed} 个。`);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : '清理失败。', true);
+      } finally {
+        cleanupButton.disabled = false;
+        cleanupButton.textContent = '清理过期图片';
+      }
+    });
+  </script>
 </SiteLayout>

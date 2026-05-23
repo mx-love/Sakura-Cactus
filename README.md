@@ -66,12 +66,19 @@ Implemented:
 - Sitemap at `/sitemap.xml`
 - Robots metadata at `/robots.txt`
 - Lightweight local search overlay and `/search` fallback page
+- Friend links V1 with public `/friends` display and inline management on `/friends`
+- Site settings stored in D1 `site_settings`
+- Friend link application toggle with pending review
+- Comment on/off setting
+- Optional PV view counts
+- External favicon URL setting
+- Site maintenance action for expired unreferenced image cleanup
 
 Not implemented yet:
 
-- Full settings system
 - Full tag management
-- Friend link management and application flow
+- Friend link health monitoring flow
+- Comment content storage is intentionally not implemented; use external comment providers
 
 ## Commands
 
@@ -139,6 +146,34 @@ Sakura Cactus uses `SITE_URL` when generating RSS and sitemap URLs. If `SITE_URL
 ```txt
 SITE_AVATAR_URL=https://example.com/avatar.png
 ```
+
+## Friend Links
+
+`/friends` displays approved friend links as a public friend-book page.
+
+Administrators can manage friend links directly from `/friends` after signing in:
+
+- name
+- site URL
+- optional avatar URL
+- optional description
+- status: visible, hidden, or pending
+
+Friend link URLs and avatar URLs must use `http` or `https`. Sakura Cactus does not fetch or health-check these URLs in V1.
+
+If friend link applications are enabled in `/settings`, visitors can submit a friend link request from `/friends`. New submissions are saved as `pending` and are not publicly shown until an administrator approves them.
+
+## Site Settings
+
+`/settings` stores real site controls in D1 `site_settings`:
+
+- friend link applications on/off
+- comment entry on/off
+- PV view count on/off
+- external favicon URL
+- site maintenance action for expired unreferenced image cleanup
+
+Comments are currently only a feature toggle. When enabled, administrators can see a lightweight placeholder on article pages. Sakura Cactus does not store comment content in D1. External comment provider integration can be added later as a separate feature.
 
 It is not a secret. You can upload an avatar to your CDN or another public image host later, then point `SITE_AVATAR_URL` at that public URL. Sakura Cactus does not provide avatar upload UI in V1.
 

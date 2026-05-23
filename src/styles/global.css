@@ -1355,6 +1355,10 @@ summary {
   overflow: hidden;
 }
 
+.sc-settings-rows-container {
+  box-shadow: 0 16px 42px rgba(47, 41, 44, 0.048);
+}
+
 .sc-settings-group {
   padding: clamp(1.15rem, 3vw, 1.65rem);
 }
@@ -1370,8 +1374,211 @@ summary {
   font-weight: 850;
 }
 
+.sc-settings-row-list {
+  display: grid;
+}
+
+.sc-settings-compact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
+  padding-block: 0.92rem;
+}
+
+.sc-settings-compact-row:first-child {
+  border-top: 0;
+}
+
+.sc-settings-compact-row h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.96rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.sc-settings-compact-row p {
+  max-width: 38rem;
+  margin: 0.28rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.sc-settings-status {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(240, 227, 231, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 250, 252, 0.82);
+  padding: 0.34rem 0.62rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 820;
+}
+
+.sc-settings-compact-row small {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--color-subtle);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.sc-settings-compact-row-top {
+  padding-bottom: 0.7rem;
+}
+
+.sc-settings-subform {
+  display: grid;
+  gap: 0.8rem;
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
+  padding-block: 0.9rem 1rem;
+}
+
+.sc-settings-subform label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.sc-settings-provider-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.sc-settings-provider-fields[hidden] {
+  display: none;
+}
+
+.sc-settings-provider-fields .sc-textarea {
+  grid-column: 1 / -1;
+  min-height: 9rem;
+}
+
+.sc-settings-url-input {
+  width: min(100%, 24rem);
+}
+
+.sc-settings-savebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
+  padding-top: 1rem;
+}
+
+.sc-settings-savebar p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
+.sc-settings-savebar p[data-state="success"] {
+  color: var(--color-primary);
+}
+
+.sc-settings-savebar p[data-state="error"] {
+  color: var(--color-danger);
+}
+
+.sc-settings-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.sc-settings-group-head p,
+.sc-settings-plan p {
+  margin: 0.35rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.sc-settings-link {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  padding: 0.45rem 0.8rem;
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.sc-settings-link:hover {
+  background: rgba(217, 111, 145, 0.16);
+  text-decoration: none;
+}
+
 .sc-settings-list {
   display: grid;
+}
+
+.sc-settings-entry-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.sc-settings-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
+  padding-block: 1rem;
+}
+
+.sc-settings-entry:first-child {
+  border-top: 0;
+}
+
+.sc-settings-entry h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 820;
+}
+
+.sc-settings-entry p {
+  margin: 0.35rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.sc-settings-plan-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.sc-settings-plan-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(240, 227, 231, 0.85);
+  border-radius: 999px;
+  background: rgba(255, 250, 252, 0.72);
+  padding: 0.42rem 0.68rem;
+  color: var(--color-text);
+  font-size: 0.86rem;
+  font-weight: 720;
+}
+
+.sc-settings-plan-list small {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 780;
 }
 
 .sc-settings-row {
@@ -1483,6 +1690,320 @@ summary {
   color: var(--color-danger);
 }
 
+.sc-friends-shell {
+  max-width: 860px;
+}
+
+.sc-friends-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 2.5rem 1rem;
+}
+
+.sc-friends-header h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.sc-friends-header p {
+  margin: 0.7rem 0 0;
+  color: var(--color-muted);
+  line-height: 1.75;
+}
+
+.sc-friend-add-button {
+  flex: 0 0 auto;
+}
+
+.sc-friend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.95rem;
+  margin-top: 2rem;
+}
+
+.sc-friend-card {
+  border: 1px solid rgba(241, 219, 226, 0.86);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.95rem;
+  color: inherit;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.sc-friend-card:hover {
+  border-color: rgba(217, 111, 145, 0.3);
+  background: rgba(255, 248, 250, 0.96);
+  transform: translateY(-1px);
+}
+
+.sc-friend-card-hidden {
+  opacity: 0.72;
+}
+
+.sc-friend-card-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sc-friend-avatar {
+  display: inline-grid;
+  width: 3.15rem;
+  height: 3.15rem;
+  place-items: center;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.sc-friend-avatar-placeholder {
+  background: linear-gradient(135deg, rgba(217, 111, 145, 0.18), rgba(146, 184, 134, 0.18));
+  color: var(--color-primary);
+  font-weight: 850;
+}
+
+.sc-friend-body {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.sc-friend-body strong {
+  color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.sc-friend-body .sc-friend-number {
+  color: var(--color-subtle);
+  font-size: 0.72rem;
+  font-weight: 820;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sc-friend-body span {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  text-overflow: ellipsis;
+}
+
+.sc-friend-muted {
+  white-space: nowrap;
+}
+
+.sc-friend-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.42rem;
+  margin-top: 0.8rem;
+  padding-left: 4rem;
+}
+
+.sc-friend-card-actions button {
+  border: 1px solid rgba(240, 227, 231, 0.92);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.28rem 0.56rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 780;
+}
+
+.sc-friend-card-actions button:hover {
+  border-color: rgba(217, 111, 145, 0.28);
+  color: var(--color-primary);
+}
+
+.sc-friend-modal[hidden] {
+  display: none;
+}
+
+.sc-friend-modal {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.sc-friend-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(39, 35, 38, 0.2);
+}
+
+.sc-friend-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 560px);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  border: 1px solid rgba(240, 227, 231, 0.9);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 1.15rem;
+  box-shadow: 0 24px 70px rgba(47, 41, 44, 0.14);
+}
+
+.sc-friend-modal-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sc-friend-modal-panel h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.12rem;
+  font-weight: 850;
+}
+
+.sc-friend-modal-panel header button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  padding: 0.38rem 0.68rem;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.sc-friend-admin {
+  overflow: visible;
+}
+
+.sc-friend-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  border: 1px solid rgba(240, 227, 231, 0.78);
+  border-radius: 20px;
+  background: rgba(255, 250, 252, 0.72);
+  padding: 1rem;
+}
+
+.sc-friend-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.sc-friend-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.sc-friend-admin-message {
+  align-self: center;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
+.sc-friend-admin-message[data-state="error"] {
+  color: var(--color-danger);
+}
+
+.sc-friend-admin-message[data-state="success"] {
+  color: var(--color-primary);
+}
+
+.sc-friend-admin-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sc-friend-admin-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
+  padding-top: 0.9rem;
+}
+
+.sc-friend-admin-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sc-friend-admin-item strong {
+  color: var(--color-text);
+  font-size: 0.98rem;
+}
+
+.sc-friend-admin-item a {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-primary);
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-friend-admin-item p {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.sc-friend-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.sc-comments {
+  margin-top: clamp(2rem, 5vw, 3rem);
+  border-top: 1px solid rgba(240, 227, 231, 0.82);
+  padding-top: 1.5rem;
+}
+
+.sc-comments h2 {
+  margin: 0 0 1rem;
+  color: var(--color-text);
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.sc-comments-note {
+  margin: 0;
+  border-radius: 16px;
+  background: rgba(255, 248, 250, 0.9);
+  padding: 0.85rem 1rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
 @media (max-width: 760px) {
   .sc-site-header-inner {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -1559,6 +2080,15 @@ summary {
     grid-template-columns: 1fr;
   }
 
+  .sc-settings-compact-row {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .sc-settings-provider-fields {
+    grid-template-columns: 1fr;
+  }
+
   .sc-settings-control {
     width: 100%;
     min-width: 0;
@@ -1567,5 +2097,29 @@ summary {
 
   .sc-settings-button {
     min-width: 6rem;
+  }
+
+  .sc-settings-group-head {
+    flex-direction: column;
+  }
+
+  .sc-settings-entry,
+  .sc-friends-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sc-friend-grid,
+  .sc-friend-form,
+  .sc-friend-admin-item {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-friend-card-actions {
+    padding-left: 0;
+  }
+
+  .sc-friend-admin-actions {
+    justify-content: flex-start;
   }
 }

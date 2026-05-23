@@ -1,6 +1,7 @@
 ---
 import '@/styles/global.css';
 import SiteHeader from './SiteHeader.astro';
+import { getSiteSettings } from '@/features/settings/settings.service';
 
 interface Props {
   title?: string;
@@ -37,6 +38,8 @@ const footerLinks = [
     icon: 'bilibili'
   }
 ];
+const siteSettings = await getSiteSettings();
+const faviconHref = siteSettings.faviconUrl || '/favicon.svg';
 ---
 
 <!doctype html>
@@ -51,7 +54,7 @@ const footerLinks = [
     {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
     {ogImage ? <meta property="og:image" content={ogImage} /> : null}
     <link rel="alternate" type="application/rss+xml" title="Sakura Cactus RSS" href="/rss.xml" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {siteSettings.faviconUrl ? <link rel="icon" href={faviconHref} /> : <link rel="icon" type="image/svg+xml" href={faviconHref} />}
     <title>{title}</title>
   </head>
   <body>

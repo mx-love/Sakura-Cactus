@@ -3,17 +3,25 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminPostBySlug, getPublicPostBySlug, getPublicPosts } from '@/features/posts/post.service';
+import { getPostViewCount, getSiteSettings, incrementPostViewCount } from '@/features/settings/settings.service';
 
 export const prerender = false;
 
 const slug = Astro.params.slug;
 const adminUser = await getCurrentAdminUser(Astro);
-const post = slug ? ((await getPublicPostBySlug(slug)) ?? (adminUser ? await getAdminPostBySlug(slug) : null)) : null;
+const publicPost = slug ? await getPublicPostBySlug(slug) : null;
+const post = slug ? (publicPost ?? (adminUser ? await getAdminPostBySlug(slug) : null)) : null;
 
 if (!post) {
   return new Response('Not found', { status: 404 });
 }
 
+const siteSettings = await getSiteSettings();
+const viewCount = siteSettings.viewCountEnabled
+  ? publicPost
+    ? await incrementPostViewCount(post.id)
+    : await getPostViewCount(post.id)
+  : null;
 const title = post.seoTitle ?? post.title;
 const description = post.seoDescription ?? post.excerpt ?? 'Sakura Cactus post.';
 const canonicalUrl = new URL(`/posts/${post.slug}`, Astro.url.origin).href;
@@ -71,6 +79,7 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
                 <span>Published</span>
               )}
               {shouldShowUpdatedAt ? <span> · 更新于 {formatDate(updatedAt)}</span> : null}
+              {viewCount !== null ? <span> · 阅读 {viewCount}</span> : null}
             </p>
             <h1>{post.title}</h1>
             {post.excerpt ? <p class="sc-article-subtitle">{post.excerpt}</p> : null}
@@ -84,6 +93,12 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
           </div>
         </header>
         <div class="sc-prose prose-content sc-article-prose sc-article-inner" set:html={post.contentHtml} />
+        {siteSettings.commentEnabled && adminUser ? (
+          <section class="sc-comments sc-article-inner">
+            <h2>留言</h2>
+            <p class="sc-comments-note">评论功能将在后续接入。</p>
+          </section>
+        ) : null}
         {previousPost || nextPost ? (
           <footer class="sc-article-nav sc-article-inner" aria-label="文章导航">
             {previousPost ? (

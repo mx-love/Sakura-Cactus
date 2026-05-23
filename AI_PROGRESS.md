@@ -334,3 +334,19 @@ Build completed successfully.
 ## Next Step
 
 Stage 7: add security hardening and deployment docs.
+
+Friend links V1:
+
+- Added `friend_links` D1 migration.
+- Added public `/friends` display for approved links.
+- Added signed-in `/friends` inline create/edit/hide/delete management.
+- Changed `/settings` back to a lightweight settings overview with real entry points only.
+
+Site settings controls:
+
+- Added `site_settings` D1 storage.
+- Added `post_view_counts` for optional PV counts.
+- Added friend link application toggle and pending review flow.
+- Added a comment on/off setting without external provider integration.
+- Added external favicon URL output.
+- Added settings-triggered expired unreferenced image cleanup.
