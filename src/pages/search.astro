@@ -4,14 +4,59 @@ import { getPublicPosts } from '@/features/posts/post.service';
 
 export const prerender = false;
 
-const posts = await getPublicPosts();
-const searchPosts = posts.map((post) => ({
-  title: post.title,
-  excerpt: post.excerpt ?? '',
-  slug: post.slug,
-  publishedAt: post.publishedAt,
-  tags: post.tags.map((tag) => tag.name)
-}));
+function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
+  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
+}
+
+function getSearchDateTerms(value: string | null) {
+  if (!value) {
+    return [];
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return [];
+  }
+
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+
+  return [
+    `${year}/${mm}/${dd}`,
+    `${year}-${mm}-${dd}`,
+    `${year}年${month}月${day}日`,
+    `${year}年${mm}月${dd}日`,
+    `${month}月${day}日`,
+    `${mm}/${dd}`,
+    `${month}/${day}`,
+    `${day}日`,
+    `${day}号`,
+    `${year}年${month}月`,
+    `${year}年${mm}月`,
+    `${year}/${mm}`,
+    `${year}-${month}`,
+    `${year}-${mm}`,
+    String(year)
+  ];
+}
+
+const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
+const searchPosts = posts.map((post) => {
+  const tags = post.tags.map((tag) => tag.name);
+
+  return {
+    title: post.title,
+    excerpt: post.excerpt ?? '',
+    slug: post.slug,
+    publishedAt: post.publishedAt,
+    tags,
+    searchableText: [post.title, post.excerpt ?? '', ...tags, ...getSearchDateTerms(post.publishedAt)].join(' ').toLowerCase()
+  };
+});
 const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
 ---
 
@@ -26,12 +71,10 @@ const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
 
       <header class="sc-page-header">
         <h1>搜索</h1>
-        <p>搜索公开文章。</p>
       </header>
 
       <div class="sc-search">
-        <label class="sc-search-label" for="search-input">搜索文章</label>
-        <input id="search-input" class="sc-search-input" type="search" placeholder="输入标题、简介或标签" autocomplete="off" />
+        <input id="search-input" class="sc-search-input" type="search" placeholder="请输入关键字" autocomplete="off" aria-label="搜索公开文章" />
         <p id="search-count" class="sc-search-count"></p>
       </div>
 
@@ -70,6 +113,11 @@ const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
 
           results.textContent = '';
           count.textContent = items.length ? `${items.length} 篇文章` : '';
+
+          if (!input?.value.trim()) {
+            count.textContent = '';
+            return;
+          }
 
           if (items.length === 0) {
             results.append(emptyTemplate.content.cloneNode(true));
@@ -123,18 +171,17 @@ const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
         function search() {
           const query = input?.value.trim().toLowerCase() || '';
           if (!query) {
-            render(posts);
+            render([]);
             return;
           }
 
           render(posts.filter((post) => {
-            const haystack = [post.title, post.excerpt, ...post.tags].join(' ').toLowerCase();
-            return haystack.includes(query);
+            return String(post.searchableText || '').includes(query);
           }));
         }
 
         input?.addEventListener('input', search);
-        render(posts);
+        render([]);
       </script>
     </div>
   </section>

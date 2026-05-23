@@ -3,6 +3,8 @@ import { useState } from 'react';
 interface PostDetailAdminActionsProps {
   isAdmin: boolean;
   postId?: string;
+  showPin?: boolean;
+  deleteRedirectTo?: string;
 }
 
 function ShareIcon() {
@@ -47,7 +49,7 @@ function TrashIcon() {
   );
 }
 
-export function PostDetailAdminActions({ isAdmin, postId }: PostDetailAdminActionsProps) {
+export function PostDetailAdminActions({ isAdmin, postId, showPin = true, deleteRedirectTo = '/articles' }: PostDetailAdminActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -91,7 +93,7 @@ export function PostDetailAdminActions({ isAdmin, postId }: PostDetailAdminActio
         return;
       }
 
-      window.location.assign('/articles');
+      window.location.assign(deleteRedirectTo);
     } finally {
       setIsDeleting(false);
     }
@@ -105,15 +107,17 @@ export function PostDetailAdminActions({ isAdmin, postId }: PostDetailAdminActio
         </button>
         {isAdmin ? (
           <>
-            <button
-              className="sc-article-icon-action sc-article-icon-disabled"
-              disabled
-              type="button"
-              aria-label="置顶（后续接入）"
-              title="置顶（后续接入）"
-            >
-              <PinIcon />
-            </button>
+            {showPin ? (
+              <button
+                className="sc-article-icon-action sc-article-icon-disabled"
+                disabled
+                type="button"
+                aria-label="置顶（后续接入）"
+                title="置顶（后续接入）"
+              >
+                <PinIcon />
+              </button>
+            ) : null}
             {postId ? (
               <a className="sc-article-icon-action" href={`/write?post=${postId}`} aria-label="编辑" title="编辑">
                 <PencilIcon />

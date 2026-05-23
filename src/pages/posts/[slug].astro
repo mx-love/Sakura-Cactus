@@ -23,7 +23,7 @@ const ogImage = post.coverImageUrl?.startsWith('/')
 const publishedAt = post.publishedAt ? new Date(post.publishedAt) : null;
 const updatedAt = new Date(post.updatedAt);
 const shouldShowUpdatedAt = publishedAt ? updatedAt.getTime() - publishedAt.getTime() > 60_000 : false;
-const publicPosts = await getPublicPosts();
+const publicPosts = (await getPublicPosts()).filter((item) => !isAboutPost(item));
 const currentPublicIndex = publicPosts.findIndex((item) => item.slug === post.slug);
 const previousPost = currentPublicIndex > 0 ? publicPosts[currentPublicIndex - 1] : null;
 const nextPost = currentPublicIndex >= 0 && currentPublicIndex < publicPosts.length - 1 ? publicPosts[currentPublicIndex + 1] : null;
@@ -36,6 +36,10 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
 
 function formatDate(date: Date | null) {
   return date ? dateFormatter.format(date) : '';
+}
+
+function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
+  return item.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
 }
 ---
 

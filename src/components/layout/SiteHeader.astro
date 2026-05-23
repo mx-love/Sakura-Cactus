@@ -1,5 +1,7 @@
 ---
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { getPublicPosts } from '@/features/posts/post.service';
+import { env } from 'cloudflare:workers';
 
 const leadingNavItems = [
   { href: '/articles', label: '文章' },
@@ -16,8 +18,62 @@ const publicNavItems = [...leadingNavItems, ...trailingNavItems];
 
 const adminUser = await getCurrentAdminUser(Astro);
 const pathname = Astro.url.pathname;
-const accountHref = adminUser ? '/write' : '/admin/login';
-const accountLabel = adminUser ? '写作' : '登录';
+const nextPath = `${Astro.url.pathname}${Astro.url.search}`;
+const accountHref = `/admin/login?next=${encodeURIComponent(nextPath)}`;
+const avatarUrl = adminUser ? env.SITE_AVATAR_URL?.trim() : '';
+const posts = await getPublicPosts();
+
+function getSearchDateTerms(value: string | null) {
+  if (!value) {
+    return [];
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return [];
+  }
+
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+
+  return [
+    `${year}/${mm}/${dd}`,
+    `${year}-${mm}-${dd}`,
+    `${year}年${month}月${day}日`,
+    `${year}年${mm}月${dd}日`,
+    `${month}月${day}日`,
+    `${mm}/${dd}`,
+    `${month}/${day}`,
+    `${day}日`,
+    `${day}号`,
+    `${year}年${month}月`,
+    `${year}年${mm}月`,
+    `${year}/${mm}`,
+    `${year}-${month}`,
+    `${year}-${mm}`,
+    String(year)
+  ];
+}
+
+const searchPosts = posts
+  .filter((post) => !post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about'))
+  .map((post) => {
+    const tags = post.tags.map((tag) => tag.name);
+
+    return {
+      title: post.title,
+      excerpt: post.excerpt ?? '',
+      slug: post.slug,
+      publishedAt: post.publishedAt,
+      tags,
+      searchableText: [post.title, post.excerpt ?? '', ...tags, ...getSearchDateTerms(post.publishedAt)].join(' ').toLowerCase()
+    };
+  });
+const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
 
 function isActive(href: string) {
   return pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
@@ -54,7 +110,7 @@ function isActive(href: string) {
     </nav>
 
     <div class="sc-site-actions">
-      <a class="sc-icon-link" href="/search" aria-label="搜索" title="搜索">
+      <a class="sc-icon-link" href="/search" aria-label="搜索" title="搜索" data-search-open>
         <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="m21 21-4.35-4.35" />
           <circle cx="11" cy="11" r="7" />
@@ -67,12 +123,42 @@ function isActive(href: string) {
           <circle cx="5" cy="19" r="1" />
         </svg>
       </a>
-      <a class="sc-icon-link" href={accountHref} aria-label={accountLabel} title={accountLabel}>
-        <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M20 21a8 8 0 0 0-16 0" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-      </a>
+      {adminUser ? (
+        <button class="sc-icon-link sc-account-button" type="button" aria-label="账号" title="账号" data-account-logout>
+          <span class="sc-account-default" data-account-default>
+            {avatarUrl ? (
+              <>
+                <img class="sc-account-avatar" src={avatarUrl} alt="" loading="lazy" data-account-avatar />
+                <span class="sc-account-fallback" hidden data-account-fallback>
+                  <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21a8 8 0 0 0-16 0" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
+              </>
+            ) : (
+              <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21a8 8 0 0 0-16 0" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            )}
+          </span>
+          <span class="sc-account-logout-icon" aria-hidden="true">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <path d="M16 17l5-5-5-5" />
+              <path d="M21 12H9" />
+            </svg>
+          </span>
+        </button>
+      ) : (
+        <a class="sc-icon-link" href={accountHref} aria-label="登录" title="登录">
+          <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21a8 8 0 0 0-16 0" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </a>
+      )}
 
       <details class="relative md:hidden">
         <summary class="sc-icon-link list-none" aria-label="菜单">
@@ -99,4 +185,211 @@ function isActive(href: string) {
       </details>
     </div>
   </div>
+  <div class="sc-search-overlay" hidden data-search-overlay>
+    <button class="sc-search-backdrop" type="button" aria-label="关闭搜索" data-search-close></button>
+    <section class="sc-search-dialog" role="dialog" aria-modal="true" aria-label="搜索">
+      <div class="sc-search-box">
+        <div class="sc-search-overlay-input-row">
+          <input id="site-search-overlay-input" class="sc-search-overlay-input" type="search" placeholder="请输入关键字" autocomplete="off" data-search-input />
+          <button class="sc-search-close" type="button" aria-label="关闭搜索" data-search-close>关闭</button>
+        </div>
+        <p class="sc-search-overlay-status" data-search-status hidden></p>
+        <div class="sc-search-overlay-results" data-search-results></div>
+      </div>
+    </section>
+  </div>
+  <script id="site-search-posts" type="application/json" set:html={searchJson}></script>
+  <script is:inline>
+    (() => {
+      const overlay = document.querySelector('[data-search-overlay]');
+      const input = overlay?.querySelector('[data-search-input]');
+      const results = overlay?.querySelector('[data-search-results]');
+      const status = overlay?.querySelector('[data-search-status]');
+      const postsElement = document.getElementById('site-search-posts');
+      const posts = JSON.parse(postsElement?.textContent || '[]');
+      const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+
+      function clearResults() {
+        if (results) results.textContent = '';
+      }
+
+      function createTagList(tags) {
+        const tagList = document.createElement('div');
+        tagList.className = 'sc-tag-list sc-search-result-tags';
+
+        for (const tag of tags) {
+          const item = document.createElement('span');
+          item.className = 'sc-tag-link sc-tag-link-static';
+          item.textContent = tag;
+          tagList.append(item);
+        }
+
+        return tagList;
+      }
+
+      function createResult(post) {
+        const link = document.createElement('a');
+        link.className = 'sc-search-overlay-result';
+        link.href = `/posts/${post.slug}`;
+
+        const title = document.createElement('strong');
+        title.textContent = post.title;
+        link.append(title);
+
+        if (post.publishedAt) {
+          const meta = document.createElement('small');
+          meta.textContent = dateFormatter.format(new Date(post.publishedAt));
+          link.append(meta);
+        }
+
+        if (post.excerpt) {
+          const excerpt = document.createElement('span');
+          excerpt.textContent = post.excerpt;
+          link.append(excerpt);
+        }
+
+        if (post.tags?.length) {
+          link.append(createTagList(post.tags));
+        }
+
+        return link;
+      }
+
+      function renderSearch() {
+        const query = input?.value.trim().toLowerCase() || '';
+        clearResults();
+
+        if (!query) {
+          if (status) {
+            status.textContent = '';
+            status.hidden = true;
+          }
+          return;
+        }
+
+        const matched = posts.filter((post) => {
+          return String(post.searchableText || '').includes(query);
+        });
+
+        if (matched.length === 0) {
+          if (status) {
+            status.textContent = '没有找到相关文章。';
+            status.hidden = false;
+          }
+          return;
+        }
+
+        if (status) {
+          status.textContent = '';
+          status.hidden = true;
+        }
+        for (const post of matched.slice(0, 8)) {
+          results?.append(createResult(post));
+        }
+      }
+
+      function openSearch() {
+        if (!(overlay instanceof HTMLElement)) return;
+        overlay.hidden = false;
+        document.documentElement.classList.add('sc-search-open');
+        window.setTimeout(() => {
+          input?.focus();
+          renderSearch();
+        }, 20);
+      }
+
+      function closeSearch() {
+        if (!(overlay instanceof HTMLElement)) return;
+        overlay.hidden = true;
+        document.documentElement.classList.remove('sc-search-open');
+      }
+
+      input?.addEventListener('input', renderSearch);
+
+      document.querySelectorAll('[data-search-open]').forEach((trigger) => {
+        trigger.addEventListener('click', (event) => {
+          event.preventDefault();
+          openSearch();
+        });
+      });
+
+      document.querySelectorAll('[data-search-close]').forEach((trigger) => {
+        trigger.addEventListener('click', closeSearch);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeSearch();
+          return;
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          openSearch();
+        }
+      });
+    })();
+  </script>
+  {adminUser ? (
+    <script is:inline>
+      (() => {
+        const button = document.querySelector('[data-account-logout]');
+        if (!(button instanceof HTMLButtonElement)) return;
+
+        const avatar = button.querySelector('[data-account-avatar]');
+        const fallback = button.querySelector('[data-account-fallback]');
+        let armed = false;
+        let timer = 0;
+
+        function setArmed(nextArmed) {
+          armed = nextArmed;
+          button.classList.toggle('sc-account-armed', armed);
+          button.setAttribute('aria-label', armed ? '再次点击退出' : '账号');
+          button.setAttribute('title', armed ? '再次点击退出' : '账号');
+
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = 0;
+          }
+
+          if (armed) {
+            timer = window.setTimeout(() => setArmed(false), 3000);
+          }
+        }
+
+        if (avatar instanceof HTMLImageElement && fallback instanceof HTMLElement) {
+          avatar.addEventListener('error', () => {
+            avatar.hidden = true;
+            fallback.hidden = false;
+          });
+        }
+
+        button.addEventListener('click', async () => {
+          if (!armed) {
+            setArmed(true);
+            return;
+          }
+
+          setArmed(false);
+
+          try {
+            const response = await fetch('/api/auth/logout', {
+              method: 'POST',
+              credentials: 'same-origin'
+            });
+
+            if (response.ok) {
+              window.location.assign('/');
+            }
+          } catch {
+            setArmed(false);
+          }
+        });
+      })();
+    </script>
+  ) : null}
 </header>

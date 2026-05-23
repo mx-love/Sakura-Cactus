@@ -116,6 +116,75 @@ function rehypeHardenLinksAndImages() {
   };
 }
 
+function appendClassName(node: any, className: string) {
+  node.properties = node.properties ?? {};
+  const current = node.properties.className;
+
+  if (Array.isArray(current)) {
+    if (!current.includes(className)) {
+      current.push(className);
+    }
+    return;
+  }
+
+  if (typeof current === 'string' && current.length > 0) {
+    node.properties.className = current.split(/\s+/).includes(className) ? current : `${current} ${className}`;
+    return;
+  }
+
+  node.properties.className = [className];
+}
+
+function isWhitespaceText(node: any): boolean {
+  return node?.type === 'text' && String(node.value ?? '').trim() === '';
+}
+
+function isImageOnlyParagraph(node: any): boolean {
+  if (node?.type !== 'element' || node.tagName !== 'p' || !Array.isArray(node.children)) {
+    return false;
+  }
+
+  const meaningfulChildren = node.children.filter((child: any) => !isWhitespaceText(child));
+  return meaningfulChildren.length === 1 && meaningfulChildren[0]?.type === 'element' && meaningfulChildren[0].tagName === 'img';
+}
+
+function isPlainTextEmphasis(node: any): boolean {
+  if (node?.type !== 'element' || node.tagName !== 'em' || !Array.isArray(node.children)) {
+    return false;
+  }
+
+  return node.children.length > 0 && node.children.every((child: any) => child.type === 'text');
+}
+
+function isItalicOnlyParagraph(node: any): boolean {
+  if (node?.type !== 'element' || node.tagName !== 'p' || !Array.isArray(node.children)) {
+    return false;
+  }
+
+  const meaningfulChildren = node.children.filter((child: any) => !isWhitespaceText(child));
+  return meaningfulChildren.length === 1 && isPlainTextEmphasis(meaningfulChildren[0]);
+}
+
+function rehypeMarkImageCaptions() {
+  return (tree: any) => {
+    visitTree(tree, (node) => {
+      if (!Array.isArray(node.children)) {
+        return;
+      }
+
+      for (let index = 0; index < node.children.length - 1; index += 1) {
+        const current = node.children[index];
+        const next = node.children[index + 1];
+
+        if (isImageOnlyParagraph(current) && isItalicOnlyParagraph(next)) {
+          appendClassName(current, 'sc-prose-image-paragraph');
+          appendClassName(next, 'sc-prose-image-caption');
+        }
+      }
+    });
+  };
+}
+
 const sanitizeSchema = {
   ...defaultSchema,
   tagNames: Array.from(
@@ -159,6 +228,7 @@ const markdownProcessor = unified()
   .use(rehypeRewriteAssetImages)
   .use(rehypeSanitize, sanitizeSchema)
   .use(rehypeHardenLinksAndImages)
+  .use(rehypeMarkImageCaptions)
   .use(rehypeStringify);
 
 export function renderMarkdown(markdown: string): string {

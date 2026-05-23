@@ -11,6 +11,8 @@
 - [x] Stage 6.6: add design tokens and base component styles.
 - [x] Stage 6.7: SakuraPaper minimal blog UI correction.
 - [x] Add RSS feed and sitemap.
+- [x] Refine public navigation and discovery pages.
+- [x] Add lightweight local search overlay.
 
 ## P1
 

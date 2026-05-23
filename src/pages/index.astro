@@ -4,7 +4,11 @@ import { getPublicPosts } from '@/features/posts/post.service';
 
 export const prerender = false;
 
-const posts = await getPublicPosts();
+function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
+  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
+}
+
+const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
 const latestPosts = posts.slice(0, 5);
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {

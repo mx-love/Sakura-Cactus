@@ -116,6 +116,9 @@ Stage 6.7: SakuraPaper minimal blog UI correction.
 - [x] RSS and sitemap use `SITE_URL` with a local fallback.
 - [x] Added RSS discovery link in the global document head.
 - [x] Added `/robots.txt` pointing to the generated sitemap.
+- [x] Treated the `about` tag as a system page source and hid it from normal discovery flows.
+- [x] Refined public tags, timeline, and search information architecture.
+- [x] Added lightweight local search overlay without external search dependencies.
 
 ## Pending
 

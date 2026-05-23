@@ -264,7 +264,7 @@ export async function getAssetForToken(
     return null;
   }
 
-  const isDirectlyPublic = asset.visibility === 'public';
+  const isDirectlyPublic = asset.visibility === 'public' && asset.usage_count === 0;
   const isUsedByPublicPost = await isAssetUsedByPublishedPublicPost(db, asset.id);
   const isPublic = isDirectlyPublic || isUsedByPublicPost;
 

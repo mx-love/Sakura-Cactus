@@ -176,6 +176,25 @@
   border-radius: 16px;
 }
 
+.sc-prose .sc-prose-image-paragraph,
+.prose-content .sc-prose-image-paragraph {
+  margin-bottom: 0.35rem;
+}
+
+.sc-prose .sc-prose-image-caption,
+.prose-content .sc-prose-image-caption {
+  margin-top: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.sc-prose .sc-prose-image-caption em,
+.prose-content .sc-prose-image-caption em {
+  font-style: italic;
+}
+
 @media (max-width: 640px) {
   .sc-prose,
   .prose-content {

@@ -290,9 +290,11 @@ export async function isAssetUsedByPublishedPublicPost(db: D1Database, assetId: 
          AND posts.status = 'published'
          AND posts.visibility = 'public'
          AND posts.deleted_at IS NULL
+         AND posts.published_at IS NOT NULL
+         AND posts.published_at <= ?
        LIMIT 1`
     )
-    .bind(assetId)
+    .bind(assetId, nowIso())
     .first<{ asset_id: string }>();
 
   return Boolean(row);

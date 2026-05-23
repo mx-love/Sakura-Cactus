@@ -34,9 +34,13 @@ function toRssDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? new Date().toUTCString() : date.toUTCString();
 }
 
+function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]): boolean {
+  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
+}
+
 export const GET: APIRoute = async () => {
   const siteUrl = getSiteUrl();
-  const posts = await getPublicPosts();
+  const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
 
   const items = posts
     .map((post) => {

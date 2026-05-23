@@ -1,15 +1,27 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicPostsByTagSlug, getPublicTags } from '@/features/tags/tag.service';
+import { getPublicPosts } from '@/features/posts/post.service';
+import { getPublicTags } from '@/features/tags/tag.service';
 
 export const prerender = false;
 
 const slug = Astro.params.slug;
 const tags = await getPublicTags();
 const tag = slug ? tags.find((item) => item.slug === slug) : null;
-const posts = slug ? await getPublicPostsByTagSlug(slug) : [];
 
-if (!slug || !tag) {
+function isAboutTagLike(value: { name: string; slug: string }) {
+  return value.slug === 'about' || value.name.toLowerCase() === 'about';
+}
+
+function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
+  return post.tags.some(isAboutTagLike);
+}
+
+const posts = slug
+  ? (await getPublicPosts()).filter((post) => !isAboutPost(post) && post.tags.some((item) => item.slug === slug))
+  : [];
+
+if (!slug || !tag || isAboutTagLike(tag)) {
   return new Response('Not found', { status: 404 });
 }
 
@@ -37,7 +49,7 @@ function formatDate(value: string | null) {
 
       <header class="sc-page-header">
         <h1>{tag.name}</h1>
-        <p>{tag.post_count} 篇公开文章</p>
+        <p>{posts.length} 篇公开文章</p>
       </header>
 
       {posts.length === 0 ? (

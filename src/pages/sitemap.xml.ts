@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getPublicPosts } from '@/features/posts/post.service';
-import { getPublicTags } from '@/features/tags/tag.service';
 
 export const prerender = false;
 
@@ -42,11 +41,27 @@ function sitemapUrl(path: string, siteUrl: string, options: { lastmod?: string; 
   </url>`;
 }
 
+function isAboutTagLike(value: { name: string; slug: string }): boolean {
+  return value.slug === 'about' || value.name.toLowerCase() === 'about';
+}
+
+function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]): boolean {
+  return post.tags.some(isAboutTagLike);
+}
+
 export const GET: APIRoute = async () => {
   const siteUrl = getSiteUrl();
   const now = new Date().toISOString();
-  const posts = await getPublicPosts();
-  const tags = await getPublicTags();
+  const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
+  const tags = new Map<string, { name: string; slug: string }>();
+
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      if (!isAboutTagLike(tag)) {
+        tags.set(tag.slug, tag);
+      }
+    }
+  }
 
   const staticUrls = [
     sitemapUrl('/', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '1.0' }),
@@ -66,9 +81,8 @@ export const GET: APIRoute = async () => {
     })
   );
 
-  const tagUrls = tags.map((tag) =>
+  const tagUrls = [...tags.values()].map((tag) =>
     sitemapUrl(`/tags/${tag.slug}`, siteUrl, {
-      lastmod: toLastMod(tag.updated_at),
       changefreq: 'weekly',
       priority: '0.6'
     })

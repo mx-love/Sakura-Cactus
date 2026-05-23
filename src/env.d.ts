@@ -14,6 +14,7 @@ interface Env {
   PUBLIC_SITE_NAME: string;
   PUBLIC_SITE_URL: string;
   PUBLIC_TURNSTILE_SITE_KEY?: string;
+  SITE_AVATAR_URL?: string;
   ADMIN_USERNAME?: string;
   ADMIN_PASSWORD?: string;
   ADMIN_PASSWORD_HASH?: string;

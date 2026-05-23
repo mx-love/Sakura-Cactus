@@ -1,12 +1,15 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getPublicPostBySlug, getPublicPosts } from '@/features/posts/post.service';
 
 export const prerender = false;
 
 const posts = await getPublicPosts();
-const aboutSummary = posts.find((post) => post.tags.some((tag) => tag.name.toLowerCase() === 'about' || tag.slug === 'about'));
+const aboutSummary = posts.find((post) => post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about'));
 const aboutPost = aboutSummary ? await getPublicPostBySlug(aboutSummary.slug) : null;
+const adminUser = await getCurrentAdminUser(Astro);
 ---
 
 <SiteLayout
@@ -24,6 +27,12 @@ const aboutPost = aboutSummary ? await getPublicPostBySlug(aboutSummary.slug) : 
 
       {aboutPost ? (
         <article>
+          {adminUser ? (
+            <div class="sc-article-topbar sc-about-action-bar">
+              <span></span>
+              <PostDetailAdminActions client:load isAdmin={true} postId={aboutPost.id} showPin={false} deleteRedirectTo="/about" />
+            </div>
+          ) : null}
           <header class="sc-page-header">
             <h1>{aboutPost.title}</h1>
             {aboutPost.excerpt ? <p>{aboutPost.excerpt}</p> : null}

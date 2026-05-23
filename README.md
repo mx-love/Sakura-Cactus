@@ -50,7 +50,7 @@ Implemented:
 - `post_assets` syncing when posts are saved
 - Referenced images are made public when a public post is published
 - Automatic soft delete for images that are no longer referenced by any post
-- Public site header with Articles, Timeline, Tags, Friends, About, search/RSS placeholders, and login entry
+- Public site header with Articles, Timeline, Tags, Friends, About, search/RSS entries, and login entry
 - Mobile front-site menu
 - Minimal SakuraPaper-style homepage and latest post list
 - Minimal article reading layout
@@ -65,6 +65,7 @@ Implemented:
 - RSS feed at `/rss.xml`
 - Sitemap at `/sitemap.xml`
 - Robots metadata at `/robots.txt`
+- Lightweight local search overlay and `/search` fallback page
 
 Not implemented yet:
 
@@ -132,6 +133,14 @@ SITE_URL=https://example.com
 ```
 
 Sakura Cactus uses `SITE_URL` when generating RSS and sitemap URLs. If `SITE_URL` is missing during local development, feeds fall back to `http://localhost:4321`.
+
+`SITE_AVATAR_URL` is an optional public avatar URL for the signed-in header account button:
+
+```txt
+SITE_AVATAR_URL=https://example.com/avatar.png
+```
+
+It is not a secret. You can upload an avatar to your CDN or another public image host later, then point `SITE_AVATAR_URL` at that public URL. Sakura Cactus does not provide avatar upload UI in V1.
 
 `ADMIN_PASSWORD_HASH` uses Sakura Cactus' PBKDF2-SHA256 password hash format. Generate a hash for your real password locally:
 
@@ -209,9 +218,17 @@ Sakura Cactus exposes production blog metadata routes:
 
 RSS is used by feed readers and aggregators. Sitemap helps search engines discover public pages. `robots.txt` allows crawling and points crawlers to the sitemap.
 
-RSS and sitemap only include public posts that are published, visible, not deleted, and not scheduled for the future. Sitemap also includes public tag pages that have at least one visible public post. RSS, sitemap, and robots URLs are generated from `SITE_URL` in Cloudflare Workers Secrets, with a local fallback of `http://localhost:4321`.
+RSS and sitemap only include public posts that are published, visible, not deleted, not scheduled for the future, and not used as system page content. Sitemap also includes public tag pages that have at least one visible public post. RSS, sitemap, and robots URLs are generated from `SITE_URL` in Cloudflare Workers Secrets, with a local fallback of `http://localhost:4321`.
+
+The latest public post tagged `about` is used as the `/about` page content source. That system source post is hidden from normal public discovery surfaces such as the homepage, article list, timeline, search, RSS, sitemap post URLs, and the public tag index.
 
 RSS currently uses each post excerpt for `description` and `content:encoded`. Full-content RSS can be added later after safely absolute-URL rewriting rendered post HTML.
+
+## Search
+
+Sakura Cactus uses a lightweight local search for public posts. The header search icon opens a small overlay when JavaScript is available, and `/search` remains available as a fallback page.
+
+Search runs in the browser against public post metadata rendered by Sakura Cactus. It searches title, excerpt, and tags, and does not call external search services.
 
 ## Media Library
 
@@ -284,5 +301,15 @@ The renderer converts it to:
 ```html
 <img src="/i/token" alt="图片说明" loading="lazy" />
 ```
+
+For a small image attribution or caption, put an italic paragraph directly after the image:
+
+```md
+![图片说明](asset:token)
+
+_图片资源出自互联网收集整理，如果侵犯了您的合法权益，请联系我删除。_
+```
+
+Sakura Cactus displays that immediately following italic paragraph as a muted, right-aligned image caption. Prefer this Markdown form instead of HTML for font size or alignment.
 
 R2 keys and R2 public URLs are never written to post content. Saving a post rescans the Markdown and updates `post_assets`. Publishing a public post makes only the currently referenced assets public. When an image is no longer referenced by any post, Sakura Cactus deletes the R2 object first, then soft deletes the D1 asset record.

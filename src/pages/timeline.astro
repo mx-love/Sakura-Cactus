@@ -4,7 +4,11 @@ import { getPublicPosts } from '@/features/posts/post.service';
 
 export const prerender = false;
 
-const posts = await getPublicPosts();
+function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
+  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
+}
+
+const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -66,25 +70,12 @@ const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
                   <div class="sc-archive-list">
                     {archive[year][month].map((post) => (
                       <article class="sc-archive-entry">
-                        <div class="sc-archive-date">
+                        <div class="sc-archive-date" aria-label={post.publishedAt ? formatDate(post.publishedAt) : undefined}>
                           {post.publishedAt ? (
-                            <>
-                              <span>{String(new Date(post.publishedAt).getMonth() + 1).padStart(2, '0')}/{String(new Date(post.publishedAt).getDate()).padStart(2, '0')}</span>
-                              <span class="sc-calendar-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                  <path d="M8 2v4" />
-                                  <path d="M16 2v4" />
-                                  <path d="M3 10h18" />
-                                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                                </svg>
-                              </span>
-                            </>
+                            <time datetime={post.publishedAt}>{String(new Date(post.publishedAt).getMonth() + 1).padStart(2, '0')}/{String(new Date(post.publishedAt).getDate()).padStart(2, '0')}</time>
                           ) : null}
                         </div>
-                        <div>
-                          <p class="sc-post-meta">
-                            {post.publishedAt ? <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time> : null}
-                          </p>
+                        <div class="sc-archive-content">
                           <h4>
                             <a href={`/posts/${post.slug}`}>{post.title}</a>
                           </h4>
