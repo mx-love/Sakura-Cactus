@@ -223,25 +223,27 @@
   position: sticky;
   top: 5.25rem;
   display: grid;
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
 .sc-writer-card,
 .sc-writer-danger {
-  padding: 1rem;
+  padding: 1.05rem;
 }
 
 .sc-writer-card-title,
 .sc-writer-danger h2 {
   margin: 0;
-  font-size: 0.95rem;
+  color: var(--color-text);
+  font-size: 0.92rem;
   font-weight: 900;
+  line-height: 1.35;
 }
 
 .sc-writer-fields {
   display: grid;
-  gap: 0.95rem;
-  margin-top: 0;
+  gap: 0.85rem;
+  margin-top: 0.85rem;
 }
 
 .sc-writer-field {
@@ -263,7 +265,7 @@
 .sc-writer-control {
   border-color: transparent;
   border-radius: 14px;
-  background: #f6f6f7;
+  background: #f7f7f8;
   font-size: 0.875rem;
 }
 
@@ -285,19 +287,25 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  border-bottom: 1px solid rgba(238, 238, 241, 0.78);
+  padding-bottom: 0.7rem;
 }
 
 .sc-writer-visibility {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  border: 1px solid rgba(228, 228, 231, 0.78);
+  border-radius: 15px;
+  background: #f6f6f7;
+  padding: 0.25rem;
 }
 
 .sc-writer-choice {
-  min-height: 2.35rem;
+  min-height: 2.25rem;
   border: 1px solid transparent;
-  border-radius: 14px;
-  background: #f6f6f7;
+  border-radius: 12px;
+  background: transparent;
   color: var(--color-muted);
   font-size: 0.875rem;
   font-weight: 850;
@@ -308,15 +316,16 @@
 }
 
 .sc-writer-choice-active {
-  border-color: rgba(217, 111, 145, 0.22);
-  background: var(--color-primary-soft);
+  border-color: rgba(217, 111, 145, 0.18);
+  background: white;
+  box-shadow: 0 6px 18px rgba(102, 66, 82, 0.06);
   color: var(--color-primary);
 }
 
 .sc-writer-publish-actions {
   display: grid;
   gap: 0.55rem;
-  padding-top: 0.25rem;
+  padding-top: 0.35rem;
 }
 
 .sc-writer-primary-action,
@@ -333,14 +342,17 @@
 
 .sc-writer-danger {
   border-color: rgba(184, 91, 106, 0.18);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 30px rgba(184, 91, 106, 0.035);
 }
 
 .sc-writer-danger h2 {
   color: var(--color-danger);
+  font-size: 0.88rem;
 }
 
 .sc-writer-danger button {
-  margin-top: 0.75rem;
+  margin-top: 0.8rem;
 }
 
 @media (max-width: 1024px) {

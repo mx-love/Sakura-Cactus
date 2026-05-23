@@ -13,6 +13,7 @@ import {
   listAdminPosts,
   listPublicPosts,
   replacePostAssets,
+  setPostPinnedAt,
   setPostStatus,
   slugExists,
   softDeletePost,
@@ -157,6 +158,14 @@ export async function publishAdminPost(id: string): Promise<PostRow | null> {
 
 export async function unpublishAdminPost(id: string): Promise<PostRow | null> {
   return setPostStatus(getDb(), id, 'archived');
+}
+
+export async function pinAdminPost(id: string): Promise<PostRow | null> {
+  return setPostPinnedAt(getDb(), id, new Date().toISOString());
+}
+
+export async function unpinAdminPost(id: string): Promise<PostRow | null> {
+  return setPostPinnedAt(getDb(), id, null);
 }
 
 export async function deleteAdminPost(id: string): Promise<PostRow | null> {

@@ -3,6 +3,7 @@ import { useState } from 'react';
 interface PostDetailAdminActionsProps {
   isAdmin: boolean;
   postId?: string;
+  isPinned?: boolean;
   showPin?: boolean;
   deleteRedirectTo?: string;
 }
@@ -49,10 +50,18 @@ function TrashIcon() {
   );
 }
 
-export function PostDetailAdminActions({ isAdmin, postId, showPin = true, deleteRedirectTo = '/articles' }: PostDetailAdminActionsProps) {
+export function PostDetailAdminActions({
+  isAdmin,
+  postId,
+  isPinned = false,
+  showPin = true,
+  deleteRedirectTo = '/articles'
+}: PostDetailAdminActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pinned, setPinned] = useState(isPinned);
+  const [isPinning, setIsPinning] = useState(false);
 
   async function sharePost() {
     setError(null);
@@ -99,6 +108,32 @@ export function PostDetailAdminActions({ isAdmin, postId, showPin = true, delete
     }
   }
 
+  async function togglePinned() {
+    if (!postId) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setIsPinning(true);
+
+    try {
+      const response = await fetch(`/api/admin/posts/${postId}/pin`, {
+        method: pinned ? 'DELETE' : 'POST',
+        credentials: 'same-origin'
+      });
+
+      if (!response.ok) {
+        setError('置顶失败，请稍后重试。');
+        return;
+      }
+
+      setPinned(!pinned);
+    } finally {
+      setIsPinning(false);
+    }
+  }
+
   return (
     <div className="sc-article-action-wrap">
       <div className="sc-article-action-bar" aria-label="文章操作">
@@ -109,11 +144,12 @@ export function PostDetailAdminActions({ isAdmin, postId, showPin = true, delete
           <>
             {showPin ? (
               <button
-                className="sc-article-icon-action sc-article-icon-disabled"
-                disabled
+                className={`sc-article-icon-action ${pinned ? 'sc-article-icon-active' : ''}`}
+                disabled={isPinning || !postId}
+                onClick={togglePinned}
                 type="button"
-                aria-label="置顶（后续接入）"
-                title="置顶（后续接入）"
+                aria-label={pinned ? '取消置顶' : '置顶'}
+                title={pinned ? '取消置顶' : '置顶'}
               >
                 <PinIcon />
               </button>

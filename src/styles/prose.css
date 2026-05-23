@@ -1,8 +1,8 @@
 .sc-prose,
 .prose-content {
   color: var(--color-text);
-  font-size: 1.05rem;
-  line-height: 1.84;
+  font-size: 1.045rem;
+  line-height: 1.9;
   overflow-wrap: break-word;
 }
 
@@ -22,7 +22,7 @@
 .prose-content h1,
 .prose-content h2,
 .prose-content h3 {
-  margin: 2.15rem 0 0.75rem;
+  margin: 1.9rem 0 0.65rem;
   color: var(--color-text);
   font-weight: 800;
   letter-spacing: 0;
@@ -31,17 +31,17 @@
 
 .sc-prose h1,
 .prose-content h1 {
-  font-size: clamp(1.75rem, 3vw, 2.35rem);
+  font-size: clamp(1.55rem, 2.8vw, 2rem);
 }
 
 .sc-prose h2,
 .prose-content h2 {
-  font-size: clamp(1.45rem, 2.2vw, 1.8rem);
+  font-size: clamp(1.32rem, 2vw, 1.58rem);
 }
 
 .sc-prose h3,
 .prose-content h3 {
-  font-size: clamp(1.18rem, 1.8vw, 1.35rem);
+  font-size: clamp(1.12rem, 1.6vw, 1.24rem);
 }
 
 .sc-prose p,
@@ -56,7 +56,7 @@
 .prose-content blockquote,
 .prose-content pre,
 .prose-content img {
-  margin: 1.08rem 0;
+  margin: 1.16rem 0;
 }
 
 .sc-prose ul,
@@ -94,6 +94,7 @@
   border-left: 3px solid var(--color-primary-muted);
   color: var(--color-muted);
   padding-left: 1rem;
+  margin-block: 1.2rem;
   font-style: normal;
 }
 
@@ -171,14 +172,19 @@
 .sc-prose img,
 .prose-content img {
   display: block;
+  width: auto;
   max-width: 100%;
-  margin-inline: auto;
-  border-radius: 16px;
+  height: auto;
+  max-height: min(82vh, 960px);
+  object-fit: contain;
+  margin: 1.55rem auto;
+  border-radius: 20px;
 }
 
 .sc-prose .sc-prose-image-paragraph,
 .prose-content .sc-prose-image-paragraph {
-  margin-bottom: 0.35rem;
+  text-align: center;
+  margin-bottom: 0.28rem;
 }
 
 .sc-prose .sc-prose-image-caption,
@@ -198,7 +204,7 @@
 @media (max-width: 640px) {
   .sc-prose,
   .prose-content {
-    font-size: 0.98rem;
-    line-height: 1.78;
+    font-size: 1rem;
+    line-height: 1.84;
   }
 }

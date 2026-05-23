@@ -8,7 +8,25 @@ function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
   return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
 }
 
-const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
+function sortPinnedFirst(posts: Awaited<ReturnType<typeof getPublicPosts>>) {
+  return [...posts].sort((a, b) => {
+    if (a.pinnedAt && b.pinnedAt) {
+      return new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime();
+    }
+
+    if (a.pinnedAt) {
+      return -1;
+    }
+
+    if (b.pinnedAt) {
+      return 1;
+    }
+
+    return 0;
+  });
+}
+
+const posts = sortPinnedFirst((await getPublicPosts()).filter((post) => !isAboutPost(post)));
 const latestPosts = posts.slice(0, 5);
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {

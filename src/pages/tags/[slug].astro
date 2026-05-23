@@ -17,8 +17,26 @@ function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
   return post.tags.some(isAboutTagLike);
 }
 
+function sortPinnedFirst(posts: Awaited<ReturnType<typeof getPublicPosts>>) {
+  return [...posts].sort((a, b) => {
+    if (a.pinnedAt && b.pinnedAt) {
+      return new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime();
+    }
+
+    if (a.pinnedAt) {
+      return -1;
+    }
+
+    if (b.pinnedAt) {
+      return 1;
+    }
+
+    return 0;
+  });
+}
+
 const posts = slug
-  ? (await getPublicPosts()).filter((post) => !isAboutPost(post) && post.tags.some((item) => item.slug === slug))
+  ? sortPinnedFirst((await getPublicPosts()).filter((post) => !isAboutPost(post) && post.tags.some((item) => item.slug === slug)))
   : [];
 
 if (!slug || !tag || isAboutTagLike(tag)) {

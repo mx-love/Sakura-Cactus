@@ -40,6 +40,7 @@ export interface PublicPostSummary {
   coverImageUrl: string | null;
   tags: PublicPostTag[];
   publishedAt: string | null;
+  pinnedAt: string | null;
   updatedAt: string;
 }
 
@@ -58,6 +59,7 @@ export function toPublicPostSummary(post: PostRow, tags: PublicPostTag[] = []): 
     coverImageUrl: extractFirstImageUrl(post.content_markdown),
     tags: tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
     publishedAt: post.published_at,
+    pinnedAt: post.pinned_at,
     updatedAt: post.updated_at
   };
 }

@@ -33,7 +33,7 @@ export async function listAdminPosts(db: D1Database, filters: PostListFilters = 
 
   const statement = db.prepare(
     `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, created_at, updated_at, deleted_at
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
        FROM posts
        ${where}
        ORDER BY updated_at DESC
@@ -49,7 +49,7 @@ export async function listPublicPosts(db: D1Database): Promise<PostRow[]> {
   const result = await db
     .prepare(
       `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, created_at, updated_at, deleted_at
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
        FROM posts
        WHERE status = 'published'
          AND visibility = 'public'
@@ -69,7 +69,7 @@ export async function findPostById(db: D1Database, id: string): Promise<PostRow 
   return db
     .prepare(
       `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, created_at, updated_at, deleted_at
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
        FROM posts
        WHERE id = ?
        LIMIT 1`
@@ -82,7 +82,7 @@ export async function findPostBySlug(db: D1Database, slug: string): Promise<Post
   return db
     .prepare(
       `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, created_at, updated_at, deleted_at
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
        FROM posts
        WHERE slug = ?
        LIMIT 1`
@@ -95,7 +95,7 @@ export async function findPublicPostBySlug(db: D1Database, slug: string): Promis
   return db
     .prepare(
       `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, created_at, updated_at, deleted_at
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
        FROM posts
        WHERE slug = ?
          AND status = 'published'
@@ -136,6 +136,7 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
     reading_time_minutes: input.readingTimeMinutes,
     word_count: input.wordCount,
     published_at: input.publishedAt ?? (status === 'published' ? now : null),
+    pinned_at: null,
     created_at: now,
     updated_at: now,
     deleted_at: null
@@ -145,8 +146,8 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
     .prepare(
       `INSERT INTO posts (
         id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, created_at, updated_at, deleted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       post.id,
@@ -163,6 +164,7 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
       post.reading_time_minutes,
       post.word_count,
       post.published_at,
+      post.pinned_at,
       post.created_at,
       post.updated_at,
       post.deleted_at
@@ -236,6 +238,25 @@ export async function setPostStatus(db: D1Database, id: string, status: Exclude<
        WHERE id = ? AND deleted_at IS NULL`
     )
     .bind(status, publishedAt, now, id)
+    .run();
+
+  return findPostById(db, id);
+}
+
+export async function setPostPinnedAt(db: D1Database, id: string, pinnedAt: string | null): Promise<PostRow | null> {
+  const current = await findPostById(db, id);
+
+  if (!current || current.deleted_at) {
+    return null;
+  }
+
+  await db
+    .prepare(
+      `UPDATE posts
+       SET pinned_at = ?
+       WHERE id = ? AND deleted_at IS NULL`
+    )
+    .bind(pinnedAt, id)
     .run();
 
   return findPostById(db, id);

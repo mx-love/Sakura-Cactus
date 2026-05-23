@@ -45,6 +45,7 @@ export interface PostRow {
   reading_time_minutes: number;
   word_count: number;
   published_at: string | null;
+  pinned_at: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

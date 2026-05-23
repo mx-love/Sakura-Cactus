@@ -25,6 +25,18 @@ type PostFormState = {
   visibility: PostVisibility;
 };
 
+type SubmitAction = 'draft' | 'publish' | 'unpublish' | 'delete';
+type SaveFeedback = 'idle' | 'success' | 'error';
+
+type FormSnapshot = {
+  title: string;
+  excerpt: string;
+  contentMarkdown: string;
+  visibility: PostVisibility;
+  publishedAt: string;
+  tags: string[];
+};
+
 function toDateTimeLocal(value: string | null | undefined): string {
   const date = value ? new Date(value) : new Date();
 
@@ -55,6 +67,42 @@ function postToState(post?: (PostRow & { tags?: Array<{ name: string }> }) | nul
     status: post?.status === 'deleted' ? 'draft' : (post?.status ?? 'draft'),
     visibility: post?.visibility ?? 'public'
   };
+}
+
+function normalizeTagInput(value: string): string[] {
+  return value
+    .split(/[,，#\s]+/)
+    .map((tag) => tag.trim().replace(/^#+/, ''))
+    .filter(Boolean)
+    .map((tag) => tag.toLocaleLowerCase())
+    .sort();
+}
+
+function createSnapshot(form: PostFormState): FormSnapshot {
+  return {
+    title: form.title.trim(),
+    excerpt: form.excerpt.trim(),
+    contentMarkdown: form.contentMarkdown,
+    visibility: form.visibility,
+    publishedAt: form.publishedAt,
+    tags: normalizeTagInput(form.tagInput)
+  };
+}
+
+function snapshotsEqual(saved: FormSnapshot | null, current: FormSnapshot): boolean {
+  if (!saved) {
+    return false;
+  }
+
+  return (
+    saved.title === current.title &&
+    saved.excerpt === current.excerpt &&
+    saved.contentMarkdown === current.contentMarkdown &&
+    saved.visibility === current.visibility &&
+    saved.publishedAt === current.publishedAt &&
+    saved.tags.length === current.tags.length &&
+    saved.tags.every((tag, index) => tag === current.tags[index])
+  );
 }
 
 function statusLabel(status: Exclude<PostStatus, 'deleted'>): string {
@@ -100,17 +148,24 @@ export function PostEditor({ post }: PostEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const sessionUploadedTokensRef = useRef<Set<string>>(new Set());
   const [form, setForm] = useState<PostFormState>(() => postToState(post));
+  const [savedSnapshot, setSavedSnapshot] = useState<FormSnapshot | null>(() => (post ? createSnapshot(postToState(post)) : null));
   const [postId, setPostId] = useState(post?.id ?? null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitAction, setSubmitAction] = useState<SubmitAction | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<SaveFeedback>('idle');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const isExisting = useMemo(() => Boolean(postId), [postId]);
+  const currentSnapshot = useMemo(() => createSnapshot(form), [form]);
+  const isDirty = useMemo(() => !snapshotsEqual(savedSnapshot, currentSnapshot), [savedSnapshot, currentSnapshot]);
   const previewHtml = useMemo(() => renderMarkdown(form.contentMarkdown), [form.contentMarkdown]);
   const isPublished = form.status === 'published';
   const isBusy = isSubmitting || isUploadingImage;
   const statusClass = form.status === 'published' ? 'sc-badge-published' : form.status === 'archived' ? 'sc-badge-archived' : 'sc-badge-draft';
+  const isCleanExistingPost = isExisting && !isDirty && saveFeedback !== 'error';
+  const mainActionLabel = isCleanExistingPost ? '已保存' : isPublished ? '更新' : '发布';
 
   useEffect(() => {
     const handlePageExit = () => {
@@ -127,6 +182,9 @@ export function PostEditor({ post }: PostEditorProps) {
   }, []);
 
   function updateField<K extends keyof PostFormState>(field: K, value: PostFormState[K]) {
+    setSaveFeedback('idle');
+    setSubmitAction(null);
+    setError(null);
     setForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -278,8 +336,11 @@ export function PostEditor({ post }: PostEditorProps) {
   }
 
   async function saveWithStatus(status: Exclude<PostStatus, 'deleted'>) {
+    const action: SubmitAction = status === 'published' ? 'publish' : 'draft';
     setError(null);
     setMessage(null);
+    setSaveFeedback('idle');
+    setSubmitAction(action);
     setIsSubmitting(true);
 
     try {
@@ -303,14 +364,18 @@ export function PostEditor({ post }: PostEditorProps) {
 
       if (!response.ok) {
         setError(await readError(response, 'Unable to save post.'));
+        setSaveFeedback('error');
         return;
       }
 
       const payload = (await response.json()) as { ok: true; data: { post: PostRow & { tags?: Array<{ name: string }> } } };
+      const nextForm = postToState(payload.data.post);
       setPostId(payload.data.post.id);
-      setForm(postToState(payload.data.post));
+      setForm(nextForm);
+      setSavedSnapshot(createSnapshot(nextForm));
       markSavedAssetTokens(payload.data.post.content_markdown);
       setMessage(status === 'published' ? '已发布' : '已保存');
+      setSaveFeedback('success');
 
       if (!postId) {
         window.history.replaceState(null, '', `/write?post=${payload.data.post.id}`);
@@ -328,6 +393,8 @@ export function PostEditor({ post }: PostEditorProps) {
 
     setError(null);
     setMessage(null);
+    setSaveFeedback('idle');
+    setSubmitAction('unpublish');
     setIsSubmitting(true);
 
     try {
@@ -338,12 +405,16 @@ export function PostEditor({ post }: PostEditorProps) {
 
       if (!response.ok) {
         setError(await readError(response, 'Unable to unpublish post.'));
+        setSaveFeedback('error');
         return;
       }
 
       const payload = (await response.json()) as { ok: true; data: { post: PostRow & { tags?: Array<{ name: string }> } } };
-      setForm(postToState(payload.data.post));
+      const nextForm = postToState(payload.data.post);
+      setForm(nextForm);
+      setSavedSnapshot(createSnapshot(nextForm));
       setMessage('已下架');
+      setSaveFeedback('success');
     } finally {
       setIsSubmitting(false);
     }
@@ -361,6 +432,7 @@ export function PostEditor({ post }: PostEditorProps) {
 
     setError(null);
     setMessage(null);
+    setSubmitAction('delete');
     setIsSubmitting(true);
 
     try {
@@ -378,7 +450,24 @@ export function PostEditor({ post }: PostEditorProps) {
       window.location.assign('/articles');
     } finally {
       setIsSubmitting(false);
+      setSubmitAction(null);
     }
+  }
+
+  function saveButtonText(action: SubmitAction, idleLabel: string) {
+    if (submitAction === action && isSubmitting) {
+      return action === 'publish' && isPublished ? '更新中...' : '保存中...';
+    }
+
+    if (submitAction === action && saveFeedback === 'success') {
+      return '已保存';
+    }
+
+    if (submitAction === action && saveFeedback === 'error') {
+      return '保存失败，重试';
+    }
+
+    return idleLabel;
   }
 
   return (
@@ -388,11 +477,8 @@ export function PostEditor({ post }: PostEditorProps) {
           <a className="sc-writer-back" href="/articles">
             ← 返回文章
           </a>
-          <div className="sc-writer-top-actions">
-            {message || error ? <span className={`sc-badge ${statusClass}`}>{message ?? '保存失败'}</span> : null}
-          </div>
+          <div className="sc-writer-top-actions" aria-hidden="true"></div>
         </div>
-        {error ? <p className="sc-field-error sc-writer-error">{error}</p> : null}
       </div>
 
       <div className="sc-writer-grid">
@@ -453,6 +539,7 @@ export function PostEditor({ post }: PostEditorProps) {
 
       <aside className="sc-writer-side">
         <div className="sc-writer-card">
+          <h2 className="sc-writer-card-title">文章设置</h2>
           <div className="sc-writer-fields">
             <label className="sc-writer-field sc-writer-field-plain">
               <input
@@ -483,7 +570,12 @@ export function PostEditor({ post }: PostEditorProps) {
                 onChange={(event) => updateField('tagInput', event.target.value)}
               />
             </label>
+          </div>
+        </div>
 
+        <div className="sc-writer-card">
+          <h2 className="sc-writer-card-title">发布设置</h2>
+          <div className="sc-writer-fields">
             <div className="sc-writer-status-row">
               <span>状态</span>
               <span className={`sc-badge ${statusClass}`}>{statusLabel(form.status)}</span>
@@ -520,25 +612,25 @@ export function PostEditor({ post }: PostEditorProps) {
             </label>
 
             <div className="sc-writer-publish-actions">
+              {!isPublished ? (
+                <button
+                  className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
+                  disabled={isBusy || isCleanExistingPost}
+                  onClick={() => saveWithStatus('draft')}
+                  type="button"
+                >
+                  {saveButtonText('draft', '保存草稿')}
+                </button>
+              ) : null}
               <button
                 className="sc-button sc-button-primary sc-writer-primary-action disabled:opacity-60"
-                disabled={isBusy}
+                disabled={isBusy || isCleanExistingPost}
                 onClick={() => saveWithStatus('published')}
                 type="button"
               >
-                {isPublished ? '更新' : '发布'}
+                {saveButtonText('publish', mainActionLabel)}
               </button>
 
-            {!isPublished ? (
-              <button
-                className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
-                disabled={isBusy}
-                onClick={() => saveWithStatus('draft')}
-                type="button"
-              >
-                保存草稿
-              </button>
-            ) : null}
             {isPublished ? (
               <button
                 className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
@@ -546,11 +638,12 @@ export function PostEditor({ post }: PostEditorProps) {
                 onClick={unpublish}
                 type="button"
               >
-                下架
+                {submitAction === 'unpublish' && isSubmitting ? '下架中...' : '下架'}
               </button>
             ) : null}
             </div>
 
+            {error ? <p className="sc-field-error sc-writer-error">{error}</p> : null}
             <p className="sc-writer-note">
               公开发布后会显示在文章列表。
             </p>
@@ -559,7 +652,7 @@ export function PostEditor({ post }: PostEditorProps) {
 
         {isExisting ? (
           <div className="sc-writer-danger">
-            <h2>危险区域</h2>
+            <h2>纸页整理</h2>
             <button
               className="sc-button sc-button-danger sc-writer-secondary-action disabled:opacity-60"
               disabled={isSubmitting}

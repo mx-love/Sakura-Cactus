@@ -46,69 +46,74 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
 <SiteLayout title={`${title} | Sakura Cactus`} description={description} canonicalUrl={canonicalUrl} ogImage={ogImage ?? undefined}>
   <article class="sc-page">
     <div class="sc-article-shell">
-      <div class="sc-article-topbar">
-        <a class="sc-article-back" href="/articles">← 返回文章</a>
-        <PostDetailAdminActions client:load isAdmin={Boolean(adminUser)} postId={adminUser ? post.id : undefined} />
-      </div>
-      <header class="sc-article-header">
-        <p class="sc-post-meta sc-article-meta">
-          {publishedAt ? (
-            <>
-              <span class="sc-calendar-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M8 2v4" />
-                  <path d="M16 2v4" />
-                  <path d="M3 10h18" />
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                </svg>
-              </span>
-              <time datetime={post.publishedAt ?? undefined}>{formatDate(publishedAt)}</time>
-            </>
-          ) : (
-            <span>Published</span>
-          )}
-          {shouldShowUpdatedAt ? <span> · 更新于 {formatDate(updatedAt)}</span> : null}
-        </p>
-        <h1>{post.title}</h1>
-        {post.excerpt ? <p class="sc-article-subtitle">{post.excerpt}</p> : null}
-        {post.tags.length > 0 ? (
-          <div class="sc-tag-list sc-article-tags">
-            {post.tags.map((tag) => (
-              <a class="sc-tag-pill" href={`/tags/${tag.slug}`}>{tag.name}</a>
-            ))}
+      <a class="sc-article-back" href="/articles">← 返回文章</a>
+      <div class="sc-article-paper">
+        <div class="sc-article-topbar">
+          <span></span>
+          <PostDetailAdminActions client:load isAdmin={Boolean(adminUser)} postId={adminUser ? post.id : undefined} isPinned={Boolean(post.pinnedAt)} />
+        </div>
+        <header class="sc-article-header">
+          <div class="sc-article-inner">
+            <p class="sc-post-meta sc-article-meta">
+              {publishedAt ? (
+                <>
+                  <span class="sc-calendar-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M8 2v4" />
+                      <path d="M16 2v4" />
+                      <path d="M3 10h18" />
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                    </svg>
+                  </span>
+                  <time datetime={post.publishedAt ?? undefined}>{formatDate(publishedAt)}</time>
+                </>
+              ) : (
+                <span>Published</span>
+              )}
+              {shouldShowUpdatedAt ? <span> · 更新于 {formatDate(updatedAt)}</span> : null}
+            </p>
+            <h1>{post.title}</h1>
+            {post.excerpt ? <p class="sc-article-subtitle">{post.excerpt}</p> : null}
+            {post.tags.length > 0 ? (
+              <div class="sc-tag-list sc-article-tags">
+                {post.tags.map((tag) => (
+                  <a class="sc-tag-pill" href={`/tags/${tag.slug}`}>{tag.name}</a>
+                ))}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </header>
-      <div class="sc-prose prose-content sc-article-prose" set:html={post.contentHtml} />
-      {previousPost || nextPost ? (
-        <footer class="sc-article-nav" aria-label="文章导航">
-          {previousPost ? (
-            <a class="sc-article-nav-card sc-article-nav-prev" href={`/posts/${previousPost.slug}`}>
-              <span>Previous / 上一篇</span>
-              <strong>{previousPost.title}</strong>
-              {previousPost.publishedAt ? <time datetime={previousPost.publishedAt}>{formatDate(new Date(previousPost.publishedAt))}</time> : null}
-            </a>
-          ) : (
-            <div class="sc-article-nav-card sc-article-nav-disabled">
-              <span>Previous / 上一篇</span>
-              <strong>没有更早的文章</strong>
-            </div>
-          )}
+        </header>
+        <div class="sc-prose prose-content sc-article-prose sc-article-inner" set:html={post.contentHtml} />
+        {previousPost || nextPost ? (
+          <footer class="sc-article-nav sc-article-inner" aria-label="文章导航">
+            {previousPost ? (
+              <a class="sc-article-nav-card sc-article-nav-prev" href={`/posts/${previousPost.slug}`}>
+                <span>上一页</span>
+                <strong>{previousPost.title}</strong>
+                {previousPost.publishedAt ? <time datetime={previousPost.publishedAt}>{formatDate(new Date(previousPost.publishedAt))}</time> : null}
+              </a>
+            ) : (
+              <div class="sc-article-nav-card sc-article-nav-disabled">
+                <span>上一页</span>
+                <strong>已是第一页</strong>
+              </div>
+            )}
 
-          {nextPost ? (
-            <a class="sc-article-nav-card sc-article-nav-next" href={`/posts/${nextPost.slug}`}>
-              <span>Next / 下一篇</span>
-              <strong>{nextPost.title}</strong>
-              {nextPost.publishedAt ? <time datetime={nextPost.publishedAt}>{formatDate(new Date(nextPost.publishedAt))}</time> : null}
-            </a>
-          ) : (
-            <div class="sc-article-nav-card sc-article-nav-disabled sc-article-nav-next">
-              <span>Next / 下一篇</span>
-              <strong>没有更新的文章</strong>
-            </div>
-          )}
-        </footer>
-      ) : null}
+            {nextPost ? (
+              <a class="sc-article-nav-card sc-article-nav-next" href={`/posts/${nextPost.slug}`}>
+                <span>下一页</span>
+                <strong>{nextPost.title}</strong>
+                {nextPost.publishedAt ? <time datetime={nextPost.publishedAt}>{formatDate(new Date(nextPost.publishedAt))}</time> : null}
+              </a>
+            ) : (
+              <div class="sc-article-nav-card sc-article-nav-disabled sc-article-nav-next">
+                <span>下一页</span>
+                <strong>已是最后一页</strong>
+              </div>
+            )}
+          </footer>
+        ) : null}
+      </div>
     </div>
   </article>
 </SiteLayout>
