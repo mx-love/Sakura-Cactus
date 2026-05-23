@@ -10,6 +10,7 @@
 - [x] Stage 6: add Sakura Cactus theme and navigation.
 - [x] Stage 6.6: add design tokens and base component styles.
 - [x] Stage 6.7: SakuraPaper minimal blog UI correction.
+- [x] Add RSS feed and sitemap.
 
 ## P1
 
@@ -17,6 +18,7 @@
 - [ ] Consider reverting assets to draft when no published public posts reference them.
 - [ ] Add 30-second draft autosave in the post editor.
 - [ ] Warn before leaving the post editor with unsaved changes.
+- [ ] Add full-content RSS after safe absolute URL rewriting for rendered HTML.
 - [ ] Connect real tag management.
 - [ ] Connect friend link management.
 

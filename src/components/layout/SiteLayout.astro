@@ -50,6 +50,7 @@ const footerLinks = [
     <meta property="og:description" content={description} />
     {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
     {ogImage ? <meta property="og:image" content={ogImage} /> : null}
+    <link rel="alternate" type="application/rss+xml" title="Sakura Cactus RSS" href="/rss.xml" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
   </head>

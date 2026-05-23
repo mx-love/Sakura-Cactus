@@ -62,6 +62,9 @@ Implemented:
 - `/write` as the primary private writing entry
 - `/settings` as the primary private blog settings entry
 - `/admin/media` retained as a hidden media maintenance page
+- RSS feed at `/rss.xml`
+- Sitemap at `/sitemap.xml`
+- Robots metadata at `/robots.txt`
 
 Not implemented yet:
 
@@ -118,8 +121,17 @@ For production, set Cloudflare Workers secrets first and apply migrations agains
 ```bash
 wrangler secret put ADMIN_USERNAME
 wrangler secret put ADMIN_PASSWORD_HASH
+wrangler secret put SITE_URL
 pnpm db:migration:apply:prod
 ```
+
+`SITE_URL` should be the absolute production site URL, for example:
+
+```txt
+SITE_URL=https://example.com
+```
+
+Sakura Cactus uses `SITE_URL` when generating RSS and sitemap URLs. If `SITE_URL` is missing during local development, feeds fall back to `http://localhost:4321`.
 
 `ADMIN_PASSWORD_HASH` uses Sakura Cactus' PBKDF2-SHA256 password hash format. Generate a hash for your real password locally:
 
@@ -180,10 +192,26 @@ Visitors can only read posts where:
 ```sql
 status = 'published'
 AND visibility = 'public'
+AND published_at IS NOT NULL
+AND published_at <= CURRENT_TIMESTAMP
 AND deleted_at IS NULL
 ```
 
 Draft, private, archived, deleted, and missing posts return 404 on public detail routes.
+
+## RSS and Sitemap
+
+Sakura Cactus exposes production blog metadata routes:
+
+- RSS: `/rss.xml`
+- Sitemap: `/sitemap.xml`
+- Robots: `/robots.txt`
+
+RSS is used by feed readers and aggregators. Sitemap helps search engines discover public pages. `robots.txt` allows crawling and points crawlers to the sitemap.
+
+RSS and sitemap only include public posts that are published, visible, not deleted, and not scheduled for the future. Sitemap also includes public tag pages that have at least one visible public post. RSS, sitemap, and robots URLs are generated from `SITE_URL` in Cloudflare Workers Secrets, with a local fallback of `http://localhost:4321`.
+
+RSS currently uses each post excerpt for `description` and `content:encoded`. Full-content RSS can be added later after safely absolute-URL rewriting rendered post HTML.
 
 ## Media Library
 
@@ -219,7 +247,7 @@ Public assets use long immutable caching. Draft/private assets use `Cache-Contro
 
 ## Writing Markdown
 
-Sakura Cactus uses a clean GitHub Flavored Markdown-style writing flow. The `/write` page keeps a plain Markdown textarea and supports common long-form blog syntax:
+Sakura Cactus uses a clean GitHub Flavored Markdown-style writing flow. The `/write` page keeps a plain Markdown textarea. Rendering is handled by a local `unified` / `remark-gfm` / `rehype-sanitize` pipeline and does not call the GitHub Markdown API.
 
 - Headings: `#`, `##`, `###`
 - Emphasis: `**bold**`, `*italic*`, `~~strikethrough~~`

@@ -124,11 +124,23 @@
   color: var(--color-muted);
 }
 
-.sc-task-checkbox {
-  display: inline-block;
-  width: 1.35em;
-  color: var(--color-muted);
-  font-family: var(--font-mono);
+.sc-prose .contains-task-list,
+.prose-content .contains-task-list {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+.sc-prose .task-list-item,
+.prose-content .task-list-item {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+
+.sc-prose .task-list-item input[type="checkbox"],
+.prose-content .task-list-item input[type="checkbox"] {
+  margin-top: 0.55em;
+  accent-color: var(--color-primary);
 }
 
 .sc-prose code,

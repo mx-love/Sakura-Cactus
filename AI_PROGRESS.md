@@ -111,6 +111,11 @@ Stage 6.7: SakuraPaper minimal blog UI correction.
 - [x] Changed `/admin` and `/admin/settings` to compatibility redirects.
 - [x] Kept `/admin/media` as a hidden maintenance page outside the main navigation.
 - [x] Simplified the homepage, article list, timeline, tags, friends, about, login, article detail, and writing UI around narrow content-first layouts.
+- [x] Added `/rss.xml` for public published posts.
+- [x] Added `/sitemap.xml` for static public pages, public posts, and public tag pages.
+- [x] RSS and sitemap use `SITE_URL` with a local fallback.
+- [x] Added RSS discovery link in the global document head.
+- [x] Added `/robots.txt` pointing to the generated sitemap.
 
 ## Pending
 
