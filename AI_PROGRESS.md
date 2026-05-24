@@ -133,6 +133,7 @@ Stage 6.7: SakuraPaper minimal blog UI correction.
 - Wrangler D1/R2 IDs are placeholders and must be replaced before remote deployment.
 - Local migration verification depends on Wrangler accepting the placeholder D1 database configuration; production requires replacing IDs first.
 - Login now only requires `ADMIN_USERNAME` and `ADMIN_PASSWORD` for standard deployment; `ADMIN_PASSWORD_HASH` remains an advanced optional override.
+- Git-based Cloudflare deployment now runs `scripts/prepare-cloudflare-config.mjs` to generate `DB` and `MEDIA_BUCKET` bindings from Cloudflare Variables, avoiding committed personal D1 IDs.
 - `SETUP_TOKEN` is required for `/admin/setup`; it must be set in `.dev.vars` locally or Cloudflare secrets remotely.
 - `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migration/create-admin against that config or use `pnpm dev`.
 - `pnpm check` currently prompts to install `@astrojs/check`; it was not installed during Stage 4 to avoid changing package dependencies.

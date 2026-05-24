@@ -8,8 +8,11 @@ Sakura Cactus is deployed as a Cloudflare Workers SSR application. Workers handl
 - Create production and preview private R2 buckets.
 - Keep R2 public development URL disabled.
 - Do not bind a public custom domain directly to R2.
-- Bind the D1 database as `DB` in the Cloudflare dashboard.
-- Bind the private R2 bucket as `MEDIA_BUCKET` in the Cloudflare dashboard.
+- Set `CLOUDFLARE_D1_DATABASE_ID` in Cloudflare Variables. The build command runs `scripts/prepare-cloudflare-config.mjs` and generates the `DB` binding.
+- Optionally set `CLOUDFLARE_D1_DATABASE_NAME`; it defaults to `sakura_blog_prod`.
+- Optionally set `CLOUDFLARE_R2_BUCKET_NAME`; it defaults to `sakura-blog-media-prod`.
+- The generated Wrangler config includes the private R2 bucket binding as `MEDIA_BUCKET`.
+- Keep `keep_vars: true` in `wrangler.jsonc` so Wrangler deploys do not remove Dashboard-managed Variables and Secrets.
 - Configure administrator credentials with Cloudflare Workers Secrets.
 - Configure public site identity with Cloudflare Workers environment variables if you do not want the defaults.
 

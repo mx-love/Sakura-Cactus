@@ -8,7 +8,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "wrangler dev",
-    "deploy": "astro build && wrangler deploy",
+    "deploy": "node scripts/prepare-cloudflare-config.mjs && astro build && wrangler deploy",
     "types": "wrangler types",
     "check": "astro check",
     "db:migration:create": "wrangler d1 migrations create sakura_blog_prod",
