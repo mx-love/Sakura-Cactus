@@ -117,6 +117,15 @@ function statusLabel(status: Exclude<PostStatus, 'deleted'>): string {
   return '草稿';
 }
 
+function isPubliclyReachablePost(post: PostRow): boolean {
+  if (post.status !== 'published' || post.visibility !== 'public' || !post.slug || !post.published_at) {
+    return false;
+  }
+
+  const publishedAt = new Date(post.published_at);
+  return !Number.isNaN(publishedAt.getTime()) && publishedAt.getTime() <= Date.now();
+}
+
 function isImageUrl(value: string): boolean {
   const trimmed = value.trim();
 
@@ -369,16 +378,22 @@ export function PostEditor({ post }: PostEditorProps) {
       }
 
       const payload = (await response.json()) as { ok: true; data: { post: PostRow & { tags?: Array<{ name: string }> } } };
+      const savedPost = payload.data.post;
       const nextForm = postToState(payload.data.post);
-      setPostId(payload.data.post.id);
+      setPostId(savedPost.id);
       setForm(nextForm);
       setSavedSnapshot(createSnapshot(nextForm));
-      markSavedAssetTokens(payload.data.post.content_markdown);
+      markSavedAssetTokens(savedPost.content_markdown);
       setMessage(status === 'published' ? '已发布' : '已保存');
       setSaveFeedback('success');
 
+      if (status === 'published' && isPubliclyReachablePost(savedPost)) {
+        window.location.href = `/posts/${encodeURIComponent(savedPost.slug)}`;
+        return;
+      }
+
       if (!postId) {
-        window.history.replaceState(null, '', `/write?post=${payload.data.post.id}`);
+        window.history.replaceState(null, '', `/write?post=${savedPost.id}`);
       }
     } finally {
       setIsSubmitting(false);

@@ -317,14 +317,37 @@ function stripTags(value: string): string {
   return value.replace(/<[^>]*>/g, '');
 }
 
-function decodeHtmlEntities(value: string): string {
-  return value
+export function decodeHtmlEntities(value: string | null | undefined): string {
+  if (!value) {
+    return '';
+  }
+
+  const decodeOnce = (input: string) => input
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
     .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'");
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hexValue: string) => {
+      const codePoint = Number.parseInt(hexValue, 16);
+      try {
+        return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&#([0-9]+);/g, (_, decimalValue: string) => {
+      const codePoint = Number.parseInt(decimalValue, 10);
+      try {
+        return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : _;
+      } catch {
+        return _;
+      }
+    });
+
+  return decodeOnce(decodeOnce(String(value)));
 }
 
 function escapeHtmlAttribute(value: string): string {

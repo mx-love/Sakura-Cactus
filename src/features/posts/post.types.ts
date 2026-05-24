@@ -1,5 +1,5 @@
 import type { PostRow, PostStatus, PostVisibility } from '@/lib/database.types';
-import { extractFirstImageUrl } from './post.renderer';
+import { decodeHtmlEntities, extractFirstImageUrl } from './post.renderer';
 
 export type { PostRow, PostStatus, PostVisibility };
 
@@ -54,10 +54,10 @@ export function toPublicPostSummary(post: PostRow, tags: PublicPostTag[] = []): 
   return {
     id: post.id,
     slug: post.slug,
-    title: post.title,
-    excerpt: post.excerpt,
+    title: decodeHtmlEntities(post.title),
+    excerpt: post.excerpt ? decodeHtmlEntities(post.excerpt) : null,
     coverImageUrl: extractFirstImageUrl(post.content_markdown),
-    tags: tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
+    tags: tags.map((tag) => ({ name: decodeHtmlEntities(tag.name), slug: tag.slug })),
     publishedAt: post.published_at,
     pinnedAt: post.pinned_at,
     updatedAt: post.updated_at
@@ -68,7 +68,7 @@ export function toPublicPostDetail(post: PostRow, tags: PublicPostTag[] = []): P
   return {
     ...toPublicPostSummary(post, tags),
     contentHtml: post.content_html ?? '',
-    seoTitle: post.seo_title,
-    seoDescription: post.seo_description
+    seoTitle: post.seo_title ? decodeHtmlEntities(post.seo_title) : null,
+    seoDescription: post.seo_description ? decodeHtmlEntities(post.seo_description) : null
   };
 }
