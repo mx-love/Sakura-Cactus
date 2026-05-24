@@ -1,11 +1,15 @@
 import { createRandomId } from '@/features/auth/crypto.service';
 import { nowIso } from '@/lib/db';
-import type { FriendLinkRow, FriendLinkStatus } from './friend.types';
+import type { FriendHealthStatus, FriendLinkRow, FriendLinkStatus } from './friend.types';
+
+const FRIEND_LINK_SELECT = `id, name, url, avatar_url, description, status, sort_order,
+  health_status, last_checked_at, last_status_code, last_error, consecutive_failures,
+  created_at, updated_at`;
 
 export async function listApprovedFriendLinks(db: D1Database): Promise<FriendLinkRow[]> {
   const result = await db
     .prepare(
-      `SELECT id, name, url, avatar_url, description, status, sort_order, created_at, updated_at
+      `SELECT ${FRIEND_LINK_SELECT}
        FROM friend_links
        WHERE status = 'approved'
        ORDER BY created_at ASC`
@@ -18,7 +22,7 @@ export async function listApprovedFriendLinks(db: D1Database): Promise<FriendLin
 export async function listAdminFriendLinks(db: D1Database): Promise<FriendLinkRow[]> {
   const result = await db
     .prepare(
-      `SELECT id, name, url, avatar_url, description, status, sort_order, created_at, updated_at
+      `SELECT ${FRIEND_LINK_SELECT}
        FROM friend_links
        ORDER BY created_at ASC`
     )
@@ -30,7 +34,7 @@ export async function listAdminFriendLinks(db: D1Database): Promise<FriendLinkRo
 export async function findFriendLinkById(db: D1Database, id: string): Promise<FriendLinkRow | null> {
   return db
     .prepare(
-      `SELECT id, name, url, avatar_url, description, status, sort_order, created_at, updated_at
+      `SELECT ${FRIEND_LINK_SELECT}
        FROM friend_links
        WHERE id = ?
        LIMIT 1`
@@ -57,6 +61,11 @@ export async function createFriendLink(db: D1Database, input: PersistedFriendLin
     description: input.description,
     status: input.status,
     sort_order: 0,
+    health_status: 'unknown',
+    last_checked_at: null,
+    last_status_code: null,
+    last_error: null,
+    consecutive_failures: 0,
     created_at: now,
     updated_at: now
   };
@@ -127,4 +136,41 @@ export async function deleteFriendLink(db: D1Database, id: string): Promise<Frie
 
   await db.prepare('DELETE FROM friend_links WHERE id = ?').bind(id).run();
   return current;
+}
+
+export interface FriendHealthUpdate {
+  healthStatus: FriendHealthStatus;
+  statusCode: number | null;
+  error: string | null;
+  consecutiveFailures: number;
+}
+
+export async function updateFriendHealth(
+  db: D1Database,
+  id: string,
+  input: FriendHealthUpdate
+): Promise<FriendLinkRow | null> {
+  await db
+    .prepare(
+      `UPDATE friend_links
+       SET health_status = ?,
+           last_checked_at = ?,
+           last_status_code = ?,
+           last_error = ?,
+           consecutive_failures = ?,
+           updated_at = ?
+       WHERE id = ?`
+    )
+    .bind(
+      input.healthStatus,
+      nowIso(),
+      input.statusCode,
+      input.error,
+      input.consecutiveFailures,
+      nowIso(),
+      id
+    )
+    .run();
+
+  return findFriendLinkById(db, id);
 }

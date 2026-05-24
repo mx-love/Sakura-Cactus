@@ -35,7 +35,7 @@ const tags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
 
 <SiteLayout title="标签 | Sakura Cactus" description="按主题浏览公开文章。">
   <section class="sc-page">
-    <div class="sc-public-shell">
+    <div class="sc-public-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
         <span>»</span>
@@ -52,7 +52,7 @@ const tags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
           <p>暂无公开标签。</p>
         </div>
       ) : (
-        <div class="sc-tags-index sc-tags-compact">
+        <div class="sc-tags-index sc-tags-compact sc-sticker-tags">
           {tags.map((tag) => (
             <a class="sc-tag-topic" href={`/tags/${tag.slug}`}>
               <span>{tag.name}</span>

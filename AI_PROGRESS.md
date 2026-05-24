@@ -113,7 +113,7 @@ Stage 6.7: SakuraPaper minimal blog UI correction.
 - [x] Simplified the homepage, article list, timeline, tags, friends, about, login, article detail, and writing UI around narrow content-first layouts.
 - [x] Added `/rss.xml` for public published posts.
 - [x] Added `/sitemap.xml` for static public pages, public posts, and public tag pages.
-- [x] RSS and sitemap use `SITE_URL` with a local fallback.
+- [x] RSS, sitemap, and robots use the current request origin automatically.
 - [x] Added RSS discovery link in the global document head.
 - [x] Added `/robots.txt` pointing to the generated sitemap.
 - [x] Treated the `about` tag as a system page source and hid it from normal discovery flows.
@@ -350,3 +350,15 @@ Site settings controls:
 - Added a comment on/off setting without external provider integration.
 - Added external favicon URL output.
 - Added settings-triggered expired unreferenced image cleanup.
+
+View counting and friend health checks:
+
+- Changed PV counting to wait 8 seconds and avoid repeat counts from the same browser for 12 hours.
+- Added approved friend link health checks with manual admin trigger and weekly scheduled Cron reuse.
+- Down friend links stay visible but show a muted grayscale avatar on `/friends`.
+
+Public reading experience:
+
+- Added a window-side paper desk homepage with a small calendar note, featured latest post, paper strip list, and compact tag stickers.
+- Added h2/h3 heading ids and article TOC extraction to the Markdown renderer.
+- Added desktop paper-edge TOC and mobile collapsible TOC for longer articles.

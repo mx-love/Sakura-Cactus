@@ -1,6 +1,8 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { getDb } from '@/lib/db';
 import { jsonError } from '@/lib/response';
+import { ensureD1Schema } from '@/lib/schema';
 
 function isAdminPage(pathname: string): boolean {
   return pathname === '/admin' || pathname.startsWith('/admin/');
@@ -19,6 +21,8 @@ function isAdminApi(pathname: string): boolean {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  await ensureD1Schema(getDb());
+
   const { pathname } = context.url;
 
   if (isAdminApi(pathname)) {

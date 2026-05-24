@@ -6,6 +6,7 @@ export type CommentProvider = 'off' | 'giscus' | 'utterances' | 'waline' | 'arta
 
 export interface SiteSettings {
   friendApplyEnabled: boolean;
+  friendHealthEnabled: boolean;
   commentEnabled: boolean;
   commentProvider: CommentProvider;
   commentConfig: Record<string, string>;
@@ -16,6 +17,7 @@ export interface SiteSettings {
 
 export interface SiteSettingsInput {
   friendApplyEnabled?: boolean;
+  friendHealthEnabled?: boolean;
   commentEnabled?: boolean;
   commentProvider?: CommentProvider;
   commentConfig?: Record<string, unknown>;

@@ -1,6 +1,7 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getPublicPosts } from '@/features/posts/post.service';
+import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
@@ -28,6 +29,72 @@ function sortPinnedFirst(posts: Awaited<ReturnType<typeof getPublicPosts>>) {
 
 const posts = sortPinnedFirst((await getPublicPosts()).filter((post) => !isAboutPost(post)));
 const latestPosts = posts.slice(0, 5);
+const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
+const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地发布。';
+const siteDescription = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。';
+const leadPost = latestPosts[0] ?? null;
+const notePosts = latestPosts.slice(1);
+const now = new Date();
+const calendarYear = now.getFullYear();
+const calendarMonth = now.getMonth();
+const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+const monthStartDay = new Date(calendarYear, calendarMonth, 1).getDay();
+const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+const earthlyBranches = [
+  { branch: '子', zodiac: '鼠' },
+  { branch: '丑', zodiac: '牛' },
+  { branch: '寅', zodiac: '虎' },
+  { branch: '卯', zodiac: '兔' },
+  { branch: '辰', zodiac: '龙' },
+  { branch: '巳', zodiac: '蛇' },
+  { branch: '午', zodiac: '马' },
+  { branch: '未', zodiac: '羊' },
+  { branch: '申', zodiac: '猴' },
+  { branch: '酉', zodiac: '鸡' },
+  { branch: '戌', zodiac: '狗' },
+  { branch: '亥', zodiac: '猪' }
+];
+const dayOfYear = Math.floor((Date.UTC(calendarYear, calendarMonth, now.getDate()) - Date.UTC(calendarYear, 0, 1)) / 86_400_000) + 1;
+const isoWeekDate = new Date(Date.UTC(calendarYear, calendarMonth, now.getDate()));
+const isoDay = isoWeekDate.getUTCDay() || 7;
+isoWeekDate.setUTCDate(isoWeekDate.getUTCDate() + 4 - isoDay);
+const isoYearStart = new Date(Date.UTC(isoWeekDate.getUTCFullYear(), 0, 1));
+const isoWeek = Math.ceil(((isoWeekDate.getTime() - isoYearStart.getTime()) / 86_400_000 + 1) / 7);
+const stem = heavenlyStems[(calendarYear - 4) % 10];
+const branchInfo = earthlyBranches[(calendarYear - 4) % 12];
+const ganzhiYear = `${stem}${branchInfo.branch}${branchInfo.zodiac}年`;
+const articleDays = new Set(
+  posts
+    .filter((post) => {
+      if (!post.publishedAt) {
+        return false;
+      }
+
+      const date = new Date(post.publishedAt);
+      return date.getFullYear() === calendarYear && date.getMonth() === calendarMonth;
+    })
+    .map((post) => new Date(post.publishedAt as string).getDate())
+);
+const tagMap = new Map<string, { name: string; slug: string; count: number }>();
+
+for (const post of posts) {
+  for (const tag of post.tags) {
+    if (tag.slug === 'about' || tag.name.toLowerCase() === 'about') {
+      continue;
+    }
+
+    const current = tagMap.get(tag.slug);
+
+    if (current) {
+      current.count += 1;
+    } else {
+      tagMap.set(tag.slug, { name: tag.name, slug: tag.slug, count: 1 });
+    }
+  }
+}
+
+const tagCloud = [...tagMap.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 8);
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -38,16 +105,47 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
 function formatDate(value: string | null) {
   return value ? dateFormatter.format(new Date(value)) : '';
 }
+
 ---
 
 <SiteLayout>
   <section class="sc-page">
     <div class="sc-public-shell">
-      <header class="sc-home-intro">
-        <h1>Sakura Cactus</h1>
-        <p class="sc-home-signature">温柔地写，安静地发布。</p>
-        <p class="sc-home-description">一些文章、笔记，以及慢慢整理的想法。</p>
-      </header>
+      <div class="sc-home-desk">
+        <header class="sc-home-intro sc-paper-piece">
+          <span class="sc-paper-kicker">窗边纸页</span>
+          <h1>{siteName}</h1>
+          <p class="sc-home-signature">{tagline}</p>
+          <p class="sc-home-description">{siteDescription}</p>
+        </header>
+
+        <aside class="sc-calendar-note" aria-label="今日纸页">
+          <div class="sc-calendar-note-head">
+            <span>今日纸页</span>
+            <strong>{calendarYear}年{calendarMonth + 1}月 · {weekdays[now.getDay()]}</strong>
+          </div>
+          <div class="sc-calendar-weekdays" aria-hidden="true">
+            {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+              <span>{day}</span>
+            ))}
+          </div>
+          <div class="sc-calendar-grid" aria-hidden="true">
+            {Array.from({ length: monthStartDay }).map(() => <span class="sc-calendar-empty"></span>)}
+            {Array.from({ length: daysInMonth }).map((_, index) => {
+              const day = index + 1;
+              return (
+                <span class:list={['sc-calendar-day', day === now.getDate() && 'sc-calendar-today', articleDays.has(day) && 'sc-calendar-has-post']}>
+                  {day}
+                </span>
+              );
+            })}
+          </div>
+          <div class="sc-calendar-note-foot">
+            <span>第{dayOfYear}天 第{isoWeek}周</span>
+            <span>{ganzhiYear}</span>
+          </div>
+        </aside>
+      </div>
 
       <section class="sc-section">
         <div class="sc-section-heading">
@@ -61,38 +159,54 @@ function formatDate(value: string | null) {
             <p>第一篇文章发布后会显示在这里。</p>
           </div>
         ) : (
-          <div class="sc-post-list">
-            {latestPosts.map((post) => (
-              <article class="sc-post-entry">
+          <div class="sc-home-posts">
+            {leadPost ? (
+              <article class="sc-featured-paper">
+                <span class="sc-paper-kicker">最新整理</span>
                 <h3>
-                  <a href={`/posts/${post.slug}`}>{post.title}</a>
+                  <a href={`/posts/${leadPost.slug}`}>{leadPost.title}</a>
                 </h3>
-                {post.publishedAt ? (
-                  <p class="sc-post-meta">
-                    <span class="sc-calendar-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M8 2v4" />
-                        <path d="M16 2v4" />
-                        <path d="M3 10h18" />
-                        <rect x="3" y="4" width="18" height="18" rx="2" />
-                      </svg>
-                    </span>
-                    <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
-                  </p>
-                ) : null}
-                {post.excerpt ? <p class="sc-post-excerpt">{post.excerpt}</p> : null}
-                {post.tags.length > 0 ? (
+                {leadPost.publishedAt ? <time datetime={leadPost.publishedAt}>{formatDate(leadPost.publishedAt)}</time> : null}
+                {leadPost.excerpt ? <p>{leadPost.excerpt}</p> : null}
+                {leadPost.tags.length > 0 ? (
                   <div class="sc-tag-list">
-                    {post.tags.map((tag) => (
+                    {leadPost.tags.map((tag) => (
                       <a class="sc-tag-link" href={`/tags/${tag.slug}`}>{tag.name}</a>
                     ))}
                   </div>
                 ) : null}
               </article>
-            ))}
+            ) : null}
+
+            {notePosts.length > 0 ? (
+              <div class="sc-paper-strip-list">
+                {notePosts.map((post) => (
+                  <article class="sc-paper-strip">
+                    <div>
+                      <h3>
+                        <a href={`/posts/${post.slug}`}>{post.title}</a>
+                      </h3>
+                      {post.excerpt ? <p>{post.excerpt}</p> : null}
+                    </div>
+                    {post.publishedAt ? <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time> : null}
+                  </article>
+                ))}
+              </div>
+            ) : null}
           </div>
         )}
       </section>
+
+      {tagCloud.length > 0 ? (
+        <section class="sc-home-tags" aria-label="标签纸片">
+          <span>纸页标签</span>
+          <div class="sc-tag-list">
+            {tagCloud.map((tag) => (
+              <a class="sc-tag-pill" href={`/tags/${tag.slug}`}>{tag.name}</a>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   </section>
 </SiteLayout>

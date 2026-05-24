@@ -13,26 +13,8 @@
     "enabled": true
   },
   "triggers": {
-    "crons": ["0 3 * * *"]
+    "crons": ["0 3 * * 1"]
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "sakura_blog_prod",
-      "database_id": "REPLACE_WITH_PROD_D1_ID",
-      "migrations_dir": "./migrations",
-      "preview_database_id": "REPLACE_WITH_PREVIEW_D1_ID"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA_BUCKET",
-      "bucket_name": "sakura-blog-media-prod",
-      "preview_bucket_name": "sakura-blog-media-preview"
-    }
-  ],
-  "vars": {
-    "PUBLIC_SITE_NAME": "Sakura Cactus",
-    "PUBLIC_SITE_URL": "http://localhost:4321"
-  }
+  "d1_databases": [],
+  "r2_buckets": []
 }

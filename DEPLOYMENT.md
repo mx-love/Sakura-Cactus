@@ -8,9 +8,10 @@ Sakura Cactus is deployed as a Cloudflare Workers SSR application. Workers handl
 - Create production and preview private R2 buckets.
 - Keep R2 public development URL disabled.
 - Do not bind a public custom domain directly to R2.
-- Replace placeholder database IDs in `wrangler.jsonc`.
-- Apply D1 migrations.
+- Bind the D1 database as `DB` in the Cloudflare dashboard.
+- Bind the private R2 bucket as `MEDIA_BUCKET` in the Cloudflare dashboard.
 - Configure administrator credentials with Cloudflare Workers Secrets.
+- Configure public site identity with Cloudflare Workers environment variables if you do not want the defaults.
 
 ## Required Production Secrets
 
@@ -19,7 +20,6 @@ Set these with `wrangler secret put` or in the Cloudflare dashboard. Do not comm
 ```bash
 wrangler secret put ADMIN_USERNAME
 wrangler secret put ADMIN_PASSWORD_HASH
-wrangler secret put SITE_URL
 ```
 
 Recommended production variables:
@@ -27,7 +27,6 @@ Recommended production variables:
 ```txt
 ADMIN_USERNAME=your-name
 ADMIN_PASSWORD_HASH=generated-password-hash
-SITE_URL=https://your-domain.com
 ```
 
 `ADMIN_PASSWORD_HASH` stores a password hash, not the real password. Generate it locally:
@@ -36,7 +35,19 @@ SITE_URL=https://your-domain.com
 node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
 ```
 
-`SITE_URL` is used to generate absolute URLs for RSS, sitemap, and robots metadata.
+RSS, sitemap, and robots metadata use the current request origin automatically. No extra site URL variable is required. Local development uses localhost, `workers.dev` uses the workers.dev domain, and custom domains use the bound domain.
+
+## Public Site Identity Variables
+
+These are normal Cloudflare Workers environment variables, not secrets. Configure them in the Cloudflare dashboard or your deployment environment. Do not put them in `wrangler.jsonc` unless you intentionally want repository-tracked defaults.
+
+```txt
+SITE_NAME=Sakura Cactus
+SITE_TAGLINE=温柔地写，安静地发布。
+SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
+```
+
+Empty or missing values fall back to the defaults above. `SITE_NAME` controls the header brand, homepage title, default page title, footer, and RSS title. `SITE_TAGLINE` and `SITE_DESCRIPTION` control the homepage intro. `SITE_DESCRIPTION` is also used as the default meta description and RSS description. The small homepage label `窗边纸页` is part of the fixed Sakura Cactus theme and is not configurable.
 
 ## Optional Variables
 
@@ -57,20 +68,26 @@ Use `.dev.vars` locally. Do not commit `.dev.vars`.
 ```txt
 ADMIN_USERNAME=sakura
 ADMIN_PASSWORD=change-me
-SITE_URL=http://localhost:4321
+SITE_NAME=Sakura Cactus
+SITE_TAGLINE=温柔地写，安静地发布。
+SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 ```
 
 Local development may use `ADMIN_PASSWORD` for convenience. Production should use `ADMIN_PASSWORD_HASH`.
 
-## Database Migrations
+## Database Initialization
 
-Local:
+Sakura Cactus automatically initializes the D1 schema on first runtime access. The bootstrap only creates missing tables, indexes, default settings, and known columns. It does not delete tables, clear data, or rebuild the database.
+
+The SQL files under `migrations/` are still kept for developers who want explicit local database maintenance.
+
+Local developer command:
 
 ```bash
 pnpm db:migration:apply:local
 ```
 
-Production:
+Production maintenance command, if you intentionally want to apply migrations manually:
 
 ```bash
 pnpm db:migration:apply:prod

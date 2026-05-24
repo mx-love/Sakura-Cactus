@@ -39,9 +39,15 @@ const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
             <article class="sc-settings-compact-row">
               <div>
                 <h3>友链健康监测</h3>
-                <p>定期检查友链可访问性。</p>
+                <p>开启后每周自动检查友链可访问性。无法访问时，友人帐头像会变灰；不会自动删除或隐藏友链。</p>
               </div>
-              <span class="sc-settings-status">后续</span>
+              <div class="sc-settings-inline-actions">
+                <label class="sc-switch">
+                  <input id="friend-health-enabled" type="checkbox" checked={settings.friendHealthEnabled} />
+                  <span></span>
+                </label>
+                <button class="sc-settings-link" id="friend-health-check-button" type="button" disabled={!settings.friendHealthEnabled}>立即检查</button>
+              </div>
             </article>
           </div>
         </section>
@@ -110,6 +116,8 @@ const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
     const message = document.getElementById('settings-message');
     const saveButton = document.getElementById('settings-save-button');
     const cleanupButton = document.getElementById('cleanup-assets-button');
+    const friendHealthEnabled = document.getElementById('friend-health-enabled');
+    const friendHealthCheckButton = document.getElementById('friend-health-check-button');
 
     function setMessage(text, isError = false) {
       if (!message) {
@@ -128,6 +136,12 @@ const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
     function checkedValue(id) {
       const field = document.getElementById(id);
       return field instanceof HTMLInputElement ? field.checked : false;
+    }
+
+    function syncFriendHealthCheckButton() {
+      if (friendHealthEnabled instanceof HTMLInputElement && friendHealthCheckButton instanceof HTMLButtonElement) {
+        friendHealthCheckButton.disabled = !friendHealthEnabled.checked;
+      }
     }
 
     async function readError(response, fallback) {
@@ -149,6 +163,7 @@ const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
           credentials: 'same-origin',
           body: JSON.stringify({
             friendApplyEnabled: checkedValue('friend-apply-enabled'),
+            friendHealthEnabled: checkedValue('friend-health-enabled'),
             commentEnabled: checkedValue('comment-enabled'),
             viewCountEnabled: checkedValue('view-count-enabled'),
             faviconUrl: fieldValue('favicon-url')
@@ -165,6 +180,41 @@ const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
       } finally {
         saveButton.disabled = false;
         saveButton.textContent = '保存设置';
+      }
+    });
+
+    friendHealthEnabled?.addEventListener('change', syncFriendHealthCheckButton);
+    syncFriendHealthCheckButton();
+
+    friendHealthCheckButton?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = '检查中...';
+      setMessage('');
+
+      try {
+        const response = await fetch('/api/admin/friends/check-health', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+          throw new Error(await readError(response, '检查失败。'));
+        }
+
+        const payload = await response.json();
+        const stats = payload.data.stats;
+        setMessage(`已检查 ${stats.scanned} 个：正常 ${stats.ok}，受限 ${stats.warning}，不可达 ${stats.down}。`);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : '检查失败。', true);
+      } finally {
+        button.textContent = '立即检查';
+        syncFriendHealthCheckButton();
       }
     });
 

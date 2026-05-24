@@ -35,6 +35,29 @@ export async function incrementPostViewCount(db: D1Database, postId: string): Pr
   return row?.count ?? 0;
 }
 
+export async function incrementPublicPostViewCount(db: D1Database, postId: string, nowIsoValue: string): Promise<number | null> {
+  const post = await db
+    .prepare(
+      `SELECT id
+       FROM posts
+       WHERE id = ?
+         AND status = 'published'
+         AND visibility = 'public'
+         AND deleted_at IS NULL
+         AND published_at IS NOT NULL
+         AND published_at <= ?
+       LIMIT 1`
+    )
+    .bind(postId, nowIsoValue)
+    .first<{ id: string }>();
+
+  if (!post) {
+    return null;
+  }
+
+  return incrementPostViewCount(db, postId);
+}
+
 export async function getPostViewCount(db: D1Database, postId: string): Promise<number> {
   const row = await db.prepare('SELECT count FROM post_view_counts WHERE post_id = ?').bind(postId).first<{ count: number }>();
   return row?.count ?? 0;

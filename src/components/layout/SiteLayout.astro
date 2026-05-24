@@ -2,6 +2,7 @@
 import '@/styles/global.css';
 import SiteHeader from './SiteHeader.astro';
 import { getSiteSettings } from '@/features/settings/settings.service';
+import { env } from 'cloudflare:workers';
 
 interface Props {
   title?: string;
@@ -13,8 +14,8 @@ interface Props {
 }
 
 const {
-  title = 'Sakura Cactus',
-  description = '温柔地写，安静地发布。',
+  title = env.SITE_NAME?.trim() || 'Sakura Cactus',
+  description = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。',
   canonicalUrl,
   ogImage,
   showHeader = true,
@@ -40,6 +41,7 @@ const footerLinks = [
 ];
 const siteSettings = await getSiteSettings();
 const faviconHref = siteSettings.faviconUrl || '/favicon.svg';
+const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 ---
 
 <!doctype html>
@@ -53,7 +55,7 @@ const faviconHref = siteSettings.faviconUrl || '/favicon.svg';
     <meta property="og:description" content={description} />
     {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
     {ogImage ? <meta property="og:image" content={ogImage} /> : null}
-    <link rel="alternate" type="application/rss+xml" title="Sakura Cactus RSS" href="/rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/rss.xml" />
     {siteSettings.faviconUrl ? <link rel="icon" href={faviconHref} /> : <link rel="icon" type="image/svg+xml" href={faviconHref} />}
     <title>{title}</title>
   </head>
@@ -65,7 +67,7 @@ const faviconHref = siteSettings.faviconUrl || '/favicon.svg';
     {showFooter ? (
       <footer class="sc-site-footer">
         <div class="sc-site-footer-inner">
-          <span>Sakura Cactus © {new Date().getFullYear()}</span>
+          <span>{siteName} © {new Date().getFullYear()}</span>
           <div class="sc-footer-links" aria-label="外部链接">
             {footerLinks.map((link) => (
               <a class="sc-footer-icon-link" href={link.href} target="_blank" rel="noreferrer" aria-label={link.label} title={link.label}>

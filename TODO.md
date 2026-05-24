@@ -15,6 +15,8 @@
 - [x] Add lightweight local search overlay.
 - [x] Add friend links V1.
 - [x] Add site settings controls.
+- [x] Improve view counting and friend health checks.
+- [x] Polish public reading experience and article TOC.
 
 ## P1
 
@@ -24,7 +26,6 @@
 - [ ] Warn before leaving the post editor with unsaved changes.
 - [ ] Add full-content RSS after safe absolute URL rewriting for rendered HTML.
 - [ ] Connect real tag management.
-- [ ] Add friend link health monitoring flow.
 - [ ] Add external comment provider integration.
 
 ## P2

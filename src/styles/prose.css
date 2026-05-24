@@ -37,11 +37,13 @@
 .sc-prose h2,
 .prose-content h2 {
   font-size: clamp(1.32rem, 2vw, 1.58rem);
+  scroll-margin-top: 5.5rem;
 }
 
 .sc-prose h3,
 .prose-content h3 {
   font-size: clamp(1.12rem, 1.6vw, 1.24rem);
+  scroll-margin-top: 5.5rem;
 }
 
 .sc-prose p,
@@ -177,8 +179,9 @@
   height: auto;
   max-height: min(82vh, 960px);
   object-fit: contain;
-  margin: 1.55rem auto;
+  margin: 1.7rem auto;
   border-radius: 20px;
+  box-shadow: 0 14px 34px rgba(102, 66, 82, 0.055);
 }
 
 .sc-prose .sc-prose-image-paragraph,

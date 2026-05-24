@@ -6,10 +6,15 @@ import {
   listAdminFriendLinks,
   listApprovedFriendLinks,
   updateFriendLink,
+  updateFriendHealth,
   type PersistedFriendLinkInput
 } from './friend.repo';
+import { getSiteSettings } from '@/features/settings/settings.service';
+import type { FriendHealthStatus } from './friend.types';
 
 const FRIEND_STATUSES: FriendLinkStatus[] = ['approved', 'hidden', 'pending'];
+const FRIEND_HEALTH_USER_AGENT = 'Sakura-Cactus-Check/1.0';
+const FRIEND_HEALTH_TIMEOUT_MS = 8000;
 
 export class FriendLinkValidationError extends Error {
   constructor(
@@ -109,6 +114,117 @@ export async function updateAdminFriendLink(id: string, raw: unknown): Promise<F
 
 export async function deleteAdminFriendLink(id: string): Promise<FriendLinkRow | null> {
   return deleteFriendLink(getDb(), id);
+}
+
+interface FriendHealthCheckResult {
+  friend: FriendLinkRow;
+  healthStatus: FriendHealthStatus;
+  statusCode: number | null;
+  error: string | null;
+}
+
+export interface FriendHealthCheckStats {
+  scanned: number;
+  ok: number;
+  warning: number;
+  down: number;
+}
+
+function classifyStatus(status: number): FriendHealthStatus {
+  if (status >= 200 && status <= 399) {
+    return 'ok';
+  }
+
+  if ([403, 405, 429].includes(status)) {
+    return 'warning';
+  }
+
+  return 'down';
+}
+
+async function fetchWithTimeout(url: string, method: 'HEAD' | 'GET'): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FRIEND_HEALTH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      method,
+      redirect: 'follow',
+      headers: {
+        'User-Agent': FRIEND_HEALTH_USER_AGENT
+      },
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function checkFriendLink(friend: FriendLinkRow): Promise<FriendHealthCheckResult> {
+  try {
+    let response = await fetchWithTimeout(friend.url, 'HEAD');
+
+    if (response.status === 405) {
+      response = await fetchWithTimeout(friend.url, 'GET');
+    }
+
+    return {
+      friend,
+      healthStatus: classifyStatus(response.status),
+      statusCode: response.status,
+      error: null
+    };
+  } catch (error) {
+    return {
+      friend,
+      healthStatus: 'down',
+      statusCode: null,
+      error: error instanceof Error ? error.message.slice(0, 200) : 'Network error'
+    };
+  }
+}
+
+export async function checkApprovedFriendLinksHealth(): Promise<FriendHealthCheckStats> {
+  const db = getDb();
+  const friends = await listApprovedFriendLinks(db);
+  const stats: FriendHealthCheckStats = {
+    scanned: friends.length,
+    ok: 0,
+    warning: 0,
+    down: 0
+  };
+
+  for (const friend of friends) {
+    const result = await checkFriendLink(friend);
+    const consecutiveFailures = result.healthStatus === 'down' ? friend.consecutive_failures + 1 : 0;
+
+    await updateFriendHealth(db, friend.id, {
+      healthStatus: result.healthStatus,
+      statusCode: result.statusCode,
+      error: result.error,
+      consecutiveFailures
+    });
+
+    if (result.healthStatus === 'ok') {
+      stats.ok += 1;
+    } else if (result.healthStatus === 'warning') {
+      stats.warning += 1;
+    } else {
+      stats.down += 1;
+    }
+  }
+
+  return stats;
+}
+
+export async function checkApprovedFriendLinksHealthIfEnabled(): Promise<FriendHealthCheckStats | null> {
+  const settings = await getSiteSettings();
+
+  if (!settings.friendHealthEnabled) {
+    return null;
+  }
+
+  return checkApprovedFriendLinksHealth();
 }
 
 export type { FriendLinkInput };

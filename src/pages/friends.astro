@@ -32,11 +32,31 @@ function statusText(status: string): string {
 
   return '显示';
 }
+
+function healthText(status: string): string {
+  if (status === 'ok') {
+    return '正常';
+  }
+
+  if (status === 'warning') {
+    return '检测受限';
+  }
+
+  if (status === 'down') {
+    return '暂不可达';
+  }
+
+  return '未检测';
+}
+
+function formatCheckedAt(value: string | null): string {
+  return value ? new Date(value).toLocaleString() : '尚未检测';
+}
 ---
 
 <SiteLayout title="友人帐 | Sakura Cactus" description="在这里收藏一些同行的纸页与风。">
   <section class="sc-page">
-    <div class="sc-shell sc-friends-shell">
+    <div class="sc-shell sc-friends-shell sc-friends-paper-shell">
       <nav class="sc-breadcrumb" aria-label="Breadcrumb">
         <a href="/">首页</a>
         <span>»</span>
@@ -61,7 +81,7 @@ function statusText(status: string): string {
         ) : (
           <div class="sc-friend-grid">
             {friends.map((friend, index) => (
-              <article class={`sc-friend-card ${friend.status !== 'approved' ? 'sc-friend-card-hidden' : ''}`}>
+              <article class={`sc-friend-card ${friend.status !== 'approved' ? 'sc-friend-card-hidden' : ''} ${friend.health_status === 'down' ? 'sc-friend-card-down' : ''}`}>
                 <a class="sc-friend-card-link" href={friend.url} target="_blank" rel="noreferrer">
                   {friend.avatar_url ? (
                     <img class="sc-friend-avatar" src={friend.avatar_url} alt="" loading="lazy" />
@@ -72,11 +92,14 @@ function statusText(status: string): string {
                     <span class="sc-friend-number">{displayNumber(index)}</span>
                     <strong>{friend.name}</strong>
                     {friend.description ? <span>{friend.description}</span> : <span class="sc-friend-muted">{friend.url}</span>}
+                    {!isAdmin && friend.health_status === 'down' ? <span class="sc-friend-down-note">暂不可达</span> : null}
                   </span>
                 </a>
                 {isAdmin ? (
                   <div class="sc-friend-card-actions">
                     {friend.status !== 'approved' ? <span class="sc-badge sc-badge-private">{statusText(friend.status)}</span> : null}
+                    <span class={`sc-friend-health sc-friend-health-${friend.health_status}`}>{healthText(friend.health_status)}</span>
+                    <span class="sc-friend-health-meta">{formatCheckedAt(friend.last_checked_at)} · 失败 {friend.consecutive_failures}</span>
                     <button type="button" data-edit={friend.id}>编辑</button>
                     <button type="button" data-toggle={friend.id}>{friend.status === 'approved' ? '隐藏' : '显示'}</button>
                     <button type="button" data-delete={friend.id}>删除</button>
@@ -180,6 +203,26 @@ function statusText(status: string): string {
           return '显示';
         }
 
+        function getHealthText(status) {
+          if (status === 'ok') {
+            return '正常';
+          }
+
+          if (status === 'warning') {
+            return '检测受限';
+          }
+
+          if (status === 'down') {
+            return '暂不可达';
+          }
+
+          return '未检测';
+        }
+
+        function formatCheckedAt(value) {
+          return value ? new Date(value).toLocaleString() : '尚未检测';
+        }
+
         function escapeHtml(value) {
           return String(value)
             .replaceAll('&', '&amp;')
@@ -265,7 +308,7 @@ function statusText(status: string): string {
                   const statusBadge = friend.status !== 'approved' ? `<span class="sc-badge sc-badge-private">${getStatusText(friend.status)}</span>` : '';
 
                   return `
-                    <article class="sc-friend-card ${friend.status !== 'approved' ? 'sc-friend-card-hidden' : ''}">
+                    <article class="sc-friend-card ${friend.status !== 'approved' ? 'sc-friend-card-hidden' : ''} ${friend.health_status === 'down' ? 'sc-friend-card-down' : ''}">
                       <a class="sc-friend-card-link" href="${escapeAttribute(friend.url)}" target="_blank" rel="noreferrer">
                         ${avatar}
                         <span class="sc-friend-body">
@@ -276,6 +319,8 @@ function statusText(status: string): string {
                       </a>
                       <div class="sc-friend-card-actions">
                         ${statusBadge}
+                        <span class="sc-friend-health sc-friend-health-${escapeAttribute(friend.health_status)}">${getHealthText(friend.health_status)}</span>
+                        <span class="sc-friend-health-meta">${escapeHtml(formatCheckedAt(friend.last_checked_at))} · 失败 ${Number(friend.consecutive_failures || 0)}</span>
                         <button type="button" data-edit="${escapeAttribute(friend.id)}">编辑</button>
                         <button type="button" data-toggle="${escapeAttribute(friend.id)}">${friend.status === 'approved' ? '隐藏' : '显示'}</button>
                         <button type="button" data-delete="${escapeAttribute(friend.id)}">删除</button>

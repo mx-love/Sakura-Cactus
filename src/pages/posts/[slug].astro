@@ -3,7 +3,8 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminPostBySlug, getPublicPostBySlug, getPublicPosts } from '@/features/posts/post.service';
-import { getPostViewCount, getSiteSettings, incrementPostViewCount } from '@/features/settings/settings.service';
+import { addHeadingIdsToHtml } from '@/features/posts/post.renderer';
+import { getPostViewCount, getSiteSettings } from '@/features/settings/settings.service';
 
 export const prerender = false;
 
@@ -17,11 +18,7 @@ if (!post) {
 }
 
 const siteSettings = await getSiteSettings();
-const viewCount = siteSettings.viewCountEnabled
-  ? publicPost
-    ? await incrementPostViewCount(post.id)
-    : await getPostViewCount(post.id)
-  : null;
+const viewCount = siteSettings.viewCountEnabled ? await getPostViewCount(post.id) : null;
 const title = post.seoTitle ?? post.title;
 const description = post.seoDescription ?? post.excerpt ?? 'Sakura Cactus post.';
 const canonicalUrl = new URL(`/posts/${post.slug}`, Astro.url.origin).href;
@@ -35,6 +32,9 @@ const publicPosts = (await getPublicPosts()).filter((item) => !isAboutPost(item)
 const currentPublicIndex = publicPosts.findIndex((item) => item.slug === post.slug);
 const previousPost = currentPublicIndex > 0 ? publicPosts[currentPublicIndex - 1] : null;
 const nextPost = currentPublicIndex >= 0 && currentPublicIndex < publicPosts.length - 1 ? publicPosts[currentPublicIndex + 1] : null;
+const renderedContent = addHeadingIdsToHtml(post.contentHtml);
+const tocHeadings = renderedContent.headings;
+const showToc = tocHeadings.length >= 3;
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -55,6 +55,18 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
   <article class="sc-page">
     <div class="sc-article-shell">
       <a class="sc-article-back" href="/articles">← 返回文章</a>
+      {showToc ? (
+        <aside class="sc-article-toc" aria-label="文章目录">
+          <p>纸页书签</p>
+          <nav>
+            {tocHeadings.map((heading) => (
+              <a class={`sc-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug}>
+                {heading.text}
+              </a>
+            ))}
+          </nav>
+        </aside>
+      ) : null}
       <div class="sc-article-paper">
         <div class="sc-article-topbar">
           <span></span>
@@ -90,9 +102,21 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
                 ))}
               </div>
             ) : null}
+            {showToc ? (
+              <details class="sc-article-toc-mobile">
+                <summary>本文目录</summary>
+                <nav>
+                  {tocHeadings.map((heading) => (
+                    <a class={`sc-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug}>
+                      {heading.text}
+                    </a>
+                  ))}
+                </nav>
+              </details>
+            ) : null}
           </div>
         </header>
-        <div class="sc-prose prose-content sc-article-prose sc-article-inner" set:html={post.contentHtml} />
+        <div class="sc-prose prose-content sc-article-prose sc-article-inner" set:html={renderedContent.html} />
         {siteSettings.commentEnabled && adminUser ? (
           <section class="sc-comments sc-article-inner">
             <h2>留言</h2>
@@ -127,6 +151,119 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
               </div>
             )}
           </footer>
+        ) : null}
+        {siteSettings.viewCountEnabled && publicPost ? (
+          <script define:vars={{ postId: post.id }}>
+            const storageKey = `sakura:viewed:${postId}`;
+            const twelveHours = 12 * 60 * 60 * 1000;
+            const trackerKey = `sakura:${postId}`;
+            window.__sakuraViewTracker = window.__sakuraViewTracker || {};
+            const tracker = window.__sakuraViewTracker;
+
+            function recentlyCounted() {
+              try {
+                const lastViewedAt = Number(window.localStorage.getItem(storageKey) || '0');
+                return Number.isFinite(lastViewedAt) && Date.now() - lastViewedAt < twelveHours;
+              } catch {
+                return true;
+              }
+            }
+
+            function markCounted() {
+              try {
+                window.localStorage.setItem(storageKey, String(Date.now()));
+              } catch {
+                return;
+              }
+            }
+
+            if (!tracker[trackerKey] && !recentlyCounted()) {
+              tracker[trackerKey] = {
+                submitted: false
+              };
+
+              window.setTimeout(() => {
+                const currentTracker = tracker[trackerKey];
+
+                if (!currentTracker || currentTracker.submitted) {
+                  return;
+                }
+
+                if (recentlyCounted()) {
+                  return;
+                }
+
+                currentTracker.submitted = true;
+                markCounted();
+
+                fetch(`/api/views/${encodeURIComponent(postId)}`, {
+                  method: 'POST',
+                  credentials: 'same-origin',
+                  keepalive: true
+                })
+                  .catch(() => undefined);
+              }, 8000);
+            }
+          </script>
+        ) : null}
+        {showToc ? (
+          <script>
+            const tocLinks = Array.from(document.querySelectorAll('[data-toc-link]'));
+            const headings = tocLinks
+              .map((link) => {
+                const id = link instanceof HTMLElement ? link.dataset.tocLink : '';
+                return id ? document.getElementById(id) : null;
+              })
+              .filter(Boolean);
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (!reduceMotion) {
+              tocLinks.forEach((link) => {
+                link.addEventListener('click', (event) => {
+                  const target = event.currentTarget;
+
+                  if (!(target instanceof HTMLAnchorElement)) {
+                    return;
+                  }
+
+                  const id = decodeURIComponent(target.hash.slice(1));
+                  const heading = document.getElementById(id);
+
+                  if (!heading) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  history.pushState(null, '', target.hash);
+                });
+              });
+            }
+
+            if ('IntersectionObserver' in window && headings.length > 0) {
+              const observer = new IntersectionObserver(
+                (entries) => {
+                  const visible = entries
+                    .filter((entry) => entry.isIntersecting)
+                    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+                  if (!visible?.target?.id) {
+                    return;
+                  }
+
+                  tocLinks.forEach((link) => {
+                    link.classList.toggle('sc-toc-link-active', link instanceof HTMLElement && link.dataset.tocLink === visible.target.id);
+                  });
+                },
+                {
+                  rootMargin: '-18% 0px -68% 0px',
+                  threshold: [0, 0.2, 0.6, 1]
+                }
+              );
+
+              headings.forEach((heading) => observer.observe(heading));
+            }
+          </script>
         ) : null}
       </div>
     </div>

@@ -21,6 +21,7 @@ const pathname = Astro.url.pathname;
 const nextPath = `${Astro.url.pathname}${Astro.url.search}`;
 const accountHref = `/admin/login?next=${encodeURIComponent(nextPath)}`;
 const avatarUrl = adminUser ? env.SITE_AVATAR_URL?.trim() : '';
+const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const posts = await getPublicPosts();
 
 function getSearchDateTerms(value: string | null) {
@@ -82,7 +83,7 @@ function isActive(href: string) {
 
 <header class="sc-site-header">
   <div class="sc-site-header-inner">
-    <a class="sc-site-title" href="/">Sakura Cactus</a>
+    <a class="sc-site-title" href="/">{siteName}</a>
 
     <nav class="sc-site-nav" aria-label="主导航">
       {leadingNavItems.map((item) => (

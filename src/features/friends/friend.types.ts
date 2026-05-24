@@ -1,6 +1,6 @@
-import type { FriendLinkRow, FriendLinkStatus } from '@/lib/database.types';
+import type { FriendHealthStatus, FriendLinkRow, FriendLinkStatus } from '@/lib/database.types';
 
-export type { FriendLinkRow, FriendLinkStatus };
+export type { FriendHealthStatus, FriendLinkRow, FriendLinkStatus };
 
 export interface FriendLinkInput {
   name: string;

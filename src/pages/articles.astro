@@ -41,7 +41,7 @@ function formatDate(value: string | null) {
 
 <SiteLayout title="文章 | Sakura Cactus" description="我发布的所有文章。">
   <section class="sc-page">
-    <div class="sc-public-shell sc-list-shell">
+    <div class="sc-public-shell sc-list-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
         <span>»</span>
@@ -58,7 +58,7 @@ function formatDate(value: string | null) {
           <p>暂无公开文章。</p>
         </div>
       ) : (
-        <div class="sc-post-list sc-compact-post-list">
+        <div class="sc-post-list sc-compact-post-list sc-paper-index-list">
           {posts.map((post) => (
             <article class="sc-post-entry">
               <h2>

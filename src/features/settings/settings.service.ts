@@ -1,5 +1,5 @@
 import { getDb, nowIso } from '@/lib/db';
-import { listSiteSettings, upsertSiteSetting, incrementPostViewCount as incrementCount, getPostViewCount as readCount } from './settings.repo';
+import { listSiteSettings, upsertSiteSetting, incrementPublicPostViewCount, getPostViewCount as readCount } from './settings.repo';
 import type { CommentProvider, SiteSettings, SiteSettingsInput } from './settings.types';
 
 const COMMENT_PROVIDERS: CommentProvider[] = ['off', 'giscus', 'utterances', 'waline', 'artalk', 'custom'];
@@ -16,6 +16,7 @@ export class SiteSettingsValidationError extends Error {
 
 const DEFAULT_SETTINGS: SiteSettings = {
   friendApplyEnabled: false,
+  friendHealthEnabled: false,
   commentEnabled: false,
   commentProvider: 'off',
   commentConfig: {},
@@ -88,6 +89,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 
   return {
     friendApplyEnabled: parseBoolean(values.friend_apply_enabled),
+    friendHealthEnabled: parseBoolean(values.friend_health_enabled),
     commentEnabled: parseBoolean(values.comment_enabled),
     commentProvider: COMMENT_PROVIDERS.includes(values.comment_provider as CommentProvider)
       ? (values.comment_provider as CommentProvider)
@@ -105,6 +107,10 @@ export async function updateSiteSettings(input: SiteSettingsInput): Promise<Site
 
   if (typeof input.friendApplyEnabled === 'boolean') {
     writes.push(['friend_apply_enabled', String(input.friendApplyEnabled)]);
+  }
+
+  if (typeof input.friendHealthEnabled === 'boolean') {
+    writes.push(['friend_health_enabled', String(input.friendHealthEnabled)]);
   }
 
   if (typeof input.commentEnabled === 'boolean') {
@@ -142,8 +148,8 @@ export async function updateMaintenanceLastRunAt(): Promise<void> {
   await upsertSiteSetting(getDb(), 'maintenance_last_run_at', nowIso());
 }
 
-export async function incrementPostViewCount(postId: string): Promise<number> {
-  return incrementCount(getDb(), postId);
+export async function incrementPostViewCount(postId: string): Promise<number | null> {
+  return incrementPublicPostViewCount(getDb(), postId, nowIso());
 }
 
 export async function getPostViewCount(postId: string): Promise<number> {

@@ -6,6 +6,7 @@ export type AssetVisibility = 'draft' | 'public' | 'private' | 'deleted';
 export type AssetRole = 'inline' | 'cover';
 export type SettingType = 'string' | 'number' | 'boolean' | 'json';
 export type FriendLinkStatus = 'approved' | 'hidden' | 'pending';
+export type FriendHealthStatus = 'unknown' | 'ok' | 'warning' | 'down';
 
 export interface UserRow {
   id: string;
@@ -106,6 +107,11 @@ export interface FriendLinkRow {
   description: string | null;
   status: FriendLinkStatus;
   sort_order: number;
+  health_status: FriendHealthStatus;
+  last_checked_at: string | null;
+  last_status_code: number | null;
+  last_error: string | null;
+  consecutive_failures: number;
   created_at: string;
   updated_at: string;
 }

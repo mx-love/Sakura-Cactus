@@ -43,7 +43,7 @@ const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
 
 <SiteLayout title="时间轴 | Sakura Cactus" description="所有公开文章按发布时间归档。">
   <section class="sc-page">
-    <div class="sc-public-shell">
+    <div class="sc-public-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
         <span>»</span>
@@ -60,7 +60,7 @@ const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
           <p>暂无可归档文章。</p>
         </div>
       ) : (
-        <div class="sc-archive">
+        <div class="sc-archive sc-paper-archive">
           {years.map((year) => (
             <section class="sc-archive-year">
               <h2>{year}</h2>

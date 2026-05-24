@@ -7,6 +7,12 @@ import { unified } from 'unified';
 
 const ASSET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,64}$/;
 
+export interface MarkdownHeading {
+  depth: 2 | 3;
+  text: string;
+  slug: string;
+}
+
 function isSafeAnchorUrl(url: string): boolean {
   const trimmed = url.trim().toLowerCase();
   return trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('mailto:');
@@ -51,6 +57,39 @@ function visitTree(node: any, visitor: (node: any, index?: number, parent?: any)
   for (let index = 0; index < node.children.length; index += 1) {
     visitTree(node.children[index], (child) => visitor(child, index, node), node);
   }
+}
+
+function getNodeText(node: any): string {
+  if (!node || typeof node !== 'object') {
+    return '';
+  }
+
+  if (node.type === 'text') {
+    return String(node.value ?? '');
+  }
+
+  if (!Array.isArray(node.children)) {
+    return '';
+  }
+
+  return node.children.map(getNodeText).join('');
+}
+
+function createSlugger() {
+  const seen = new Map<string, number>();
+
+  return (value: string): string => {
+    const normalized = value
+      .normalize('NFKD')
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-+|-+$/g, '');
+    const base = normalized || 'section';
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return count === 0 ? base : `${base}-${count + 1}`;
+  };
 }
 
 function remarkEscapeRawHtml() {
@@ -185,6 +224,34 @@ function rehypeMarkImageCaptions() {
   };
 }
 
+function rehypeAddHeadingIds(headings: MarkdownHeading[]) {
+  return (tree: any) => {
+    const slugger = createSlugger();
+
+    visitTree(tree, (node) => {
+      if (node.type !== 'element' || (node.tagName !== 'h2' && node.tagName !== 'h3')) {
+        return;
+      }
+
+      const text = getNodeText(node).trim();
+
+      if (!text) {
+        return;
+      }
+
+      node.properties = node.properties ?? {};
+      const existingId = typeof node.properties.id === 'string' ? node.properties.id : '';
+      const slug = existingId || slugger(text);
+      node.properties.id = slug;
+      headings.push({
+        depth: node.tagName === 'h2' ? 2 : 3,
+        text,
+        slug
+      });
+    });
+  };
+}
+
 const sanitizeSchema = {
   ...defaultSchema,
   tagNames: Array.from(
@@ -205,6 +272,8 @@ const sanitizeSchema = {
     a: [...(defaultSchema.attributes?.a ?? []), 'href', 'title', 'rel'],
     code: [...(defaultSchema.attributes?.code ?? []), 'className'],
     img: [...(defaultSchema.attributes?.img ?? []), 'src', 'alt', 'title', 'loading'],
+    h2: [...(defaultSchema.attributes?.h2 ?? []), 'id'],
+    h3: [...(defaultSchema.attributes?.h3 ?? []), 'id'],
     input: [
       ['type', 'checkbox'],
       'checked',
@@ -220,19 +289,75 @@ const sanitizeSchema = {
   }
 };
 
-const markdownProcessor = unified()
-  .use(remarkParse)
-  .use(remarkGfm)
-  .use(remarkEscapeRawHtml)
-  .use(remarkRehype)
-  .use(rehypeRewriteAssetImages)
-  .use(rehypeSanitize, sanitizeSchema)
-  .use(rehypeHardenLinksAndImages)
-  .use(rehypeMarkImageCaptions)
-  .use(rehypeStringify);
+function createMarkdownProcessor(headings: MarkdownHeading[]) {
+  return unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkEscapeRawHtml)
+    .use(remarkRehype)
+    .use(rehypeRewriteAssetImages)
+    .use(rehypeAddHeadingIds, headings)
+    .use(rehypeSanitize, sanitizeSchema)
+    .use(rehypeHardenLinksAndImages)
+    .use(rehypeMarkImageCaptions)
+    .use(rehypeStringify);
+}
+
+export function renderMarkdownWithHeadings(markdown: string): { html: string; headings: MarkdownHeading[] } {
+  const headings: MarkdownHeading[] = [];
+  const html = String(createMarkdownProcessor(headings).processSync(markdown));
+  return { html, headings };
+}
 
 export function renderMarkdown(markdown: string): string {
-  return String(markdownProcessor.processSync(markdown));
+  return renderMarkdownWithHeadings(markdown).html;
+}
+
+function stripTags(value: string): string {
+  return value.replace(/<[^>]*>/g, '');
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'");
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+export function addHeadingIdsToHtml(html: string): { html: string; headings: MarkdownHeading[] } {
+  const headings: MarkdownHeading[] = [];
+  const slugger = createSlugger();
+  const nextHtml = html.replace(/<h([23])([^>]*)>([\s\S]*?)<\/h\1>/g, (match, depthValue: string, attrs: string, body: string) => {
+    const depth = Number(depthValue) as 2 | 3;
+    const text = decodeHtmlEntities(stripTags(body)).trim();
+
+    if (!text) {
+      return match;
+    }
+
+    const idMatch = /\sid=(["'])(.*?)\1/.exec(attrs);
+    const slug = idMatch ? idMatch[2] : slugger(text);
+    headings.push({ depth, text, slug });
+
+    if (idMatch) {
+      return match;
+    }
+
+    return `<h${depth}${attrs} id="${escapeHtmlAttribute(slug)}">${body}</h${depth}>`;
+  });
+
+  return { html: nextHtml, headings };
 }
 
 export function extractFirstImageUrl(markdown: string): string | null {

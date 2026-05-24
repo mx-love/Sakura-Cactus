@@ -1,350 +1,318 @@
 # Sakura Cactus
 
-Sakura Cactus is a Cloudflare Workers personal blog system built with Astro, Cloudflare Workers, D1, R2, TypeScript, React, and Tailwind CSS.
+Sakura Cactus 是一个部署在 Cloudflare Workers 上的个人博客系统。它使用 Astro SSR、Cloudflare D1、Cloudflare R2、Markdown 写作，并内置 RSS、sitemap、友人帐、搜索、访问量和站点维护能力。
 
-The project keeps code and content separate:
+它适合个人博客：写文章、上传图片、发布到自己的域名，不需要外部 CMS。
 
-- Code is committed to GitHub and deployed to Cloudflare Workers.
-- Posts are created in `/write` and stored in Cloudflare D1.
-- Images are stored in a private Cloudflare R2 bucket.
-- Public image access must go through `/i/:token`.
-- Cloudflare Workers handles Astro SSR, APIs, D1, R2, and scheduled cleanup Cron.
+## 功能概览
 
-Sakura Cactus targets Cloudflare Workers. Cloudflare Pages is not the recommended deployment target for this project.
+- GitHub Flavored Markdown 风格写作
+- 图片上传到私有 R2，并通过 `/i/:token` 代理访问
+- 草稿、发布、定时发布、私密文章
+- 文章置顶
+- 友人帐、友链申请、友链健康监测
+- RSS、sitemap、robots
+- 轻量搜索
+- 访问量统计
+- 设置页和站点维护
 
-## Current Stage
+## 快速部署到 Cloudflare Workers
 
-Stage 6.7: SakuraPaper minimal blog UI correction.
+Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 应用。
 
-Implemented:
+这不是纯一键部署。首次部署需要创建 D1、R2、填写管理员 Secrets；完成后，后续 push 到 GitHub 会自动部署。数据库表会在首次运行时自动初始化。
 
-- Astro server output
-- Cloudflare adapter
-- React integration
-- Tailwind CSS
-- Basic homepage
-- `/api/health`
-- Initial Wrangler bindings for D1 and R2
-- D1 initial migration schema
-- Environment-variable administrator authentication
-- D1-backed sessions
-- HttpOnly Secure SameSite=Lax session cookie
-- `/admin/login` and `/admin`
-- `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`
-- Server-side protection for `/admin/*` and `/api/admin/*`
-- Login with `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH`; local development can use `ADMIN_PASSWORD`
-- Admin post list, create, edit, publish, unpublish, and soft delete
-- D1-backed post API under `/api/admin/posts`
-- Server-rendered GitHub Flavored Markdown-style HTML with basic sanitization
-- Public homepage post list
-- Public `/posts/[slug]` post detail page
-- Private R2 media upload from `/admin/media`
-- D1-backed asset records
-- Admin asset APIs under `/api/admin/assets`
-- Token-based image proxy at `/i/:token`
-- Public/draft/private asset visibility controls
-- Paste image upload in the post editor
-- Drag-and-drop image upload in the post editor
-- Gallery image insertion from the post editor
-- `asset:token` Markdown image rendering to `/i/:token`
-- `post_assets` syncing when posts are saved
-- Referenced images are made public when a public post is published
-- Automatic soft delete for images that are no longer referenced by any post
-- Public site header with Articles, Timeline, Tags, Friends, About, search/RSS entries, and login entry
-- Mobile front-site menu
-- Minimal SakuraPaper-style homepage and latest post list
-- Minimal article reading layout
-- Unified admin layout and navigation
-- `/archive`, `/about`, and `/admin/settings` placeholder pages
-- Sakura Cactus design tokens for colors, radius, shadows, focus states, buttons, forms, badges, and prose
-- Reusable base CSS classes under the `.sc-*` namespace
-- `/articles`, `/timeline`, `/tags`, `/friends`, `/write`, and `/settings`
-- `/write` as the primary private writing entry
-- `/settings` as the primary private blog settings entry
-- `/admin/media` retained as a hidden media maintenance page
-- RSS feed at `/rss.xml`
-- Sitemap at `/sitemap.xml`
-- Robots metadata at `/robots.txt`
-- Lightweight local search overlay and `/search` fallback page
-- Friend links V1 with public `/friends` display and inline management on `/friends`
-- Site settings stored in D1 `site_settings`
-- Friend link application toggle with pending review
-- Comment on/off setting
-- Optional PV view counts
-- External favicon URL setting
-- Site maintenance action for expired unreferenced image cleanup
+推荐部署方式是：
 
-Not implemented yet:
+GitHub 仓库 + Cloudflare Workers Git 集成自动部署。
 
-- Full tag management
-- Friend link health monitoring flow
-- Comment content storage is intentionally not implemented; use external comment providers
+### 1. 准备 GitHub 仓库
 
-## Commands
+先把项目上传到 GitHub。
+
+可以使用 GitHub Desktop，也可以使用 git 命令：
 
 ```bash
-pnpm install
-pnpm dev
-pnpm build
-pnpm db:migration:apply:local
-pnpm preview
+git add .
+git commit -m "deploy sakura cactus"
+git push
 ```
 
-On this Windows sandbox, use `pnpm.cmd` if PowerShell blocks `pnpm.ps1`.
+如果代码已经在 GitHub，这一步可以跳过。
 
-If Astro or Wrangler tries to write config outside the workspace during local verification, run:
+### 2. 创建 Cloudflare 资源
 
-```powershell
-$env:ASTRO_TELEMETRY_DISABLED='1'
-$env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
-pnpm.cmd build
-```
+需要创建两个资源。
 
-Apply D1 migrations locally:
+#### D1 数据库
 
-```powershell
-$env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
-pnpm.cmd db:migration:apply:local
-```
-
-Configure the local administrator through `.dev.vars`:
+示例名称：
 
 ```txt
-ADMIN_USERNAME=sakura
-ADMIN_PASSWORD=change-me
+sakura_blog_prod
 ```
 
-`ADMIN_USERNAME` can be any name you want to use for the private writing area, such as `sakura`, `owner`, or a nickname. `ADMIN_PASSWORD` is for local development convenience and must never be committed.
+创建后在 Worker 设置中绑定为 `DB`。
 
-Apply D1 migrations locally, then start the app and open `/admin/login`:
+#### R2 Bucket
 
-```powershell
-$env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'
-pnpm.cmd db:migration:apply:local
-pnpm.cmd dev
+示例名称：
+
+```txt
+sakura-blog-media-prod
 ```
 
-For production, set Cloudflare Workers secrets first and apply migrations against remote D1:
+R2 Bucket 保持私有，不需要公开。
+
+图片访问由项目的 `/i/:token` 路由代理，不要打开 R2 public bucket。
+
+### 3. 在 Worker 里绑定 D1 和 R2
+
+在 Cloudflare Worker 的设置里添加绑定。
+
+确认 D1 binding 名称是：
+
+```txt
+DB
+```
+
+确认 R2 binding 名称是：
+
+```txt
+MEDIA_BUCKET
+```
+
+提醒：binding 名称不要改。项目代码默认读取 `DB` 和 `MEDIA_BUCKET`。
+
+不需要手动创建数据库表。Worker 首次运行时会自动初始化 D1 schema。
+
+### 4. Cloudflare 连接 GitHub 自动部署
+
+在 Cloudflare Dashboard 中：
+
+1. 进入 `Workers & Pages`。
+2. 创建 Worker 或选择 `Import repository`。
+3. 选择 GitHub。
+4. 选择你的 Sakura Cactus 仓库。
+5. 选择生产分支，例如 `main`。
+6. 设置构建命令。
+
+构建命令：
 
 ```bash
-wrangler secret put ADMIN_USERNAME
-wrangler secret put ADMIN_PASSWORD_HASH
-wrangler secret put SITE_URL
-pnpm db:migration:apply:prod
+pnpm install --frozen-lockfile && pnpm build
 ```
 
-`SITE_URL` should be the absolute production site URL, for example:
+Deploy command 优先使用 Cloudflare 默认的：
+
+```bash
+npx wrangler deploy
+```
+
+如果 Cloudflare 当前页面不要求填写 Deploy command，按页面默认即可。
+
+如果 Cloudflare 界面要求自定义 Deploy command，也可以使用项目脚本：
+
+```bash
+pnpm deploy
+```
+
+不要填写项目里不存在的脚本。
+
+### 5. 填写环境变量和 Secrets
+
+Cloudflare Worker 设置里需要填写两类配置。
+
+#### 普通环境变量
+
+这些不是密码，可以放在 Variables：
 
 ```txt
-SITE_URL=https://example.com
+SITE_NAME=Sakura Cactus
+SITE_TAGLINE=温柔地写，安静地发布。
+SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
+SITE_AVATAR_URL=https://你的头像地址
 ```
 
-Sakura Cactus uses `SITE_URL` when generating RSS and sitemap URLs. If `SITE_URL` is missing during local development, feeds fall back to `http://localhost:4321`.
+说明：
 
-`SITE_AVATAR_URL` is an optional public avatar URL for the signed-in header account button:
+- `SITE_AVATAR_URL` 可选。
+- `SITE_NAME`、`SITE_TAGLINE`、`SITE_DESCRIPTION` 可以不改，系统有默认值。
+- 首页小标签“窗边纸页”是固定主题文案，不通过环境变量修改。
+- 不需要额外配置站点地址。RSS、sitemap、robots 会自动使用当前访问域名。
+
+#### Secrets
+
+这些是敏感配置，放在 Secrets：
 
 ```txt
-SITE_AVATAR_URL=https://example.com/avatar.png
+ADMIN_USERNAME
+ADMIN_PASSWORD_HASH
 ```
 
-## Friend Links
+说明：
 
-`/friends` displays approved friend links as a public friend-book page.
+- `ADMIN_USERNAME` 是管理员用户名。
+- `ADMIN_PASSWORD_HASH` 是管理员密码 hash，生产推荐使用。
+- 不要在生产环境使用 `ADMIN_PASSWORD` 明文。
+- `ADMIN_PASSWORD` 只建议本地开发使用。
+- `SESSION_SECRET` 默认不需要配置；系统会从管理员密码配置派生。只有你明确想让修改密码后旧 session 继续有效时，才需要把它作为高级 Secret 单独设置。
 
-Administrators can manage friend links directly from `/friends` after signing in:
+### 6. 生成 ADMIN_PASSWORD_HASH
 
-- name
-- site URL
-- optional avatar URL
-- optional description
-- status: visible, hidden, or pending
+生产环境推荐使用 `ADMIN_PASSWORD_HASH`。
 
-Friend link URLs and avatar URLs must use `http` or `https`. Sakura Cactus does not fetch or health-check these URLs in V1.
-
-If friend link applications are enabled in `/settings`, visitors can submit a friend link request from `/friends`. New submissions are saved as `pending` and are not publicly shown until an administrator approves them.
-
-## Site Settings
-
-`/settings` stores real site controls in D1 `site_settings`:
-
-- friend link applications on/off
-- comment entry on/off
-- PV view count on/off
-- external favicon URL
-- site maintenance action for expired unreferenced image cleanup
-
-Comments are currently only a feature toggle. When enabled, administrators can see a lightweight placeholder on article pages. Sakura Cactus does not store comment content in D1. External comment provider integration can be added later as a separate feature.
-
-It is not a secret. You can upload an avatar to your CDN or another public image host later, then point `SITE_AVATAR_URL` at that public URL. Sakura Cactus does not provide avatar upload UI in V1.
-
-`ADMIN_PASSWORD_HASH` uses Sakura Cactus' PBKDF2-SHA256 password hash format. Generate a hash for your real password locally:
+在本地终端运行：
 
 ```bash
 node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
 ```
 
-Do not commit the generated hash. Store it with `wrangler secret put ADMIN_PASSWORD_HASH`.
+把输出填入 Cloudflare Secret：
 
-`SESSION_SECRET` is an advanced optional override. If it is not set, Sakura Cactus derives the session signing secret from the administrator password configuration:
+```txt
+ADMIN_PASSWORD_HASH
+```
 
-- Production: derived from `ADMIN_PASSWORD_HASH` by default. If production only sets `ADMIN_PASSWORD`, Sakura Cactus can still derive sessions from it, but logs a warning and this is not recommended.
-- Local dev: derived from `ADMIN_PASSWORD` when `ADMIN_PASSWORD_HASH` is not set.
+提醒：不要把真实密码或 hash 提交到 GitHub。
 
-Changing `ADMIN_PASSWORD_HASH` or local `ADMIN_PASSWORD` invalidates existing login sessions. This is acceptable for most personal blogs. If you want old sessions to stay valid after changing the admin password, set a custom `SESSION_SECRET`.
+### 7. 数据库自动初始化
 
-Generate a long optional `SESSION_SECRET` with:
+首次访问 Worker 时，Sakura Cactus 会自动确保 D1 里存在需要的表、字段、索引和默认设置。
+
+你不需要在 Cloudflare Dashboard 部署流程里手动执行 D1 migration。
+
+项目仍然保留 `migrations/*.sql`，方便开发者本地开发或需要手动维护数据库时使用。
+
+### 8. 部署、绑定域名并访问
+
+完成以上配置后，在 Cloudflare 触发一次部署，或者 push 一次 GitHub。
+
+如果要使用自己的域名，在 Cloudflare Worker 中进入：
+
+```txt
+Settings -> Domains & Routes -> Custom Domain
+```
+
+绑定完成后，RSS、sitemap、robots 会自动使用这个自定义域名。
+
+如果使用 `workers.dev` 访问，它们会自动使用 `workers.dev` 域名。
+
+本地开发时，它们会自动使用 localhost。
+
+部署成功后访问：
+
+```txt
+/
+/admin/login
+/write
+/settings
+/friends
+/rss.xml
+/sitemap.xml
+/robots.txt
+```
+
+登录后先测试：
+
+1. 能否进入 `/write`。
+2. 能否保存草稿。
+3. 能否发布文章。
+4. 能否上传图片。
+5. `/settings` 是否正常。
+6. `/rss.xml` 和 `/sitemap.xml` 是否显示当前访问域名。
+
+### 9. 以后怎么更新
+
+以后只需要：
+
+1. 本地修改代码。
+2. push 到 GitHub。
+3. Cloudflare 自动重新部署。
+
+如果只是使用 Cloudflare Dashboard 部署，正常情况下不需要手动运行 migration；Worker 首次运行会自动补齐 schema。
+
+## 环境变量速查表
+
+| 名称 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `SITE_NAME` | Variable | 否 | 站点名称 |
+| `SITE_TAGLINE` | Variable | 否 | 首页主标语 |
+| `SITE_DESCRIPTION` | Variable | 否 | 首页描述 / RSS 描述 |
+| `SITE_AVATAR_URL` | Variable | 否 | Header 头像 |
+| `ADMIN_USERNAME` | Secret | 是 | 管理员用户名 |
+| `ADMIN_PASSWORD_HASH` | Secret | 是 | 管理员密码 hash |
+
+## 最小排错
+
+### 页面 500，提示 no such table / no such column
+
+先确认 Cloudflare Worker 已绑定 D1，binding 名称必须是 `DB`。
+
+如果是开发者手动维护数据库，也可以执行 migration 命令重新确认 schema。
+
+### 图片打不开
+
+检查 R2 binding 名称是不是：
+
+```txt
+MEDIA_BUCKET
+```
+
+### 登录失败
+
+检查：
+
+```txt
+ADMIN_USERNAME
+ADMIN_PASSWORD_HASH
+```
+
+### PowerShell 不能运行 pnpm
+
+使用 `pnpm.cmd`：
+
+```powershell
+pnpm.cmd build
+pnpm.cmd dev
+```
+
+## 本地开发（可选）
+
+如果只是部署到 Cloudflare，可以先跳过本节。
+
+本地开发需要创建 `.dev.vars`：
+
+```txt
+ADMIN_USERNAME=sakura
+ADMIN_PASSWORD=change-me
+SITE_NAME=Sakura Cactus
+SITE_TAGLINE=温柔地写，安静地发布。
+SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
+```
+
+不要提交 `.dev.vars` 到 GitHub。
+
+安装依赖：
 
 ```bash
-node -e "console.log(crypto.randomUUID() + crypto.randomUUID())"
+pnpm install
 ```
 
-If both `ADMIN_PASSWORD_HASH` and `ADMIN_PASSWORD` exist, Sakura Cactus uses `ADMIN_PASSWORD_HASH`. `ADMIN_PASSWORD` is kept for local development convenience. If production only sets `ADMIN_PASSWORD`, Sakura Cactus logs a warning recommending `ADMIN_PASSWORD_HASH`.
+应用本地 D1 migration：
 
-Changing the administrator username or password only requires updating Cloudflare Workers Secrets. Sakura Cactus no longer uses `SETUP_TOKEN`, `/admin/setup`, or a web-based first-admin creation flow. The `users` table remains in D1 for legacy ownership/session compatibility, but administrator credentials are read from environment variables, not from D1.
-
-## Security Notes
-
-Do not commit `.env`, `.dev.vars`, Cloudflare API tokens, R2 access keys, session secrets, Turnstile secrets, administrator passwords, or generated password hashes. Do not put real passwords or real password hashes in `wrangler.jsonc`; use `wrangler secret put`.
-
-Admin authentication compares the submitted username against `ADMIN_USERNAME` and verifies the submitted password against `ADMIN_PASSWORD_HASH` when present. D1 stores session token hashes; administrator passwords are not stored in D1. The browser receives only an HttpOnly, Secure, SameSite=Lax cookie.
-
-Browser password managers may offer to save the password typed into `/admin/login`; that is normal browser behavior. Sakura Cactus does not save plaintext administrator passwords to D1. Production should store `ADMIN_PASSWORD_HASH` in Cloudflare Workers Secrets. After login, Sakura Cactus uses the HttpOnly session cookie rather than storing tokens in localStorage or sessionStorage.
-
-## Post Management
-
-After signing in, open `/write` to create a post. Existing compatibility routes under `/admin/posts` are retained for maintenance.
-
-Supported fields:
-
-- `title`
-- `slug`
-- `excerpt`
-- `content_markdown`
-- `content_html`
-- `status`
-- `visibility`
-- `seo_title`
-- `seo_description`
-- `published_at`
-- `created_at`
-- `updated_at`
-
-Post statuses are `draft`, `published`, `archived`, and `deleted`. Deleting a post performs a soft delete by setting `deleted_at` and `status = 'deleted'`.
-
-Visitors can only read posts where:
-
-```sql
-status = 'published'
-AND visibility = 'public'
-AND published_at IS NOT NULL
-AND published_at <= CURRENT_TIMESTAMP
-AND deleted_at IS NULL
+```powershell
+pnpm.cmd db:migration:apply:local
 ```
 
-Draft, private, archived, deleted, and missing posts return 404 on public detail routes.
+启动开发服务：
 
-## RSS and Sitemap
-
-Sakura Cactus exposes production blog metadata routes:
-
-- RSS: `/rss.xml`
-- Sitemap: `/sitemap.xml`
-- Robots: `/robots.txt`
-
-RSS is used by feed readers and aggregators. Sitemap helps search engines discover public pages. `robots.txt` allows crawling and points crawlers to the sitemap.
-
-RSS and sitemap only include public posts that are published, visible, not deleted, not scheduled for the future, and not used as system page content. Sitemap also includes public tag pages that have at least one visible public post. RSS, sitemap, and robots URLs are generated from `SITE_URL` in Cloudflare Workers Secrets, with a local fallback of `http://localhost:4321`.
-
-The latest public post tagged `about` is used as the `/about` page content source. That system source post is hidden from normal public discovery surfaces such as the homepage, article list, timeline, search, RSS, sitemap post URLs, and the public tag index.
-
-RSS currently uses each post excerpt for `description` and `content:encoded`. Full-content RSS can be added later after safely absolute-URL rewriting rendered post HTML.
-
-## Search
-
-Sakura Cactus uses a lightweight local search for public posts. The header search icon opens a small overlay when JavaScript is available, and `/search` remains available as a fallback page.
-
-Search runs in the browser against public post metadata rendered by Sakura Cactus. It searches title, excerpt, and tags, and does not call external search services.
-
-## Media Library
-
-`/admin/media` is retained as a hidden maintenance page. Daily writing should use the image controls inside `/write`.
-
-Rules:
-
-- Files are stored in the private `MEDIA_BUCKET` R2 bucket.
-- Public URLs use `/i/:token`; R2 object keys are not exposed.
-- Tokens are random URL-safe values, not sequential IDs.
-- Uploads create D1 records in `assets`.
-- Default visibility is `draft`.
-- Allowed MIME types: `image/webp`, `image/jpeg`, `image/png`, `image/gif`.
-- Maximum file size: 5 MB.
-- SVG, HTML, JavaScript, executable, archive, and non-image uploads are rejected.
-
-Visitor access:
-
-```txt
-public asset -> 200
-asset used by a published public post -> 200
-draft/private asset without admin session -> 404
-deleted or missing asset -> 404
+```powershell
+pnpm.cmd dev
 ```
 
-Admin access:
+构建检查：
 
-```txt
-draft/private asset with valid admin session -> 200
+```powershell
+pnpm.cmd build
 ```
-
-Public assets use long immutable caching. Draft/private assets use `Cache-Control: private, no-store`.
-
-## Writing Markdown
-
-Sakura Cactus uses a clean GitHub Flavored Markdown-style writing flow. The `/write` page keeps a plain Markdown textarea. Rendering is handled by a local `unified` / `remark-gfm` / `rehype-sanitize` pipeline and does not call the GitHub Markdown API.
-
-- Headings: `#`, `##`, `###`
-- Emphasis: `**bold**`, `*italic*`, `~~strikethrough~~`
-- Blockquotes
-- Ordered and unordered lists
-- Task lists: `- [ ] todo` and `- [x] done`
-- Tables
-- Inline code and fenced code blocks
-- Links and automatic `https://example.com` links
-- Markdown images
-
-Keep post content portable Markdown. Sakura Cactus does not render raw HTML in posts; HTML such as `<script>`, `<iframe>`, `<img>`, or inline event attributes is escaped and shown as text instead of being executed. If you need a small image attribution or note, use a Markdown quote:
-
-```md
-> 图片资源出自互联网收集整理，如果侵犯了您的合法权益，请联系我删除。
-```
-
-## Editor Images
-
-In `/write` and the retained edit route `/admin/posts/[id]`, administrators can insert images without leaving the editor:
-
-- Paste an image into the Markdown textarea.
-- Drag an image file onto the Markdown textarea.
-- Paste an external image URL ending in `.jpg`, `.jpeg`, `.png`, `.webp`, or `.gif`; the editor converts it to Markdown image syntax.
-
-The editor inserts this Markdown syntax:
-
-```md
-![图片说明](asset:token)
-```
-
-The renderer converts it to:
-
-```html
-<img src="/i/token" alt="图片说明" loading="lazy" />
-```
-
-For a small image attribution or caption, put an italic paragraph directly after the image:
-
-```md
-![图片说明](asset:token)
-
-_图片资源出自互联网收集整理，如果侵犯了您的合法权益，请联系我删除。_
-```
-
-Sakura Cactus displays that immediately following italic paragraph as a muted, right-aligned image caption. Prefer this Markdown form instead of HTML for font size or alignment.
-
-R2 keys and R2 public URLs are never written to post content. Saving a post rescans the Markdown and updates `post_assets`. Publishing a public post makes only the currently referenced assets public. When an image is no longer referenced by any post, Sakura Cactus deletes the R2 object first, then soft deletes the D1 asset record.
