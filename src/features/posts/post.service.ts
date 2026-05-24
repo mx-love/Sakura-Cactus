@@ -3,17 +3,19 @@ import { randomBytes } from '@/features/auth/crypto.service';
 import { findAssetsByTokens, makeAssetsPublic } from '@/features/assets/asset.repo';
 import { cleanupUnreferencedAssets } from '@/features/assets/asset.service';
 import { getPostTags, syncPostTags } from '@/features/tags/tag.service';
-import { calculateReadingTimeMinutes, calculateWordCount, extractAssetTokens, renderMarkdown } from './post.renderer';
+import { calculateReadingTimeMinutes, calculateWordCount, decodeHtmlEntities, extractAssetTokens, renderMarkdown } from './post.renderer';
 import {
   createPost,
   clearPostAssets,
   findPostById,
   findPostBySlug,
+  findAdjacentPublicPosts,
   findPublicPostBySlug,
   countPublicPosts,
   listPublicFeedPosts,
   listAdminPosts,
   listPublicPosts,
+  listPublicSearchPosts,
   listPublicSitemapPosts,
   replacePostAssets,
   setPostPinnedAt,
@@ -255,6 +257,44 @@ export async function getPublicFeedPosts(limit = 50) {
 
 export async function getPublicSitemapPosts() {
   return listPublicSitemapPosts(getDb());
+}
+
+export async function getPublicSearchIndex(limit = 100) {
+  const db = getDb();
+  const posts = await listPublicSearchPosts(db, limit);
+  const tagsByPostId = await getTagsForPostIds(db, posts.map((post) => post.id));
+
+  return posts.map((post) => ({
+    title: decodeHtmlEntities(post.title),
+    slug: post.slug,
+    excerpt: post.excerpt ? decodeHtmlEntities(post.excerpt) : '',
+    published_at: post.published_at,
+    tags: (tagsByPostId.get(post.id) ?? []).map((tag) => decodeHtmlEntities(tag.name))
+  }));
+}
+
+export async function getAdjacentPublicPosts(post: PublicPostDetail) {
+  const adjacent = await findAdjacentPublicPosts(getDb(), {
+    id: post.id,
+    published_at: post.publishedAt
+  });
+
+  return {
+    previous: adjacent.previous
+      ? {
+          slug: adjacent.previous.slug,
+          title: decodeHtmlEntities(adjacent.previous.title),
+          publishedAt: adjacent.previous.published_at
+        }
+      : null,
+    next: adjacent.next
+      ? {
+          slug: adjacent.next.slug,
+          title: decodeHtmlEntities(adjacent.next.title),
+          publishedAt: adjacent.next.published_at
+        }
+      : null
+  };
 }
 
 export async function getPublicPostBySlug(slug: string): Promise<PublicPostDetail | null> {

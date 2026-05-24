@@ -34,6 +34,20 @@ export interface PublicPostSitemapRow {
   updated_at: string;
 }
 
+export interface PublicSearchPostRow {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  published_at: string | null;
+}
+
+export interface AdjacentPublicPostRow {
+  slug: string;
+  title: string;
+  published_at: string | null;
+}
+
 const PUBLIC_POST_SUMMARY_SELECT = `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown,
   NULL AS content_html, posts.cover_asset_id, posts.status, posts.visibility, NULL AS seo_title,
   NULL AS seo_description, posts.reading_time_minutes, posts.word_count, posts.published_at,
@@ -177,6 +191,69 @@ export async function listPublicSitemapPosts(db: D1Database): Promise<PublicPost
     .all<PublicPostSitemapRow>();
 
   return result.results ?? [];
+}
+
+export async function listPublicSearchPosts(db: D1Database, limit = 100): Promise<PublicSearchPostRow[]> {
+  const { conditions, values } = publicPostWhere({ excludeAbout: true });
+  const result = await db
+    .prepare(
+      `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.published_at
+       FROM posts
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY posts.published_at DESC, posts.updated_at DESC
+       LIMIT ?`
+    )
+    .bind(...values, Math.min(Math.max(limit, 1), 100))
+    .all<PublicSearchPostRow>();
+
+  return result.results ?? [];
+}
+
+export async function findAdjacentPublicPosts(
+  db: D1Database,
+  current: { id: string; published_at: string | null }
+): Promise<{ previous: AdjacentPublicPostRow | null; next: AdjacentPublicPostRow | null }> {
+  if (!current.published_at) {
+    return { previous: null, next: null };
+  }
+
+  const base = publicPostWhere({ excludeAbout: true });
+  const previous = await db
+    .prepare(
+      `SELECT posts.slug, posts.title, posts.published_at
+       FROM posts
+       WHERE ${base.conditions.join(' AND ')}
+         AND posts.id != ?
+         AND (
+           posts.published_at < ?
+           OR (posts.published_at = ? AND posts.id < ?)
+         )
+       ORDER BY posts.published_at DESC, posts.id DESC
+       LIMIT 1`
+    )
+    .bind(...base.values, current.id, current.published_at, current.published_at, current.id)
+    .first<AdjacentPublicPostRow>();
+
+  const next = await db
+    .prepare(
+      `SELECT posts.slug, posts.title, posts.published_at
+       FROM posts
+       WHERE ${base.conditions.join(' AND ')}
+         AND posts.id != ?
+         AND (
+           posts.published_at > ?
+           OR (posts.published_at = ? AND posts.id > ?)
+         )
+       ORDER BY posts.published_at ASC, posts.id ASC
+       LIMIT 1`
+    )
+    .bind(...base.values, current.id, current.published_at, current.published_at, current.id)
+    .first<AdjacentPublicPostRow>();
+
+  return {
+    previous: previous ?? null,
+    next: next ?? null
+  };
 }
 
 export async function findPostById(db: D1Database, id: string): Promise<PostRow | null> {

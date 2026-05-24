@@ -8,13 +8,15 @@ const PUBLIC_CACHE_TTLS: Array<{ test: (pathname: string) => boolean; ttl: numbe
   { test: (pathname) => pathname === '/timeline' || pathname === '/timeline/', ttl: 300 },
   { test: (pathname) => pathname === '/rss.xml', ttl: 600 },
   { test: (pathname) => pathname === '/sitemap.xml', ttl: 3600 },
-  { test: (pathname) => pathname === '/robots.txt', ttl: 86400 }
+  { test: (pathname) => pathname === '/robots.txt', ttl: 86400 },
+  { test: (pathname) => pathname === '/api/search-index', ttl: 300 }
 ];
 
 const PUBLIC_CACHE_CONTENT_TYPES = [
   'text/html',
   'application/rss+xml',
   'application/xml',
+  'application/json',
   'text/xml',
   'text/plain'
 ];
@@ -61,7 +63,8 @@ function createCacheUrl(url: URL): URL | null {
     pathname.startsWith('/posts/') ||
     pathname === '/rss.xml' ||
     pathname === '/sitemap.xml' ||
-    pathname === '/robots.txt'
+    pathname === '/robots.txt' ||
+    pathname === '/api/search-index'
   ) {
     return normalized;
   }
@@ -72,7 +75,14 @@ function createCacheUrl(url: URL): URL | null {
 export function shouldForceNoStore(request: Request, url: URL): boolean {
   const pathname = url.pathname;
 
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api') || pathname === '/write' || pathname.startsWith('/write/') || pathname === '/settings' || pathname.startsWith('/settings/')) {
+  if (
+    pathname.startsWith('/admin') ||
+    (pathname.startsWith('/api') && pathname !== '/api/search-index') ||
+    pathname === '/write' ||
+    pathname.startsWith('/write/') ||
+    pathname === '/settings' ||
+    pathname.startsWith('/settings/')
+  ) {
     return true;
   }
 

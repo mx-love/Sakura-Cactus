@@ -1,6 +1,5 @@
 ---
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
-import { getPublicPosts } from '@/features/posts/post.service';
 import { env } from 'cloudflare:workers';
 
 const leadingNavItems = [
@@ -22,58 +21,6 @@ const nextPath = `${Astro.url.pathname}${Astro.url.search}`;
 const accountHref = `/admin/login?next=${encodeURIComponent(nextPath)}`;
 const avatarUrl = adminUser ? env.SITE_AVATAR_URL?.trim() : '';
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
-const posts = await getPublicPosts({ limit: 100, excludeAbout: true });
-
-function getSearchDateTerms(value: string | null) {
-  if (!value) {
-    return [];
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return [];
-  }
-
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const mm = String(month).padStart(2, '0');
-  const dd = String(day).padStart(2, '0');
-
-  return [
-    `${year}/${mm}/${dd}`,
-    `${year}-${mm}-${dd}`,
-    `${year}年${month}月${day}日`,
-    `${year}年${mm}月${dd}日`,
-    `${month}月${day}日`,
-    `${mm}/${dd}`,
-    `${month}/${day}`,
-    `${day}日`,
-    `${day}号`,
-    `${year}年${month}月`,
-    `${year}年${mm}月`,
-    `${year}/${mm}`,
-    `${year}-${month}`,
-    `${year}-${mm}`,
-    String(year)
-  ];
-}
-
-const searchPosts = posts
-  .map((post) => {
-    const tags = post.tags.map((tag) => tag.name);
-
-    return {
-      title: post.title,
-      excerpt: post.excerpt ?? '',
-      slug: post.slug,
-      publishedAt: post.publishedAt,
-      tags,
-      searchableText: [post.title, post.excerpt ?? '', ...tags, ...getSearchDateTerms(post.publishedAt)].join(' ').toLowerCase()
-    };
-  });
-const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
 
 function isActive(href: string) {
   return pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
@@ -198,7 +145,6 @@ function isActive(href: string) {
       </div>
     </section>
   </div>
-  <script id="site-search-posts" type="application/json" set:html={searchJson}></script>
   <script is:inline>
     (() => {
       const menu = document.querySelector('[data-mobile-menu]');
@@ -247,13 +193,92 @@ function isActive(href: string) {
       const input = overlay?.querySelector('[data-search-input]');
       const results = overlay?.querySelector('[data-search-results]');
       const status = overlay?.querySelector('[data-search-status]');
-      const postsElement = document.getElementById('site-search-posts');
-      const posts = JSON.parse(postsElement?.textContent || '[]');
+      let posts = [];
+      let searchIndexPromise = null;
       const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
       });
+
+      function getSearchDateTerms(value) {
+        if (!value) {
+          return [];
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+          return [];
+        }
+
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const mm = String(month).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+
+        return [
+          `${year}/${mm}/${dd}`,
+          `${year}-${mm}-${dd}`,
+          `${year}年${month}月${day}日`,
+          `${year}年${mm}月${dd}日`,
+          `${month}月${day}日`,
+          `${mm}/${dd}`,
+          `${month}/${day}`,
+          `${day}日`,
+          `${day}号`,
+          `${year}年${month}月`,
+          `${year}年${mm}月`,
+          `${year}/${mm}`,
+          `${year}-${month}`,
+          `${year}-${mm}`,
+          String(year)
+        ];
+      }
+
+      function normalizeSearchPost(post) {
+        const tags = Array.isArray(post.tags) ? post.tags : [];
+        const publishedAt = post.published_at || post.publishedAt || null;
+
+        return {
+          title: post.title || '',
+          excerpt: post.excerpt || '',
+          slug: post.slug || '',
+          publishedAt,
+          tags,
+          searchableText: [post.title || '', post.excerpt || '', ...tags, ...getSearchDateTerms(publishedAt)].join(' ').toLowerCase()
+        };
+      }
+
+      async function loadSearchIndex() {
+        if (posts.length > 0) {
+          return posts;
+        }
+
+        searchIndexPromise ??= fetch('/api/search-index', {
+          headers: {
+            Accept: 'application/json'
+          }
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('Search index request failed.');
+            }
+
+            return response.json();
+          })
+          .then((payload) => {
+            posts = Array.isArray(payload?.data?.posts) ? payload.data.posts.map(normalizeSearchPost) : [];
+            return posts;
+          })
+          .catch(() => {
+            searchIndexPromise = null;
+            throw new Error('Search index unavailable.');
+          });
+
+        return searchIndexPromise;
+      }
 
       function clearResults() {
         if (results) results.textContent = '';
@@ -301,7 +326,7 @@ function isActive(href: string) {
         return link;
       }
 
-      function renderSearch() {
+      async function renderSearch() {
         const query = input?.value.trim().toLowerCase() || '';
         clearResults();
 
@@ -309,6 +334,16 @@ function isActive(href: string) {
           if (status) {
             status.textContent = '';
             status.hidden = true;
+          }
+          return;
+        }
+
+        try {
+          await loadSearchIndex();
+        } catch {
+          if (status) {
+            status.textContent = '搜索暂时不可用。';
+            status.hidden = false;
           }
           return;
         }
@@ -340,7 +375,14 @@ function isActive(href: string) {
         document.documentElement.classList.add('sc-search-open');
         window.setTimeout(() => {
           input?.focus();
-          renderSearch();
+          loadSearchIndex()
+            .then(renderSearch)
+            .catch(() => {
+              if (status) {
+                status.textContent = '搜索暂时不可用。';
+                status.hidden = false;
+              }
+            });
         }, 20);
       }
 
