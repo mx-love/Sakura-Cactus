@@ -1,9 +1,9 @@
 import { SESSION_COOKIE_NAME } from '@/features/auth/auth.constants';
 
 const PUBLIC_CACHE_TTLS: Array<{ test: (pathname: string) => boolean; ttl: number }> = [
-  { test: (pathname) => pathname === '/', ttl: 30 },
-  { test: (pathname) => pathname === '/articles' || pathname === '/articles/', ttl: 60 },
-  { test: (pathname) => pathname.startsWith('/posts/'), ttl: 60 },
+  { test: (pathname) => pathname === '/', ttl: 300 },
+  { test: (pathname) => pathname === '/articles' || pathname === '/articles/', ttl: 120 },
+  { test: (pathname) => pathname.startsWith('/posts/'), ttl: 300 },
   { test: (pathname) => pathname === '/tags' || pathname === '/tags/' || pathname.startsWith('/tags/'), ttl: 300 },
   { test: (pathname) => pathname === '/timeline' || pathname === '/timeline/', ttl: 300 },
   { test: (pathname) => pathname === '/rss.xml', ttl: 600 },
