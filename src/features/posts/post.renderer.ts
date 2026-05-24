@@ -224,6 +224,38 @@ function rehypeMarkImageCaptions() {
   };
 }
 
+function rehypeWrapTables() {
+  return (tree: any) => {
+    visitTree(tree, (node) => {
+      if (!Array.isArray(node.children)) {
+        return;
+      }
+
+      const className = node.properties?.className;
+      const classes = Array.isArray(className) ? className : typeof className === 'string' ? className.split(/\s+/) : [];
+
+      if (classes.includes('sc-table-scroll')) {
+        return;
+      }
+
+      node.children = node.children.map((child: any) => {
+        if (child?.type === 'element' && child.tagName === 'table') {
+          return {
+            type: 'element',
+            tagName: 'div',
+            properties: {
+              className: ['sc-table-scroll']
+            },
+            children: [child]
+          };
+        }
+
+        return child;
+      });
+    });
+  };
+}
+
 function rehypeAddHeadingIds(headings: MarkdownHeading[]) {
   return (tree: any) => {
     const slugger = createSlugger();
@@ -300,6 +332,7 @@ function createMarkdownProcessor(headings: MarkdownHeading[]) {
     .use(rehypeSanitize, sanitizeSchema)
     .use(rehypeHardenLinksAndImages)
     .use(rehypeMarkImageCaptions)
+    .use(rehypeWrapTables)
     .use(rehypeStringify);
 }
 
@@ -358,6 +391,18 @@ function escapeHtmlAttribute(value: string): string {
     .replace(/>/g, '&gt;');
 }
 
+function wrapTablesInHtml(html: string): string {
+  return html.replace(/<table\b[\s\S]*?<\/table>/gi, (match, offset: number, source: string) => {
+    const before = source.slice(Math.max(0, offset - 120), offset);
+
+    if (/class=(["'])[^"']*\bsc-table-scroll\b/i.test(before)) {
+      return match;
+    }
+
+    return `<div class="sc-table-scroll">${match}</div>`;
+  });
+}
+
 export function addHeadingIdsToHtml(html: string): { html: string; headings: MarkdownHeading[] } {
   const headings: MarkdownHeading[] = [];
   const slugger = createSlugger();
@@ -380,7 +425,7 @@ export function addHeadingIdsToHtml(html: string): { html: string; headings: Mar
     return `<h${depth}${attrs} id="${escapeHtmlAttribute(slug)}">${body}</h${depth}>`;
   });
 
-  return { html: nextHtml, headings };
+  return { html: wrapTablesInHtml(nextHtml), headings };
 }
 
 export function extractFirstImageUrl(markdown: string): string | null {

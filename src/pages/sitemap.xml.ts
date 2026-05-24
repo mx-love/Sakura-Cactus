@@ -18,9 +18,13 @@ function escapeXml(value: string | null | undefined): string {
     .replace(/'/g, '&apos;');
 }
 
-function toLastMod(value: string | null | undefined): string {
-  const date = value ? new Date(value) : new Date();
-  return (Number.isNaN(date.getTime()) ? new Date() : date).toISOString();
+function toLastMod(value: string | null | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 function sitemapUrl(path: string, siteUrl: string, options: { lastmod?: string; changefreq?: string; priority?: string } = {}): string {

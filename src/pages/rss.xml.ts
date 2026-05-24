@@ -29,8 +29,12 @@ function escapeXml(value: string | null | undefined): string {
 }
 
 function toRssDate(value: string | null | undefined): string {
-  const date = value ? new Date(value) : new Date();
-  return Number.isNaN(date.getTime()) ? new Date().toUTCString() : date.toUTCString();
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toUTCString();
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -42,12 +46,13 @@ export const GET: APIRoute = async ({ request }) => {
     .map((post) => {
       const postUrl = absoluteUrl(`/posts/${post.slug}`, siteUrl);
       const excerpt = post.excerpt ? decodeHtmlEntities(post.excerpt) : '';
+      const pubDate = toRssDate(post.published_at);
 
       return `    <item>
       <title>${escapeXml(decodeHtmlEntities(post.title))}</title>
       <link>${escapeXml(postUrl)}</link>
       <guid isPermaLink="true">${escapeXml(postUrl)}</guid>
-      <pubDate>${escapeXml(toRssDate(post.published_at))}</pubDate>
+      ${pubDate ? `<pubDate>${escapeXml(pubDate)}</pubDate>` : ''}
       <description>${escapeXml(excerpt)}</description>
       <content:encoded>${escapeXml(excerpt)}</content:encoded>
     </item>`;
