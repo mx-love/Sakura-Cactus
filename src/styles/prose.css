@@ -219,25 +219,67 @@
   top: 0.65rem;
   right: 0.65rem;
   z-index: 1;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  border: 1px solid rgba(214, 145, 170, 0.22);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 253, 253, 0.86);
-  padding: 0.28rem 0.62rem;
+  background: rgba(255, 248, 250, 0.92);
+  color: #8f6f79;
+  padding: 0.3rem 0.68rem;
   font-size: 0.74rem;
   font-weight: 800;
   line-height: 1.2;
+  box-shadow: 0 8px 20px rgba(77, 46, 58, 0.12);
   backdrop-filter: blur(6px);
   transition:
     background-color 140ms ease,
     border-color 140ms ease,
-    color 140ms ease;
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
 }
 
 .sc-code-copy:hover {
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  border-color: rgba(217, 111, 145, 0.36);
+  background: rgba(253, 233, 239, 0.96);
+  color: var(--color-primary);
+  box-shadow: 0 10px 24px rgba(137, 74, 98, 0.16);
+  transform: translateY(-1px);
+}
+
+.sc-code-copy:focus-visible {
+  outline: 2px solid rgba(217, 111, 145, 0.34);
+  outline-offset: 2px;
+}
+
+.sc-code-copy-icon {
+  display: inline-flex;
+  width: 0.86rem;
+  height: 0.86rem;
+  flex: 0 0 auto;
+}
+
+.sc-code-copy-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sc-code-copy-success {
+  border-color: rgba(109, 170, 139, 0.32);
+  background: rgba(239, 249, 244, 0.95);
+  color: #5d937d;
+}
+
+.sc-code-copy-error {
+  border-color: rgba(190, 91, 99, 0.26);
+  background: rgba(255, 244, 245, 0.95);
+  color: var(--color-danger);
 }
 
 .sc-prose pre code,
@@ -296,7 +338,13 @@
   .sc-code-copy {
     top: 0.5rem;
     right: 0.5rem;
+    gap: 0.26rem;
     padding: 0.24rem 0.52rem;
     font-size: 0.7rem;
+  }
+
+  .sc-code-copy-icon {
+    width: 0.78rem;
+    height: 0.78rem;
   }
 }
