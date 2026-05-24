@@ -208,6 +208,38 @@
   padding: 1rem;
 }
 
+.sc-prose pre.sc-code-block,
+.prose-content pre.sc-code-block {
+  position: relative;
+  padding-top: 2.8rem;
+}
+
+.sc-code-copy {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 253, 253, 0.86);
+  padding: 0.28rem 0.62rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.2;
+  backdrop-filter: blur(6px);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.sc-code-copy:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
 .sc-prose pre code,
 .prose-content pre code {
   background: transparent;
@@ -254,5 +286,17 @@
   .prose-content {
     font-size: 1rem;
     line-height: 1.84;
+  }
+
+  .sc-prose pre.sc-code-block,
+  .prose-content pre.sc-code-block {
+    padding-top: 2.55rem;
+  }
+
+  .sc-code-copy {
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.24rem 0.52rem;
+    font-size: 0.7rem;
   }
 }

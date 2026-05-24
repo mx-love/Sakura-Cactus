@@ -262,6 +262,11 @@ function formatDate(date: Date | null) {
             }
           </script>
         ) : null}
+        <script>
+          import { enhanceCodeBlocks } from '@/lib/prose-controls';
+
+          enhanceCodeBlocks(document);
+        </script>
       </div>
     </div>
   </article>

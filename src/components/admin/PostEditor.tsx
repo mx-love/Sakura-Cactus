@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { AssetRow } from '@/features/assets/asset.types';
 import { renderMarkdown } from '@/features/posts/post.renderer';
 import type { PostRow, PostStatus, PostVisibility } from '@/features/posts/post.types';
+import { enhanceCodeBlocks } from '@/lib/prose-controls';
 
 interface ApiErrorResponse {
   ok: false;
@@ -155,6 +156,8 @@ function extractAssetTokens(markdown: string): string[] {
 
 export function PostEditor({ post }: PostEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const splitPreviewRef = useRef<HTMLDivElement | null>(null);
   const sessionUploadedTokensRef = useRef<Set<string>>(new Set());
   const [form, setForm] = useState<PostFormState>(() => postToState(post));
   const [savedSnapshot, setSavedSnapshot] = useState<FormSnapshot | null>(() => (post ? createSnapshot(postToState(post)) : null));
@@ -166,6 +169,7 @@ export function PostEditor({ post }: PostEditorProps) {
   const [saveFeedback, setSaveFeedback] = useState<SaveFeedback>('idle');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'split'>('edit');
+  const [showPreviewTop, setShowPreviewTop] = useState(false);
   const isExisting = useMemo(() => Boolean(postId), [postId]);
   const currentSnapshot = useMemo(() => createSnapshot(form), [form]);
   const isDirty = useMemo(() => !snapshotsEqual(savedSnapshot, currentSnapshot), [savedSnapshot, currentSnapshot]);
@@ -189,6 +193,38 @@ export function PostEditor({ post }: PostEditorProps) {
       window.removeEventListener('beforeunload', handlePageExit);
     };
   }, []);
+
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      if (previewRef.current) {
+        enhanceCodeBlocks(previewRef.current);
+      }
+
+      if (splitPreviewRef.current) {
+        enhanceCodeBlocks(splitPreviewRef.current);
+      }
+    });
+  }, [previewHtml, editorMode]);
+
+  useEffect(() => {
+    const preview = editorMode === 'split' ? splitPreviewRef.current : editorMode === 'preview' ? previewRef.current : null;
+
+    if (!preview) {
+      setShowPreviewTop(false);
+      return;
+    }
+
+    const syncPreviewTop = () => {
+      setShowPreviewTop(preview.scrollTop > 240);
+    };
+
+    preview.addEventListener('scroll', syncPreviewTop, { passive: true });
+    syncPreviewTop();
+
+    return () => {
+      preview.removeEventListener('scroll', syncPreviewTop);
+    };
+  }, [editorMode, previewHtml]);
 
   function updateField<K extends keyof PostFormState>(field: K, value: PostFormState[K]) {
     setSaveFeedback('idle');
@@ -485,6 +521,38 @@ export function PostEditor({ post }: PostEditorProps) {
     return idleLabel;
   }
 
+  function scrollPreviewToTop() {
+    const preview = editorMode === 'split' ? splitPreviewRef.current : editorMode === 'preview' ? previewRef.current : null;
+
+    if (!preview) {
+      return;
+    }
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    preview.scrollTo({
+      top: 0,
+      behavior: reduceMotion ? 'auto' : 'smooth'
+    });
+  }
+
+  function renderPreview(ref: RefObject<HTMLDivElement | null>) {
+    return (
+      <div className="sc-writer-preview-wrap">
+        <div ref={ref} className="sc-writer-preview sc-prose prose-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        <button
+          className={`sc-preview-top-button ${showPreviewTop ? 'sc-preview-top-button-visible' : ''}`}
+          onClick={scrollPreviewToTop}
+          type="button"
+          aria-label="返回预览顶部"
+          aria-hidden={!showPreviewTop}
+          tabIndex={showPreviewTop ? 0 : -1}
+        >
+          ↑ 顶部
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form className="sc-writer" onSubmit={(event) => event.preventDefault()}>
       <div className="sc-writer-topbar">
@@ -542,11 +610,11 @@ export function PostEditor({ post }: PostEditorProps) {
               required
             />
             {editorMode === 'split' ? (
-              <div className="sc-writer-preview sc-prose prose-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+              renderPreview(splitPreviewRef)
             ) : null}
             </div>
           ) : (
-            <div className="sc-writer-preview sc-prose prose-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            renderPreview(previewRef)
           )}
         </div>
 
