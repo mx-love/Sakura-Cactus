@@ -22,41 +22,59 @@ async function copyText(value: string): Promise<void> {
   }
 }
 
-const COPY_ICON = `
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-    <rect x="8" y="8" width="10" height="10" rx="2"></rect>
-    <path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-  </svg>
-`;
-const CHECK_ICON = `
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-    <path d="m5 12 4 4L19 6"></path>
-  </svg>
-`;
-const WARNING_ICON = `
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-    <path d="M12 9v4"></path>
-    <path d="M12 17h.01"></path>
-    <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path>
-  </svg>
-`;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
-function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success' | 'error') {
+function createSvgElement(name: string) {
+  return document.createElementNS(SVG_NS, name);
+}
+
+function createPath(d: string) {
+  const path = createSvgElement('path');
+  path.setAttribute('d', d);
+  return path;
+}
+
+function createCopyIcon() {
+  const svg = createSvgElement('svg');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+
+  const rect = createSvgElement('rect');
+  rect.setAttribute('x', '8');
+  rect.setAttribute('y', '8');
+  rect.setAttribute('width', '10');
+  rect.setAttribute('height', '10');
+  rect.setAttribute('rx', '2');
+
+  svg.append(rect, createPath('M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'));
+  return svg;
+}
+
+function createCheckIcon() {
+  const svg = createSvgElement('svg');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.append(createPath('m5 12 4 4L19 6'));
+  return svg;
+}
+
+function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success') {
   const icon = button.querySelector('.sc-code-copy-icon');
-  const label = state === 'idle' ? '复制代码' : state === 'success' ? '已复制' : '复制失败';
+  const label = state === 'success' ? '已复制' : '复制代码';
 
   button.classList.toggle('sc-code-copy-success', state === 'success');
-  button.classList.toggle('sc-code-copy-error', state === 'error');
   button.setAttribute('aria-label', label);
   button.title = label;
 
   if (icon) {
-    icon.innerHTML = state === 'success' ? CHECK_ICON : state === 'error' ? WARNING_ICON : COPY_ICON;
+    icon.replaceChildren(state === 'success' ? createCheckIcon() : createCopyIcon());
   }
 }
 
-function setTemporaryState(button: HTMLButtonElement, state: 'success' | 'error') {
-  setButtonState(button, state);
+function setTemporarySuccess(button: HTMLButtonElement) {
+  setButtonState(button, 'success');
   window.setTimeout(() => {
     setButtonState(button, 'idle');
   }, 1400);
@@ -80,16 +98,19 @@ export function enhanceCodeBlocks(root: ParentNode = document): void {
     button.className = 'sc-code-copy';
     button.setAttribute('aria-label', '复制代码');
     button.title = '复制代码';
-    button.innerHTML = `
-      <span class="sc-code-copy-icon" aria-hidden="true">${COPY_ICON}</span>
-    `;
+
+    const icon = document.createElement('span');
+    icon.className = 'sc-code-copy-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.append(createCopyIcon());
+    button.append(icon);
 
     button.addEventListener('click', async () => {
       try {
         await copyText(code.textContent ?? '');
-        setTemporaryState(button, 'success');
+        setTemporarySuccess(button);
       } catch {
-        setTemporaryState(button, 'error');
+        setButtonState(button, 'idle');
       }
     });
 
