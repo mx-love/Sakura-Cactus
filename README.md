@@ -154,9 +154,7 @@ ADMIN_PASSWORD_HASH
 
 - `ADMIN_USERNAME` 是管理员用户名。
 - `ADMIN_PASSWORD_HASH` 是管理员密码 hash，生产推荐使用。
-- 不要在生产环境使用 `ADMIN_PASSWORD` 明文。
-- `ADMIN_PASSWORD` 只建议本地开发使用。
-- `SESSION_SECRET` 默认不需要配置；系统会从管理员密码配置派生。只有你明确想让修改密码后旧 session 继续有效时，才需要把它作为高级 Secret 单独设置。
+- 如果 Cloudflare 创建页面自动列出了旧变量，请删除无关变量，只手动添加这里需要的 Secrets 和可选 Variables。
 
 ### 6. 生成 ADMIN_PASSWORD_HASH
 
@@ -285,7 +283,7 @@ pnpm.cmd dev
 
 ```txt
 ADMIN_USERNAME=sakura
-ADMIN_PASSWORD=change-me
+ADMIN_PASSWORD_HASH=pbkdf2_sha256$210000$example-salt$example-hash
 SITE_NAME=Sakura Cactus
 SITE_TAGLINE=温柔地写，安静地发布。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。

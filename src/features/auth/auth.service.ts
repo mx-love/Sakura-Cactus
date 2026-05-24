@@ -10,6 +10,11 @@ import { ensureEnvironmentAdminUser, ENV_ADMIN_USER_ID, updateLastLogin } from '
 
 let warnedAboutPlainAdminPassword = false;
 
+function readOptionalRuntimeEnv(name: string): string | undefined {
+  const value = (env as unknown as Record<string, string | undefined>)[name];
+  return typeof value === 'string' ? value : undefined;
+}
+
 export class AuthConfigurationError extends Error {
   constructor(
     public readonly code: string,
@@ -54,10 +59,10 @@ export function getEnvironmentAdminUsername(): string {
 }
 
 export function getEnvironmentAdminPassword(): string {
-  const password = env.ADMIN_PASSWORD;
+  const password = readOptionalRuntimeEnv('ADMIN_PASSWORD');
 
   if (!password) {
-    throw new AuthConfigurationError('MISSING_ADMIN_PASSWORD', 'ADMIN_PASSWORD_HASH or ADMIN_PASSWORD must be set.');
+    throw new AuthConfigurationError('MISSING_ADMIN_PASSWORD', 'ADMIN_PASSWORD_HASH must be set.');
   }
 
   if (!env.ADMIN_PASSWORD_HASH && !import.meta.env.DEV && !warnedAboutPlainAdminPassword) {
@@ -91,7 +96,7 @@ export function getEnvironmentAdminUser(): PublicAdminUser {
 }
 
 export function getSessionSecret(): string {
-  const secret = env.SESSION_SECRET;
+  const secret = readOptionalRuntimeEnv('SESSION_SECRET');
 
   if (secret && secret.length >= 32) {
     return secret;
@@ -101,13 +106,15 @@ export function getSessionSecret(): string {
     return `admin-password-hash:${env.ADMIN_PASSWORD_HASH}`;
   }
 
-  if (env.ADMIN_PASSWORD) {
+  const plainAdminPassword = readOptionalRuntimeEnv('ADMIN_PASSWORD');
+
+  if (plainAdminPassword) {
     if (!import.meta.env.DEV && !warnedAboutPlainAdminPassword) {
       console.warn('[Sakura Cactus] ADMIN_PASSWORD is set without ADMIN_PASSWORD_HASH. Use ADMIN_PASSWORD_HASH in production.');
       warnedAboutPlainAdminPassword = true;
     }
 
-    return `${import.meta.env.DEV ? 'dev' : 'plain'}-admin-password:${env.ADMIN_PASSWORD}`;
+    return `${import.meta.env.DEV ? 'dev' : 'plain'}-admin-password:${plainAdminPassword}`;
   }
 
   throw new AuthConfigurationError('MISSING_SESSION_SECRET_SOURCE', 'ADMIN_PASSWORD_HASH must be set, or set SESSION_SECRET explicitly.');

@@ -49,16 +49,6 @@ SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 
 Empty or missing values fall back to the defaults above. `SITE_NAME` controls the header brand, homepage title, default page title, footer, and RSS title. `SITE_TAGLINE` and `SITE_DESCRIPTION` control the homepage intro. `SITE_DESCRIPTION` is also used as the default meta description and RSS description. The small homepage label `窗边纸页` is part of the fixed Sakura Cactus theme and is not configurable.
 
-## Optional Variables
-
-`SESSION_SECRET` is an advanced optional override. If it is not set, Sakura Cactus derives the session signing secret from the administrator password configuration.
-
-```bash
-wrangler secret put SESSION_SECRET
-```
-
-Changing `ADMIN_PASSWORD_HASH` invalidates existing login sessions unless a stable `SESSION_SECRET` is configured. This is acceptable for most personal blogs.
-
 `SITE_AVATAR_URL` is an optional public avatar URL. It is not a secret.
 
 ## Local Development
@@ -67,13 +57,11 @@ Use `.dev.vars` locally. Do not commit `.dev.vars`.
 
 ```txt
 ADMIN_USERNAME=sakura
-ADMIN_PASSWORD=change-me
+ADMIN_PASSWORD_HASH=pbkdf2_sha256$210000$example-salt$example-hash
 SITE_NAME=Sakura Cactus
 SITE_TAGLINE=温柔地写，安静地发布。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 ```
-
-Local development may use `ADMIN_PASSWORD` for convenience. Production should use `ADMIN_PASSWORD_HASH`.
 
 ## Database Initialization
 
@@ -100,8 +88,7 @@ Sakura Cactus no longer uses `SETUP_TOKEN`, `/admin/setup`, or a web-based first
 Administrator login is controlled by environment variables:
 
 - `ADMIN_USERNAME`
-- `ADMIN_PASSWORD_HASH` in production
-- `ADMIN_PASSWORD` only for local development or unsupported fallback
+- `ADMIN_PASSWORD_HASH`
 
 The login page is:
 

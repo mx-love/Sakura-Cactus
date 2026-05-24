@@ -132,7 +132,7 @@ Stage 6.7: SakuraPaper minimal blog UI correction.
   - `XDG_CONFIG_HOME=D:\code\Sakura Cactus\.wrangler-config`
 - Wrangler D1/R2 IDs are placeholders and must be replaced before remote deployment.
 - Local migration verification depends on Wrangler accepting the placeholder D1 database configuration; production requires replacing IDs first.
-- `SESSION_SECRET` is required for local and production login. It must be set in `.dev.vars` locally or Cloudflare secrets remotely.
+- Login now only requires `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` for deployment; the session secret is derived automatically unless an advanced override is configured.
 - `SETUP_TOKEN` is required for `/admin/setup`; it must be set in `.dev.vars` locally or Cloudflare secrets remotely.
 - `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migration/create-admin against that config or use `pnpm dev`.
 - `pnpm check` currently prompts to install `@astrojs/check`; it was not installed during Stage 4 to avoid changing package dependencies.
