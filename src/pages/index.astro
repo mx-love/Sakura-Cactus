@@ -12,6 +12,8 @@ const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地发布。';
 const siteDescription = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。';
 const leadPost = latestPosts[0] ?? null;
 const notePosts = latestPosts.slice(1);
+const leadCoverOrigin = getExternalOrigin(leadPost?.coverImageUrl);
+const preconnectOrigins = leadCoverOrigin ? [leadCoverOrigin] : [];
 const now = new Date();
 const calendarYear = now.getFullYear();
 const calendarMonth = now.getMonth();
@@ -84,9 +86,22 @@ function formatDate(value: string | null) {
   return value ? dateFormatter.format(new Date(value)) : '';
 }
 
+function getExternalOrigin(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 ---
 
-<SiteLayout>
+<SiteLayout preconnectOrigins={preconnectOrigins}>
   <section class="sc-page">
     <div class="sc-public-shell">
       <div class="sc-home-desk">
