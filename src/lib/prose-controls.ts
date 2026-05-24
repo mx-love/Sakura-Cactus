@@ -33,21 +33,25 @@ const CHECK_ICON = `
     <path d="m5 12 4 4L19 6"></path>
   </svg>
 `;
+const WARNING_ICON = `
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+    <path d="M12 9v4"></path>
+    <path d="M12 17h.01"></path>
+    <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path>
+  </svg>
+`;
 
 function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success' | 'error') {
   const icon = button.querySelector('.sc-code-copy-icon');
-  const text = button.querySelector('.sc-code-copy-text');
+  const label = state === 'idle' ? '复制代码' : state === 'success' ? '已复制' : '复制失败';
 
   button.classList.toggle('sc-code-copy-success', state === 'success');
   button.classList.toggle('sc-code-copy-error', state === 'error');
-  button.setAttribute('aria-label', state === 'idle' ? '复制代码' : state === 'success' ? '代码已复制' : '复制代码失败');
+  button.setAttribute('aria-label', label);
+  button.title = label;
 
   if (icon) {
-    icon.innerHTML = state === 'success' ? CHECK_ICON : COPY_ICON;
-  }
-
-  if (text) {
-    text.textContent = state === 'idle' ? '复制' : state === 'success' ? '已复制' : '复制失败';
+    icon.innerHTML = state === 'success' ? CHECK_ICON : state === 'error' ? WARNING_ICON : COPY_ICON;
   }
 }
 
@@ -75,9 +79,9 @@ export function enhanceCodeBlocks(root: ParentNode = document): void {
     button.type = 'button';
     button.className = 'sc-code-copy';
     button.setAttribute('aria-label', '复制代码');
+    button.title = '复制代码';
     button.innerHTML = `
       <span class="sc-code-copy-icon" aria-hidden="true">${COPY_ICON}</span>
-      <span class="sc-code-copy-text">复制</span>
     `;
 
     button.addEventListener('click', async () => {
