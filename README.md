@@ -88,9 +88,9 @@ Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 
 3. 创建 D1 数据库。
 4. 创建 R2 Bucket。
 5. 在 Cloudflare Variables 中填写：
-   - `CLOUDFLARE_D1_DATABASE_ID`
-   - `CLOUDFLARE_D1_DATABASE_NAME` 可选
-   - `CLOUDFLARE_R2_BUCKET_NAME` 可选
+   - `SAKURA_D1_DATABASE_ID`
+   - `SAKURA_D1_DATABASE_NAME` 可选
+   - `SAKURA_R2_BUCKET_NAME` 可选
 6. 添加 Secrets：
    - `ADMIN_USERNAME`
    - `ADMIN_PASSWORD`
@@ -131,9 +131,9 @@ npx wrangler deploy
 | --- | --- | --- | --- |
 | `ADMIN_USERNAME` | Secret | 是 | 后台用户名 |
 | `ADMIN_PASSWORD` | Secret | 是 | 后台密码 |
-| `CLOUDFLARE_D1_DATABASE_ID` | Variable | 是 | D1 Database ID，用于生成 Wrangler binding |
-| `CLOUDFLARE_D1_DATABASE_NAME` | Variable | 否 | D1 名称，默认 sakura_blog_prod |
-| `CLOUDFLARE_R2_BUCKET_NAME` | Variable | 否 | R2 Bucket 名称，默认 sakura-blog-media-prod |
+| `SAKURA_D1_DATABASE_ID` | Variable | 是 | D1 Database ID，用于生成 Wrangler binding |
+| `SAKURA_D1_DATABASE_NAME` | Variable | 否 | D1 名称，默认 sakura_blog_prod |
+| `SAKURA_R2_BUCKET_NAME` | Variable | 否 | R2 Bucket 名称，默认 sakura-blog-media-prod |
 | `SITE_NAME` | Variable | 否 | 站点名称，默认 Sakura Cactus |
 | `SITE_TAGLINE` | Variable | 否 | 首页标语 |
 | `SITE_DESCRIPTION` | Variable | 否 | 首页描述 / RSS 描述 |
@@ -153,7 +153,7 @@ npx wrangler deploy
 
 Binding 名称不要改。项目代码默认读取 `DB` 和 `MEDIA_BUCKET`。
 
-Cloudflare Git 自动部署会运行 Wrangler，并以构建后的 Wrangler 配置为准。`scripts/prepare-cloudflare-config.mjs` 会在构建时读取 `CLOUDFLARE_D1_DATABASE_ID` / `CLOUDFLARE_R2_BUCKET_NAME`，生成 `DB` 和 `MEDIA_BUCKET` bindings，避免 Dashboard 手动绑定被 deploy 覆盖。
+Cloudflare Git 自动部署会运行 Wrangler，并以构建后的 Wrangler 配置为准。`scripts/prepare-cloudflare-config.mjs` 会在构建时读取 `SAKURA_D1_DATABASE_ID` / `SAKURA_R2_BUCKET_NAME`，生成 `DB` 和 `MEDIA_BUCKET` bindings，避免 Dashboard 手动绑定被 deploy 覆盖。
 
 ## 本地开发
 

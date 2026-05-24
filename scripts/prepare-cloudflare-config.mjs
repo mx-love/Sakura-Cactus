@@ -2,12 +2,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const configPath = resolve(process.cwd(), 'wrangler.jsonc');
-const d1DatabaseId = process.env.CLOUDFLARE_D1_DATABASE_ID?.trim();
-const d1DatabaseName = process.env.CLOUDFLARE_D1_DATABASE_NAME?.trim() || 'sakura_blog_prod';
-const r2BucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME?.trim() || 'sakura-blog-media-prod';
+const d1DatabaseId = process.env.SAKURA_D1_DATABASE_ID?.trim();
+const d1DatabaseName = process.env.SAKURA_D1_DATABASE_NAME?.trim() || 'sakura_blog_prod';
+const r2BucketName = process.env.SAKURA_R2_BUCKET_NAME?.trim() || 'sakura-blog-media-prod';
 
 if (!d1DatabaseId) {
-  console.error('Missing CLOUDFLARE_D1_DATABASE_ID. Copy it from Cloudflare D1 database settings.');
+  console.error('Missing SAKURA_D1_DATABASE_ID. Copy it from Cloudflare D1 database settings.');
   process.exit(1);
 }
 
