@@ -1,39 +1,15 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicPosts } from '@/features/posts/post.service';
+import { getPublicPostsPage } from '@/features/posts/post.service';
 
 export const prerender = false;
 
-function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
-  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
-}
-
-function sortPinnedFirst(posts: Awaited<ReturnType<typeof getPublicPosts>>) {
-  return [...posts].sort((a, b) => {
-    if (a.pinnedAt && b.pinnedAt) {
-      return new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime();
-    }
-
-    if (a.pinnedAt) {
-      return -1;
-    }
-
-    if (b.pinnedAt) {
-      return 1;
-    }
-
-    return 0;
-  });
-}
-
-const posts = sortPinnedFirst((await getPublicPosts()).filter((post) => !isAboutPost(post)));
 const pageSize = 5;
 const pageValue = Number.parseInt(Astro.url.searchParams.get('page') ?? '1', 10);
 const currentPage = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1;
-const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
-const pageStart = (currentPage - 1) * pageSize;
-const pagePosts = posts.slice(pageStart, pageStart + pageSize);
-const isOutOfRange = posts.length > 0 && currentPage > totalPages;
+const { posts: pagePosts, totalCount } = await getPublicPostsPage(currentPage, pageSize);
+const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+const isOutOfRange = totalCount > 0 && currentPage > totalPages;
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -60,7 +36,7 @@ function formatDate(value: string | null) {
         <p>我发布的所有文章。</p>
       </header>
 
-      {posts.length === 0 ? (
+      {totalCount === 0 ? (
         <div class="sc-empty">
           <p>暂无公开文章。</p>
         </div>

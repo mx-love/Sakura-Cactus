@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { getPublicPosts } from '@/features/posts/post.service';
+import { getPublicFeedPosts } from '@/features/posts/post.service';
+import { decodeHtmlEntities } from '@/features/posts/post.renderer';
 
 export const prerender = false;
 
@@ -32,25 +33,21 @@ function toRssDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? new Date().toUTCString() : date.toUTCString();
 }
 
-function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]): boolean {
-  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
-}
-
 export const GET: APIRoute = async ({ request }) => {
   const siteUrl = new URL(request.url).origin;
   const siteIdentity = readSiteIdentity();
-  const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
+  const posts = await getPublicFeedPosts(50);
 
   const items = posts
     .map((post) => {
       const postUrl = absoluteUrl(`/posts/${post.slug}`, siteUrl);
-      const excerpt = post.excerpt ?? '';
+      const excerpt = post.excerpt ? decodeHtmlEntities(post.excerpt) : '';
 
       return `    <item>
-      <title>${escapeXml(post.title)}</title>
+      <title>${escapeXml(decodeHtmlEntities(post.title))}</title>
       <link>${escapeXml(postUrl)}</link>
       <guid isPermaLink="true">${escapeXml(postUrl)}</guid>
-      <pubDate>${escapeXml(toRssDate(post.publishedAt))}</pubDate>
+      <pubDate>${escapeXml(toRssDate(post.published_at))}</pubDate>
       <description>${escapeXml(excerpt)}</description>
       <content:encoded>${escapeXml(excerpt)}</content:encoded>
     </item>`;

@@ -388,7 +388,7 @@ export function PostEditor({ post }: PostEditorProps) {
       setSaveFeedback('success');
 
       if (status === 'published' && isPubliclyReachablePost(savedPost)) {
-        window.location.href = `/posts/${encodeURIComponent(savedPost.slug)}`;
+        window.location.href = `/posts/${encodeURIComponent(savedPost.slug)}?fresh=1`;
         return;
       }
 

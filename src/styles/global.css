@@ -2480,6 +2480,8 @@ summary {
   left: max(1rem, calc(50% + 480px));
   z-index: 5;
   width: 12rem;
+  max-height: calc(100vh - 140px);
+  overflow: hidden;
   border-left: 1px solid rgba(240, 227, 231, 0.92);
   padding-left: 0.85rem;
 }
@@ -2498,9 +2500,19 @@ summary {
   gap: 0.18rem;
 }
 
+.sc-article-toc nav {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  padding-right: 0.22rem;
+  scrollbar-width: thin;
+}
+
 .sc-toc-link {
   position: relative;
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   border-radius: 999px;
   padding: 0.28rem 0.5rem 0.28rem 0.7rem;
   color: var(--color-muted);

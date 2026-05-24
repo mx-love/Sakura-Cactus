@@ -1,5 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { matchPublicCache, maybeStorePublicCache, shouldForceNoStore, withNoStore } from '@/lib/cache';
 import { getDb } from '@/lib/db';
 import { jsonError } from '@/lib/response';
 import { ensureD1Schema } from '@/lib/schema';
@@ -21,9 +22,14 @@ function isAdminApi(pathname: string): boolean {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  await ensureD1Schema(getDb());
-
   const { pathname } = context.url;
+  const cached = await matchPublicCache(context.request, context.url);
+
+  if (cached) {
+    return cached;
+  }
+
+  await ensureD1Schema(getDb());
 
   if (isAdminApi(pathname)) {
     const user = await getCurrentAdminUser(context);
@@ -32,7 +38,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return jsonError('AUTH_REQUIRED', 'Authentication required.', { status: 401 });
     }
 
-    return next();
+    const response = await next();
+    return shouldForceNoStore(context.request, context.url) ? withNoStore(response) : response;
   }
 
   if (isAdminPage(pathname)) {
@@ -47,7 +54,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         return context.redirect('/admin');
       }
 
-      return next();
+      return withNoStore(await next());
     }
 
     if (!user) {
@@ -56,5 +63,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  return next();
+  const response = await next();
+  return maybeStorePublicCache(context.request, context.url, response);
 });

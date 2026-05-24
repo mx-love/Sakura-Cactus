@@ -1,6 +1,6 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicPosts } from '@/features/posts/post.service';
+import { getPublicTags } from '@/features/tags/tag.service';
 
 export const prerender = false;
 
@@ -8,29 +8,10 @@ function isAboutTag(tag: { name: string; slug: string }) {
   return tag.slug === 'about' || tag.name.toLowerCase() === 'about';
 }
 
-function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
-  return post.tags.some(isAboutTag);
-}
-
-const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
-const tagMap = new Map<string, { name: string; slug: string; postCount: number }>();
-
-for (const post of posts) {
-  for (const tag of post.tags) {
-    if (isAboutTag(tag)) {
-      continue;
-    }
-
-    const existing = tagMap.get(tag.slug);
-    if (existing) {
-      existing.postCount += 1;
-    } else {
-      tagMap.set(tag.slug, { name: tag.name, slug: tag.slug, postCount: 1 });
-    }
-  }
-}
-
-const tags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+const tags = (await getPublicTags())
+  .filter((tag) => !isAboutTag(tag) && tag.post_count > 0)
+  .map((tag) => ({ name: tag.name, slug: tag.slug, postCount: tag.post_count }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 ---
 
 <SiteLayout title="标签 | Sakura Cactus" description="按主题浏览公开文章。">

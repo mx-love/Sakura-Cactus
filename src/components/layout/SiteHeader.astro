@@ -22,7 +22,7 @@ const nextPath = `${Astro.url.pathname}${Astro.url.search}`;
 const accountHref = `/admin/login?next=${encodeURIComponent(nextPath)}`;
 const avatarUrl = adminUser ? env.SITE_AVATAR_URL?.trim() : '';
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
-const posts = await getPublicPosts();
+const posts = await getPublicPosts({ limit: 100, excludeAbout: true });
 
 function getSearchDateTerms(value: string | null) {
   if (!value) {
@@ -61,7 +61,6 @@ function getSearchDateTerms(value: string | null) {
 }
 
 const searchPosts = posts
-  .filter((post) => !post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about'))
   .map((post) => {
     const tags = post.tags.map((tag) => tag.name);
 

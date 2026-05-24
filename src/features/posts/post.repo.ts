@@ -11,6 +11,75 @@ export interface PersistedPostInput extends NormalizedPostInput {
   readingTimeMinutes: number;
 }
 
+export interface PublicPostQueryOptions {
+  limit?: number;
+  offset?: number;
+  excludeAbout?: boolean;
+  pinnedFirst?: boolean;
+  tagSlug?: string;
+}
+
+export interface PublicPostFeedRow {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  published_at: string | null;
+  updated_at: string;
+}
+
+export interface PublicPostSitemapRow {
+  slug: string;
+  published_at: string | null;
+  updated_at: string;
+}
+
+const PUBLIC_POST_SUMMARY_SELECT = `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown,
+  NULL AS content_html, posts.cover_asset_id, posts.status, posts.visibility, NULL AS seo_title,
+  NULL AS seo_description, posts.reading_time_minutes, posts.word_count, posts.published_at,
+  posts.pinned_at, posts.created_at, posts.updated_at, posts.deleted_at`;
+
+function publicPostWhere(options: PublicPostQueryOptions = {}): { joins: string[]; conditions: string[]; values: unknown[] } {
+  const joins: string[] = [];
+  const conditions = [
+    "posts.status = 'published'",
+    "posts.visibility = 'public'",
+    'posts.deleted_at IS NULL',
+    'posts.published_at IS NOT NULL',
+    'posts.published_at <= ?'
+  ];
+  const values: unknown[] = [nowIso()];
+
+  if (options.excludeAbout) {
+    conditions.push(
+      `NOT EXISTS (
+        SELECT 1
+        FROM post_tags about_post_tags
+        INNER JOIN tags about_tags ON about_tags.id = about_post_tags.tag_id
+        WHERE about_post_tags.post_id = posts.id
+          AND (about_tags.slug = 'about' OR lower(about_tags.name) = 'about')
+      )`
+    );
+  }
+
+  if (options.tagSlug) {
+    joins.push('INNER JOIN post_tags filter_post_tags ON filter_post_tags.post_id = posts.id');
+    joins.push('INNER JOIN tags filter_tags ON filter_tags.id = filter_post_tags.tag_id');
+    conditions.push('filter_tags.slug = ?');
+    values.push(options.tagSlug);
+  }
+
+  return { joins, conditions, values };
+}
+
+function publicPostOrder(options: PublicPostQueryOptions = {}): string {
+  if (options.pinnedFirst) {
+    return 'ORDER BY posts.pinned_at IS NULL ASC, posts.pinned_at DESC, posts.published_at DESC, posts.updated_at DESC';
+  }
+
+  return 'ORDER BY posts.published_at DESC, posts.updated_at DESC';
+}
+
 export async function listAdminPosts(db: D1Database, filters: PostListFilters = {}): Promise<PostRow[]> {
   const conditions: string[] = [];
   const values: unknown[] = [];
@@ -45,22 +114,67 @@ export async function listAdminPosts(db: D1Database, filters: PostListFilters = 
   return result.results ?? [];
 }
 
-export async function listPublicPosts(db: D1Database): Promise<PostRow[]> {
+export async function listPublicPosts(db: D1Database, options: PublicPostQueryOptions = {}): Promise<PostRow[]> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
+  const offset = Math.max(options.offset ?? 0, 0);
+  const { joins, conditions, values } = publicPostWhere(options);
   const result = await db
     .prepare(
-      `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
+      `${PUBLIC_POST_SUMMARY_SELECT}
        FROM posts
-       WHERE status = 'published'
-         AND visibility = 'public'
-         AND deleted_at IS NULL
-         AND published_at IS NOT NULL
-         AND published_at <= ?
-       ORDER BY published_at DESC, updated_at DESC
-       LIMIT 50`
+       ${joins.join('\n')}
+       WHERE ${conditions.join(' AND ')}
+       ${publicPostOrder(options)}
+       LIMIT ? OFFSET ?`
     )
-    .bind(nowIso())
+    .bind(...values, limit, offset)
     .all<PostRow>();
+
+  return result.results ?? [];
+}
+
+export async function countPublicPosts(db: D1Database, options: PublicPostQueryOptions = {}): Promise<number> {
+  const { joins, conditions, values } = publicPostWhere(options);
+  const row = await db
+    .prepare(
+      `SELECT COUNT(DISTINCT posts.id) AS count
+       FROM posts
+       ${joins.join('\n')}
+       WHERE ${conditions.join(' AND ')}`
+    )
+    .bind(...values)
+    .first<{ count: number }>();
+
+  return row?.count ?? 0;
+}
+
+export async function listPublicFeedPosts(db: D1Database, limit = 50): Promise<PublicPostFeedRow[]> {
+  const { conditions, values } = publicPostWhere({ excludeAbout: true });
+  const result = await db
+    .prepare(
+      `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.published_at, posts.updated_at
+       FROM posts
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY posts.published_at DESC, posts.updated_at DESC
+       LIMIT ?`
+    )
+    .bind(...values, Math.min(Math.max(limit, 1), 100))
+    .all<PublicPostFeedRow>();
+
+  return result.results ?? [];
+}
+
+export async function listPublicSitemapPosts(db: D1Database): Promise<PublicPostSitemapRow[]> {
+  const { conditions, values } = publicPostWhere({ excludeAbout: true });
+  const result = await db
+    .prepare(
+      `SELECT posts.slug, posts.published_at, posts.updated_at
+       FROM posts
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY posts.published_at DESC, posts.updated_at DESC`
+    )
+    .bind(...values)
+    .all<PublicPostSitemapRow>();
 
   return result.results ?? [];
 }

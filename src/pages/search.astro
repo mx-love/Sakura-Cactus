@@ -4,10 +4,6 @@ import { getPublicPosts } from '@/features/posts/post.service';
 
 export const prerender = false;
 
-function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
-  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
-}
-
 function getSearchDateTerms(value: string | null) {
   if (!value) {
     return [];
@@ -44,7 +40,7 @@ function getSearchDateTerms(value: string | null) {
   ];
 }
 
-const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
+const posts = await getPublicPosts({ limit: 100, excludeAbout: true });
 const searchPosts = posts.map((post) => {
   const tags = post.tags.map((tag) => tag.name);
 

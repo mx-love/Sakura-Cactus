@@ -5,29 +5,7 @@ import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
-function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
-  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
-}
-
-function sortPinnedFirst(posts: Awaited<ReturnType<typeof getPublicPosts>>) {
-  return [...posts].sort((a, b) => {
-    if (a.pinnedAt && b.pinnedAt) {
-      return new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime();
-    }
-
-    if (a.pinnedAt) {
-      return -1;
-    }
-
-    if (b.pinnedAt) {
-      return 1;
-    }
-
-    return 0;
-  });
-}
-
-const posts = sortPinnedFirst((await getPublicPosts()).filter((post) => !isAboutPost(post)));
+const posts = await getPublicPosts({ limit: 12, excludeAbout: true, pinnedFirst: true });
 const latestPosts = posts.slice(0, 5);
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地发布。';

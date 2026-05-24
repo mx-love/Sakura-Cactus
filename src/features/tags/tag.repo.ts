@@ -7,9 +7,9 @@ export interface PublicTagSummary extends TagRow {
 }
 
 const POST_SELECT = `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown,
-  posts.content_html, posts.cover_asset_id, posts.status, posts.visibility, posts.seo_title,
-  posts.seo_description, posts.reading_time_minutes, posts.word_count, posts.published_at,
-  posts.created_at, posts.updated_at, posts.deleted_at`;
+  NULL AS content_html, posts.cover_asset_id, posts.status, posts.visibility, NULL AS seo_title,
+  NULL AS seo_description, posts.reading_time_minutes, posts.word_count, posts.published_at,
+  posts.pinned_at, posts.created_at, posts.updated_at, posts.deleted_at`;
 
 export async function findTagByName(db: D1Database, name: string): Promise<TagRow | null> {
   return db
@@ -85,6 +85,13 @@ export async function listPublicTags(db: D1Database, now: string): Promise<Publi
          AND posts.deleted_at IS NULL
          AND posts.published_at IS NOT NULL
          AND posts.published_at <= ?
+         AND NOT EXISTS (
+           SELECT 1
+           FROM post_tags about_post_tags
+           INNER JOIN tags about_tags ON about_tags.id = about_post_tags.tag_id
+           WHERE about_post_tags.post_id = posts.id
+             AND (about_tags.slug = 'about' OR lower(about_tags.name) = 'about')
+         )
        GROUP BY tags.id
        ORDER BY tags.name ASC`
     )

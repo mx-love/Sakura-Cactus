@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
-import { getPublicPosts } from '@/features/posts/post.service';
+import { getPublicSitemapPosts } from '@/features/posts/post.service';
+import { getPublicTags } from '@/features/tags/tag.service';
 
 export const prerender = false;
 
@@ -36,23 +37,11 @@ function isAboutTagLike(value: { name: string; slug: string }): boolean {
   return value.slug === 'about' || value.name.toLowerCase() === 'about';
 }
 
-function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]): boolean {
-  return post.tags.some(isAboutTagLike);
-}
-
 export const GET: APIRoute = async ({ request }) => {
   const siteUrl = new URL(request.url).origin;
   const now = new Date().toISOString();
-  const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
-  const tags = new Map<string, { name: string; slug: string }>();
-
-  for (const post of posts) {
-    for (const tag of post.tags) {
-      if (!isAboutTagLike(tag)) {
-        tags.set(tag.slug, tag);
-      }
-    }
-  }
+  const posts = await getPublicSitemapPosts();
+  const tags = (await getPublicTags()).filter((tag) => !isAboutTagLike(tag) && tag.post_count > 0);
 
   const staticUrls = [
     sitemapUrl('/', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '1.0' }),
@@ -66,13 +55,13 @@ export const GET: APIRoute = async ({ request }) => {
 
   const postUrls = posts.map((post) =>
     sitemapUrl(`/posts/${post.slug}`, siteUrl, {
-      lastmod: toLastMod(post.updatedAt || post.publishedAt),
+      lastmod: toLastMod(post.updated_at || post.published_at),
       changefreq: 'monthly',
       priority: '0.8'
     })
   );
 
-  const tagUrls = [...tags.values()].map((tag) =>
+  const tagUrls = tags.map((tag) =>
     sitemapUrl(`/tags/${tag.slug}`, siteUrl, {
       changefreq: 'weekly',
       priority: '0.6'

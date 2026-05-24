@@ -28,13 +28,13 @@ const ogImage = post.coverImageUrl?.startsWith('/')
 const publishedAt = post.publishedAt ? new Date(post.publishedAt) : null;
 const updatedAt = new Date(post.updatedAt);
 const shouldShowUpdatedAt = publishedAt ? updatedAt.getTime() - publishedAt.getTime() > 60_000 : false;
-const publicPosts = (await getPublicPosts()).filter((item) => !isAboutPost(item));
+const publicPosts = await getPublicPosts({ limit: 200, excludeAbout: true });
 const currentPublicIndex = publicPosts.findIndex((item) => item.slug === post.slug);
 const previousPost = currentPublicIndex > 0 ? publicPosts[currentPublicIndex - 1] : null;
 const nextPost = currentPublicIndex >= 0 && currentPublicIndex < publicPosts.length - 1 ? publicPosts[currentPublicIndex + 1] : null;
 const renderedContent = addHeadingIdsToHtml(post.contentHtml);
-const tocHeadings = renderedContent.headings;
-const showToc = tocHeadings.length >= 3;
+const tocHeadings = renderedContent.headings.filter((heading) => heading.depth === 2);
+const showToc = tocHeadings.length >= 2;
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -46,9 +46,6 @@ function formatDate(date: Date | null) {
   return date ? dateFormatter.format(date) : '';
 }
 
-function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
-  return item.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
-}
 ---
 
 <SiteLayout title={`${title} | Sakura Cactus`} description={description} canonicalUrl={canonicalUrl} ogImage={ogImage ?? undefined}>
@@ -60,7 +57,7 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
           <p>纸页书签</p>
           <nav>
             {tocHeadings.map((heading) => (
-              <a class={`sc-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug}>
+              <a class={`sc-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug} title={heading.text}>
                 {heading.text}
               </a>
             ))}
@@ -107,7 +104,7 @@ function isAboutPost(item: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
                 <summary>本文目录</summary>
                 <nav>
                   {tocHeadings.map((heading) => (
-                    <a class={`sc-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug}>
+                    <a class={`sc-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug} title={heading.text}>
                       {heading.text}
                     </a>
                   ))}

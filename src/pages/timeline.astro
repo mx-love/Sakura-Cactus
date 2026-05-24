@@ -4,11 +4,7 @@ import { getPublicPosts } from '@/features/posts/post.service';
 
 export const prerender = false;
 
-function isAboutPost(post: Awaited<ReturnType<typeof getPublicPosts>>[number]) {
-  return post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about');
-}
-
-const posts = (await getPublicPosts()).filter((post) => !isAboutPost(post));
+const posts = await getPublicPosts({ limit: 200, excludeAbout: true });
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',

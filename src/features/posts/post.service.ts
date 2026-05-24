@@ -10,8 +10,11 @@ import {
   findPostById,
   findPostBySlug,
   findPublicPostBySlug,
+  countPublicPosts,
+  listPublicFeedPosts,
   listAdminPosts,
   listPublicPosts,
+  listPublicSitemapPosts,
   replacePostAssets,
   setPostPinnedAt,
   setPostStatus,
@@ -20,7 +23,7 @@ import {
   updatePost
 } from './post.repo';
 import { normalizePostInput, PostValidationError } from './post.schema';
-import type { PostListFilters, PostRow, PublicPostDetail, PublicPostSummary } from './post.types';
+import type { PostListFilters, PostRow, PublicPostDetail, PublicPostSummary, PublicPostTag } from './post.types';
 import { toPublicPostDetail, toPublicPostSummary } from './post.types';
 
 export class PostConflictError extends Error {
@@ -92,6 +95,40 @@ async function attachPostTags<T extends PostRow | null>(db: D1Database, post: T)
     ...post,
     tags: await getPostTags(db, post.id)
   } as T;
+}
+
+async function getTagsForPostIds(db: D1Database, postIds: string[]): Promise<Map<string, PublicPostTag[]>> {
+  const tagsByPostId = new Map<string, PublicPostTag[]>();
+  const uniquePostIds = [...new Set(postIds)];
+
+  if (uniquePostIds.length === 0) {
+    return tagsByPostId;
+  }
+
+  const placeholders = uniquePostIds.map(() => '?').join(', ');
+  const result = await db
+    .prepare(
+      `SELECT post_tags.post_id, tags.name, tags.slug
+       FROM post_tags
+       INNER JOIN tags ON tags.id = post_tags.tag_id
+       WHERE post_tags.post_id IN (${placeholders})
+       ORDER BY tags.name ASC`
+    )
+    .bind(...uniquePostIds)
+    .all<{ post_id: string; name: string; slug: string }>();
+
+  for (const row of result.results ?? []) {
+    const tags = tagsByPostId.get(row.post_id) ?? [];
+    tags.push({ name: row.name, slug: row.slug });
+    tagsByPostId.set(row.post_id, tags);
+  }
+
+  return tagsByPostId;
+}
+
+async function toPublicPostSummaries(db: D1Database, posts: PostRow[]): Promise<PublicPostSummary[]> {
+  const tagsByPostId = await getTagsForPostIds(db, posts.map((post) => post.id));
+  return posts.map((post) => toPublicPostSummary(post, tagsByPostId.get(post.id) ?? []));
 }
 
 export function isPostValidationError(error: unknown): error is PostValidationError {
@@ -180,16 +217,44 @@ export async function deleteAdminPost(id: string): Promise<PostRow | null> {
   return post;
 }
 
-export async function getPublicPosts(): Promise<PublicPostSummary[]> {
+export async function getPublicPosts(options: {
+  limit?: number;
+  offset?: number;
+  excludeAbout?: boolean;
+  pinnedFirst?: boolean;
+  tagSlug?: string;
+} = {}): Promise<PublicPostSummary[]> {
   const db = getDb();
-  const posts = await listPublicPosts(db);
-  const summaries: PublicPostSummary[] = [];
+  const posts = await listPublicPosts(db, options);
+  return toPublicPostSummaries(db, posts);
+}
 
-  for (const post of posts) {
-    summaries.push(toPublicPostSummary(post, await getPostTags(db, post.id)));
-  }
+export async function getPublicPostsPage(page: number, pageSize: number): Promise<{ posts: PublicPostSummary[]; totalCount: number }> {
+  const db = getDb();
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const safePageSize = Math.min(Math.max(pageSize, 1), 50);
+  const offset = (safePage - 1) * safePageSize;
+  const options = {
+    excludeAbout: true,
+    pinnedFirst: true
+  };
+  const [posts, totalCount] = await Promise.all([
+    listPublicPosts(db, { ...options, limit: safePageSize, offset }),
+    countPublicPosts(db, options)
+  ]);
 
-  return summaries;
+  return {
+    posts: await toPublicPostSummaries(db, posts),
+    totalCount
+  };
+}
+
+export async function getPublicFeedPosts(limit = 50) {
+  return listPublicFeedPosts(getDb(), limit);
+}
+
+export async function getPublicSitemapPosts() {
+  return listPublicSitemapPosts(getDb());
 }
 
 export async function getPublicPostBySlug(slug: string): Promise<PublicPostDetail | null> {
