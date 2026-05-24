@@ -128,7 +128,7 @@ function isActive(href: string) {
           <span class="sc-account-default" data-account-default>
             {avatarUrl ? (
               <>
-                <img class="sc-account-avatar" src={avatarUrl} alt="" loading="lazy" data-account-avatar />
+                <img class="sc-account-avatar" src={avatarUrl} alt="" loading="lazy" decoding="async" data-account-avatar />
                 <span class="sc-account-fallback" hidden data-account-fallback>
                   <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 21a8 8 0 0 0-16 0" />
@@ -160,8 +160,8 @@ function isActive(href: string) {
         </a>
       )}
 
-      <details class="relative md:hidden">
-        <summary class="sc-icon-link list-none" aria-label="菜单">
+      <details class="relative md:hidden" data-mobile-menu>
+        <summary class="sc-icon-link list-none" aria-label="菜单" aria-expanded="false" data-mobile-menu-toggle>
           <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 7h16" />
             <path d="M4 12h16" />
@@ -199,6 +199,48 @@ function isActive(href: string) {
     </section>
   </div>
   <script id="site-search-posts" type="application/json" set:html={searchJson}></script>
+  <script is:inline>
+    (() => {
+      const menu = document.querySelector('[data-mobile-menu]');
+      const toggle = menu?.querySelector('[data-mobile-menu-toggle]');
+
+      if (!(menu instanceof HTMLDetailsElement) || !(toggle instanceof HTMLElement)) return;
+
+      function syncExpanded() {
+        toggle.setAttribute('aria-expanded', menu.open ? 'true' : 'false');
+      }
+
+      function closeMenu() {
+        if (!menu.open) return;
+        menu.open = false;
+        syncExpanded();
+      }
+
+      menu.addEventListener('toggle', syncExpanded);
+
+      document.addEventListener('click', (event) => {
+        if (!menu.open) return;
+        const target = event.target;
+
+        if (target instanceof Node && menu.contains(target)) {
+          if (target instanceof HTMLAnchorElement) {
+            closeMenu();
+          }
+          return;
+        }
+
+        closeMenu();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+        }
+      });
+
+      syncExpanded();
+    })();
+  </script>
   <script is:inline>
     (() => {
       const overlay = document.querySelector('[data-search-overlay]');

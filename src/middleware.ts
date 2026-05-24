@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
-import { matchPublicCache, maybeStorePublicCache, shouldForceNoStore, withNoStore } from '@/lib/cache';
+import { matchPublicCache, maybeStorePublicCache, shouldForceNoStore, withNoStore, withServerTiming } from '@/lib/cache';
 import { getDb } from '@/lib/db';
 import { jsonError } from '@/lib/response';
 import { ensureD1Schema } from '@/lib/schema';
@@ -22,11 +22,12 @@ function isAdminApi(pathname: string): boolean {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  const startedAt = performance.now();
   const { pathname } = context.url;
   const cached = await matchPublicCache(context.request, context.url);
 
   if (cached) {
-    return cached;
+    return withServerTiming(cached, startedAt);
   }
 
   await ensureD1Schema(getDb());
@@ -35,34 +36,34 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const user = await getCurrentAdminUser(context);
 
     if (!user) {
-      return jsonError('AUTH_REQUIRED', 'Authentication required.', { status: 401 });
+      return withServerTiming(jsonError('AUTH_REQUIRED', 'Authentication required.', { status: 401 }), startedAt);
     }
 
     const response = await next();
-    return shouldForceNoStore(context.request, context.url) ? withNoStore(response) : response;
+    return withServerTiming(shouldForceNoStore(context.request, context.url) ? withNoStore(response) : response, startedAt);
   }
 
   if (isAdminPage(pathname)) {
     if (isAdminSetupPage(pathname)) {
-      return context.redirect('/admin/login');
+      return withServerTiming(context.redirect('/admin/login'), startedAt);
     }
 
     const user = await getCurrentAdminUser(context);
 
     if (isAdminLoginPage(pathname)) {
       if (user) {
-        return context.redirect('/admin');
+        return withServerTiming(context.redirect('/admin'), startedAt);
       }
 
-      return withNoStore(await next());
+      return withServerTiming(withNoStore(await next()), startedAt);
     }
 
     if (!user) {
       const nextPath = `${pathname}${context.url.search}`;
-      return context.redirect(`/admin/login?next=${encodeURIComponent(nextPath)}`);
+      return withServerTiming(context.redirect(`/admin/login?next=${encodeURIComponent(nextPath)}`), startedAt);
     }
   }
 
   const response = await next();
-  return maybeStorePublicCache(context.request, context.url, response);
+  return withServerTiming(await maybeStorePublicCache(context.request, context.url, response), startedAt);
 });

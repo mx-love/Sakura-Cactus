@@ -110,6 +110,13 @@ function cloneWithHeaders(response: Response, headers: Headers): Response {
   });
 }
 
+export function withServerTiming(response: Response, startedAt: number): Response {
+  const headers = new Headers(response.headers);
+  const duration = Math.max(0, performance.now() - startedAt).toFixed(1);
+  headers.set('Server-Timing', `app;dur=${duration}`);
+  return cloneWithHeaders(response, headers);
+}
+
 export function withNoStore(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set('Cache-Control', 'no-store');

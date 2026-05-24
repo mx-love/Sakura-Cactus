@@ -142,7 +142,7 @@ function formatDate(value: string | null) {
               <article class:list={['sc-featured-paper', leadPost.coverImageUrl && 'sc-featured-paper-with-cover']}>
                 {leadPost.coverImageUrl ? (
                   <a class="sc-featured-cover" href={`/posts/${leadPost.slug}`} aria-label={leadPost.title}>
-                    <img src={leadPost.coverImageUrl} alt="" loading="lazy" />
+                    <img src={leadPost.coverImageUrl} alt="" loading="lazy" decoding="async" />
                   </a>
                 ) : null}
                 <div class="sc-featured-paper-body">
