@@ -161,20 +161,27 @@ function formatDate(value: string | null) {
         ) : (
           <div class="sc-home-posts">
             {leadPost ? (
-              <article class="sc-featured-paper">
-                <span class="sc-paper-kicker">最新整理</span>
-                <h3>
-                  <a href={`/posts/${leadPost.slug}`}>{leadPost.title}</a>
-                </h3>
-                {leadPost.publishedAt ? <time datetime={leadPost.publishedAt}>{formatDate(leadPost.publishedAt)}</time> : null}
-                {leadPost.excerpt ? <p>{leadPost.excerpt}</p> : null}
-                {leadPost.tags.length > 0 ? (
-                  <div class="sc-tag-list">
-                    {leadPost.tags.map((tag) => (
-                      <a class="sc-tag-link" href={`/tags/${tag.slug}`}>{tag.name}</a>
-                    ))}
-                  </div>
+              <article class:list={['sc-featured-paper', leadPost.coverImageUrl && 'sc-featured-paper-with-cover']}>
+                {leadPost.coverImageUrl ? (
+                  <a class="sc-featured-cover" href={`/posts/${leadPost.slug}`} aria-label={leadPost.title}>
+                    <img src={leadPost.coverImageUrl} alt="" loading="lazy" />
+                  </a>
                 ) : null}
+                <div class="sc-featured-paper-body">
+                  <span class="sc-paper-kicker">最新整理</span>
+                  <h3>
+                    <a href={`/posts/${leadPost.slug}`}>{leadPost.title}</a>
+                  </h3>
+                  {leadPost.publishedAt ? <time datetime={leadPost.publishedAt}>{formatDate(leadPost.publishedAt)}</time> : null}
+                  {leadPost.excerpt ? <p>{leadPost.excerpt}</p> : null}
+                  {leadPost.tags.length > 0 ? (
+                    <div class="sc-tag-list">
+                      {leadPost.tags.map((tag) => (
+                        <a class="sc-tag-link" href={`/tags/${tag.slug}`}>{tag.name}</a>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </article>
             ) : null}
 

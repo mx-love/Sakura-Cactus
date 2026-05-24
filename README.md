@@ -1,317 +1,226 @@
 # Sakura Cactus
 
-Sakura Cactus 是一个部署在 Cloudflare Workers 上的个人博客系统。它使用 Astro SSR、Cloudflare D1、Cloudflare R2、Markdown 写作，并内置 RSS、sitemap、友人帐、搜索、访问量和站点维护能力。
+Sakura Cactus 是一个基于 Astro + Cloudflare Workers 的个人博客系统，包含公开博客、Markdown 写作后台、图片上传、友人帐和站点设置。
 
-它适合个人博客：写文章、上传图片、发布到自己的域名，不需要外部 CMS。
+## 项目目的
 
-## 功能概览
+Sakura Cactus 不是传统静态博客，也不是大型 CMS。
 
-- GitHub Flavored Markdown 风格写作
-- 图片上传到私有 R2，并通过 `/i/:token` 代理访问
-- 草稿、发布、定时发布、私密文章
-- 文章置顶
-- 友人帐、友链申请、友链健康监测
-- RSS、sitemap、robots
-- 轻量搜索
-- 访问量统计
-- 设置页和站点维护
+它的目标是做一个轻量、安静、适合个人长期写作的博客：
 
-## 快速部署到 Cloudflare Workers
+- 文章写作和发布在自己的后台完成
+- Markdown 为核心
+- 图片存到 Cloudflare R2
+- 数据存到 Cloudflare D1
+- 部署在 Cloudflare Workers
+- 尽量少依赖外部服务
+- 适合个人博客、笔记、随笔和长期归档
+
+## 技术栈
+
+| 类型 | 技术 |
+| --- | --- |
+| 前端框架 | Astro |
+| UI 交互 | React / TypeScript |
+| 部署运行 | Cloudflare Workers |
+| 数据库 | Cloudflare D1 |
+| 图片存储 | Cloudflare R2 |
+| Markdown | unified / remark / rehype sanitize |
+| 样式 | 原生 CSS |
+| 包管理 | pnpm |
+| 版本管理 | GitHub |
 
 Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 应用。
 
-这不是纯一键部署。首次部署需要创建 D1、R2、填写管理员 Secrets；完成后，后续 push 到 GitHub 会自动部署。数据库表会在首次运行时自动初始化。
+## 已实现功能
 
-推荐部署方式是：
+公开博客：
 
-GitHub 仓库 + Cloudflare Workers Git 集成自动部署。
+- 首页
+- 文章列表
+- 时间轴
+- 标签
+- 文章详情
+- 文章目录 TOC
+- RSS
+- sitemap
+- robots
+- 搜索
+- 关于页
+- 友人帐
 
-### 1. 准备 GitHub 仓库
+写作后台：
 
-先把项目上传到 GitHub。
+- 管理员登录
+- Markdown 编辑
+- 实时预览 / 分屏
+- 保存草稿
+- 发布 / 更新
+- 私密文章
+- 定时发布
+- 置顶
+- 删除
+- 图片上传 / 粘贴 / 拖拽
+- R2 图片生命周期管理
 
-可以使用 GitHub Desktop，也可以使用 git 命令：
+站点功能：
 
-```bash
-git add .
-git commit -m "deploy sakura cactus"
-git push
-```
+- 友链管理
+- 友链申请开关
+- 友链健康监测
+- 评论开关占位
+- 访问量开关
+- favicon 外链设置
+- 站点维护清理
 
-如果代码已经在 GitHub，这一步可以跳过。
+部署体验：
 
-### 2. 创建 Cloudflare 资源
+- Cloudflare Dashboard 可视化部署
+- D1 schema 自动初始化
+- 不需要手动执行 migrations 才能首次使用
+- RSS / sitemap / robots 自动使用当前访问域名
+- 不需要 `SITE_URL`
 
-需要创建两个资源。
+## Cloudflare 快速部署
 
-#### D1 数据库
+1. Fork 或上传项目到 GitHub。
+2. 在 Cloudflare Workers 中连接 GitHub 仓库。
+3. 创建 D1 数据库。
+4. 创建 R2 Bucket。
+5. 在 Worker 里绑定：
+   - D1：`DB`
+   - R2：`MEDIA_BUCKET`
+6. 添加 Secrets：
+   - `ADMIN_USERNAME`
+   - `ADMIN_PASSWORD`
+7. 可选添加 Variables：
+   - `SITE_NAME`
+   - `SITE_TAGLINE`
+   - `SITE_DESCRIPTION`
+   - `SITE_AVATAR_URL`
+8. 部署 Worker。
+9. 绑定自定义域名。
+10. 打开 `/admin/login` 登录后台。
 
-示例名称：
-
-```txt
-sakura_blog_prod
-```
-
-创建后在 Worker 设置中绑定为 `DB`。
-
-#### R2 Bucket
-
-示例名称：
-
-```txt
-sakura-blog-media-prod
-```
-
-R2 Bucket 保持私有，不需要公开。
-
-图片访问由项目的 `/i/:token` 路由代理，不要打开 R2 public bucket。
-
-### 3. 在 Worker 里绑定 D1 和 R2
-
-在 Cloudflare Worker 的设置里添加绑定。
-
-确认 D1 binding 名称是：
-
-```txt
-DB
-```
-
-确认 R2 binding 名称是：
-
-```txt
-MEDIA_BUCKET
-```
-
-提醒：binding 名称不要改。项目代码默认读取 `DB` 和 `MEDIA_BUCKET`。
-
-不需要手动创建数据库表。Worker 首次运行时会自动初始化 D1 schema。
-
-### 4. Cloudflare 连接 GitHub 自动部署
-
-在 Cloudflare Dashboard 中：
-
-1. 进入 `Workers & Pages`。
-2. 创建 Worker 或选择 `Import repository`。
-3. 选择 GitHub。
-4. 选择你的 Sakura Cactus 仓库。
-5. 选择生产分支，例如 `main`。
-6. 设置构建命令。
-
-构建命令：
+Cloudflare 构建命令：
 
 ```bash
 pnpm install --frozen-lockfile && pnpm build
 ```
 
-Deploy command 优先使用 Cloudflare 默认的：
-
-```bash
-npx wrangler deploy
-```
-
-如果 Cloudflare 当前页面不要求填写 Deploy command，按页面默认即可。
-
-如果 Cloudflare 界面要求自定义 Deploy command，也可以使用项目脚本：
+如果 Cloudflare 界面要求填写 Deploy command，可以使用项目脚本：
 
 ```bash
 pnpm deploy
 ```
 
-不要填写项目里不存在的脚本。
+部署注意：
 
-### 5. 填写环境变量和 Secrets
+- R2 Bucket 保持私有。
+- 图片通过 `/i/:token` 由 Worker 代理访问。
+- 不需要 R2 自定义域名。
+- 不需要 `SITE_URL`。
+- D1 首次访问会自动建表。
 
-Cloudflare Worker 设置里需要填写两类配置。
+## 环境变量
 
-#### 普通环境变量
+| 名称 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `ADMIN_USERNAME` | Secret | 是 | 后台用户名 |
+| `ADMIN_PASSWORD` | Secret | 是 | 后台密码 |
+| `SITE_NAME` | Variable | 否 | 站点名称，默认 Sakura Cactus |
+| `SITE_TAGLINE` | Variable | 否 | 首页标语 |
+| `SITE_DESCRIPTION` | Variable | 否 | 首页描述 / RSS 描述 |
+| `SITE_AVATAR_URL` | Variable | 否 | Header 头像 URL |
 
-这些不是密码，可以放在 Variables：
+高级说明：`ADMIN_PASSWORD_HASH` 仍可作为高级方式替代 `ADMIN_PASSWORD`。如果同时配置 `ADMIN_PASSWORD_HASH` 和 `ADMIN_PASSWORD`，系统会优先使用 `ADMIN_PASSWORD_HASH`。
 
-```txt
-SITE_NAME=Sakura Cactus
-SITE_TAGLINE=温柔地写，安静地发布。
-SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
-SITE_AVATAR_URL=https://你的头像地址
-```
+不要把这些值提交到 GitHub。`.dev.vars`、真实密码、Cloudflare Token、R2 密钥都应该只保存在本地或 Cloudflare Secrets 中。
 
-说明：
+## Worker Bindings
 
-- `SITE_AVATAR_URL` 可选。
-- `SITE_NAME`、`SITE_TAGLINE`、`SITE_DESCRIPTION` 可以不改，系统有默认值。
-- 首页小标签“窗边纸页”是固定主题文案，不通过环境变量修改。
-- 不需要额外配置站点地址。RSS、sitemap、robots 会自动使用当前访问域名。
+| Binding | 类型 | 说明 |
+| --- | --- | --- |
+| `DB` | D1 Database | 存储文章、标签、设置、友链等数据 |
+| `MEDIA_BUCKET` | R2 Bucket | 存储文章图片 |
+| `ASSETS` | Assets | Cloudflare 构建产物绑定，保留默认即可 |
 
-#### Secrets
+Binding 名称不要改。项目代码默认读取 `DB` 和 `MEDIA_BUCKET`。
 
-这些是敏感配置，放在 Secrets：
-
-```txt
-ADMIN_USERNAME
-ADMIN_PASSWORD
-```
-
-说明：
-
-- `ADMIN_USERNAME` 是后台用户名。
-- `ADMIN_PASSWORD` 是后台密码，填写在 Cloudflare Secrets 中，不会写入前端。
-- 如果 Cloudflare 创建页面自动列出了旧变量，请删除无关变量，只手动添加这里需要的 Secrets 和可选 Variables。
-
-高级用户也可以改用 `ADMIN_PASSWORD_HASH`。如果同时配置了 `ADMIN_PASSWORD_HASH` 和 `ADMIN_PASSWORD`，系统会优先使用 `ADMIN_PASSWORD_HASH`。
-
-### 6. 高级：使用 ADMIN_PASSWORD_HASH
-
-普通部署不需要这一步。如果你不想在 Secret 中保存明文密码，可以在本地生成 `ADMIN_PASSWORD_HASH`：
+## 本地开发
 
 ```bash
-node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
+pnpm install
+pnpm dev
 ```
 
-把输出填入 Cloudflare Secret：
-
-```txt
-ADMIN_PASSWORD_HASH
-```
-
-提醒：不要把真实密码或 hash 提交到 GitHub。配置了 `ADMIN_PASSWORD_HASH` 后，它会优先于 `ADMIN_PASSWORD`。
-
-### 7. 数据库自动初始化
-
-首次访问 Worker 时，Sakura Cactus 会自动确保 D1 里存在需要的表、字段、索引和默认设置。
-
-你不需要在 Cloudflare Dashboard 部署流程里手动执行 D1 migration。
-
-项目仍然保留 `migrations/*.sql`，方便开发者本地开发或需要手动维护数据库时使用。
-
-### 8. 部署、绑定域名并访问
-
-完成以上配置后，在 Cloudflare 触发一次部署，或者 push 一次 GitHub。
-
-如果要使用自己的域名，在 Cloudflare Worker 中进入：
-
-```txt
-Settings -> Domains & Routes -> Custom Domain
-```
-
-绑定完成后，RSS、sitemap、robots 会自动使用这个自定义域名。
-
-如果使用 `workers.dev` 访问，它们会自动使用 `workers.dev` 域名。
-
-本地开发时，它们会自动使用 localhost。
-
-部署成功后访问：
-
-```txt
-/
-/admin/login
-/write
-/settings
-/friends
-/rss.xml
-/sitemap.xml
-/robots.txt
-```
-
-登录后先测试：
-
-1. 能否进入 `/write`。
-2. 能否保存草稿。
-3. 能否发布文章。
-4. 能否上传图片。
-5. `/settings` 是否正常。
-6. `/rss.xml` 和 `/sitemap.xml` 是否显示当前访问域名。
-
-### 9. 以后怎么更新
-
-以后只需要：
-
-1. 本地修改代码。
-2. push 到 GitHub。
-3. Cloudflare 自动重新部署。
-
-如果只是使用 Cloudflare Dashboard 部署，正常情况下不需要手动运行 migration；Worker 首次运行会自动补齐 schema。
-
-## 环境变量速查表
-
-| 名称 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `SITE_NAME` | Variable | 否 | 站点名称 |
-| `SITE_TAGLINE` | Variable | 否 | 首页主标语 |
-| `SITE_DESCRIPTION` | Variable | 否 | 首页描述 / RSS 描述 |
-| `SITE_AVATAR_URL` | Variable | 否 | Header 头像 |
-| `ADMIN_USERNAME` | Secret | 是 | 管理员用户名 |
-| `ADMIN_PASSWORD` | Secret | 是 | 管理员密码 |
-| `ADMIN_PASSWORD_HASH` | Secret | 否 | 高级可选，管理员密码 hash，存在时优先使用 |
-
-## 最小排错
-
-### 页面 500，提示 no such table / no such column
-
-先确认 Cloudflare Worker 已绑定 D1，binding 名称必须是 `DB`。
-
-如果是开发者手动维护数据库，也可以执行 migration 命令重新确认 schema。
-
-### 图片打不开
-
-检查 R2 binding 名称是不是：
-
-```txt
-MEDIA_BUCKET
-```
-
-### 登录失败
-
-检查：
-
-```txt
-ADMIN_USERNAME
-ADMIN_PASSWORD
-```
-
-### PowerShell 不能运行 pnpm
-
-使用 `pnpm.cmd`：
+Windows PowerShell 如果拦截 `pnpm`，使用：
 
 ```powershell
-pnpm.cmd build
 pnpm.cmd dev
 ```
 
-## 本地开发（可选）
-
-如果只是部署到 Cloudflare，可以先跳过本节。
-
-本地开发需要创建 `.dev.vars`：
+本地开发可以创建 `.dev.vars`：
 
 ```txt
 ADMIN_USERNAME=sakura
 ADMIN_PASSWORD=change-me
+```
+
+可选站点文案：
+
+```txt
 SITE_NAME=Sakura Cactus
 SITE_TAGLINE=温柔地写，安静地发布。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
+SITE_AVATAR_URL=https://example.com/avatar.png
 ```
 
-不要提交 `.dev.vars` 到 GitHub。
-
-安装依赖：
+构建检查：
 
 ```bash
-pnpm install
+pnpm build
 ```
 
-应用本地 D1 migration：
+Windows：
+
+```powershell
+pnpm.cmd build
+```
+
+## 数据库说明
+
+Sakura Cactus 会在首次运行时自动初始化 D1 schema。
+
+`migrations/*.sql` 仍然保留，方便开发者本地开发或手动维护数据库。
+
+开发者本地迁移命令：
 
 ```powershell
 pnpm.cmd db:migration:apply:local
 ```
 
-启动开发服务：
+## 登录后台
 
-```powershell
-pnpm.cmd dev
+部署完成后访问：
+
+```txt
+/admin/login
 ```
 
-构建检查：
+登录后可以进入：
 
-```powershell
-pnpm.cmd build
-```
+- `/write` 写文章
+- `/settings` 设置
+- `/friends` 管理友人帐
+
+## 安全提示
+
+- 不要提交 `.dev.vars`
+- 不要提交 `.env`
+- 不要提交真实密码
+- 不要提交 Cloudflare API Token
+- 不要公开 R2 Bucket
+- 生产环境中 D1 和 R2 必须通过 Worker bindings 绑定
+
+图片访问由 Sakura Cactus 的 `/i/:token` 代理完成，不需要公开 R2。

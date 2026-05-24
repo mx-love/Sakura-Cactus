@@ -395,6 +395,11 @@ export function extractFirstImageUrl(markdown: string): string | null {
       return ASSET_TOKEN_PATTERN.test(token) ? `/i/${token}` : null;
     }
 
+    if (url.startsWith('/i/')) {
+      const token = url.slice('/i/'.length).trim();
+      return ASSET_TOKEN_PATTERN.test(token) ? `/i/${token}` : null;
+    }
+
     if (isSafeImageUrl(url)) {
       return normalizeImageUrl(url);
     }

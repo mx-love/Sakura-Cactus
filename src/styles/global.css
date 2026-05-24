@@ -2213,11 +2213,35 @@ summary {
 }
 
 .sc-featured-paper {
+  overflow: hidden;
   border: 1px solid rgba(240, 227, 231, 0.82);
   border-radius: 26px 20px 24px 22px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 18px 44px rgba(102, 66, 82, 0.05);
   padding: clamp(1.25rem, 3vw, 1.8rem);
+}
+
+.sc-featured-paper-with-cover {
+  padding: 0;
+}
+
+.sc-featured-paper-body {
+  padding: clamp(1.25rem, 3vw, 1.8rem);
+}
+
+.sc-featured-cover {
+  display: block;
+  overflow: hidden;
+  border-radius: 24px 18px 20px 18px;
+  margin: 0.55rem 0.55rem 0;
+  background: rgba(255, 244, 247, 0.8);
+}
+
+.sc-featured-cover img {
+  display: block;
+  width: 100%;
+  height: clamp(12rem, 24vw, 16rem);
+  object-fit: cover;
 }
 
 .sc-featured-paper h3 {
@@ -2323,6 +2347,81 @@ summary {
 
 .sc-paper-index-list .sc-post-entry:hover {
   background: rgba(255, 248, 250, 0.5);
+}
+
+.sc-article-card-list {
+  gap: 0.85rem;
+}
+
+.sc-article-list-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: clamp(1rem, 3vw, 1.35rem);
+  border: 1px solid rgba(240, 227, 231, 0.72);
+  border-radius: 22px 18px 24px 18px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: clamp(1rem, 3vw, 1.25rem);
+}
+
+.sc-article-list-card:first-child {
+  padding-top: clamp(1rem, 3vw, 1.25rem);
+}
+
+.sc-article-card-main {
+  display: block;
+  min-width: 0;
+}
+
+.sc-article-card-main:hover h2 {
+  color: var(--color-primary);
+}
+
+.sc-article-card-main .sc-tag-list {
+  margin-top: 0.8rem;
+}
+
+.sc-article-card-cover {
+  display: block;
+  align-self: center;
+  overflow: hidden;
+  width: clamp(8rem, 18vw, 11rem);
+  aspect-ratio: 4 / 3;
+  border-radius: 18px 14px 18px 14px;
+  background: rgba(255, 244, 247, 0.85);
+}
+
+.sc-article-card-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sc-article-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.4rem;
+  border-top: 1px dashed rgba(240, 227, 231, 0.9);
+  padding-top: 1rem;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+  font-weight: 760;
+}
+
+.sc-article-pagination a {
+  color: var(--color-text);
+  transition: color 140ms ease;
+}
+
+.sc-article-pagination a:hover {
+  color: var(--color-primary);
+}
+
+.sc-pagination-disabled {
+  color: var(--color-subtle);
 }
 
 .sc-paper-archive {
@@ -2519,6 +2618,26 @@ summary {
   .sc-paper-strip:nth-child(2n) {
     grid-template-columns: 1fr;
     transform: none;
+  }
+
+  .sc-featured-cover img {
+    height: clamp(10rem, 48vw, 14rem);
+  }
+
+  .sc-article-list-card,
+  .sc-article-list-card:first-child {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .sc-article-card-cover {
+    order: -1;
+    width: 100%;
+    max-height: 13rem;
+  }
+
+  .sc-article-pagination {
+    flex-wrap: wrap;
   }
 
   .sc-paper-public-shell,

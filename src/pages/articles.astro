@@ -27,6 +27,13 @@ function sortPinnedFirst(posts: Awaited<ReturnType<typeof getPublicPosts>>) {
 }
 
 const posts = sortPinnedFirst((await getPublicPosts()).filter((post) => !isAboutPost(post)));
+const pageSize = 5;
+const pageValue = Number.parseInt(Astro.url.searchParams.get('page') ?? '1', 10);
+const currentPage = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1;
+const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
+const pageStart = (currentPage - 1) * pageSize;
+const pagePosts = posts.slice(pageStart, pageStart + pageSize);
+const isOutOfRange = posts.length > 0 && currentPage > totalPages;
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -57,37 +64,63 @@ function formatDate(value: string | null) {
         <div class="sc-empty">
           <p>暂无公开文章。</p>
         </div>
-      ) : (
-        <div class="sc-post-list sc-compact-post-list sc-paper-index-list">
-          {posts.map((post) => (
-            <article class="sc-post-entry">
-              <h2>
-                <a href={`/posts/${post.slug}`}>{post.title}</a>
-              </h2>
-              {post.publishedAt ? (
-                <p class="sc-post-meta">
-                  <span class="sc-calendar-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M8 2v4" />
-                      <path d="M16 2v4" />
-                      <path d="M3 10h18" />
-                      <rect x="3" y="4" width="18" height="18" rx="2" />
-                    </svg>
-                  </span>
-                  <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
-                </p>
-              ) : null}
-              {post.excerpt ? <p class="sc-post-excerpt">{post.excerpt}</p> : null}
-              {post.tags.length > 0 ? (
-                <div class="sc-tag-list">
-                  {post.tags.map((tag) => (
-                    <a class="sc-tag-link" href={`/tags/${tag.slug}`}>{tag.name}</a>
-                  ))}
-                </div>
-              ) : null}
-            </article>
-          ))}
+      ) : isOutOfRange ? (
+        <div class="sc-empty">
+          <p>这一页暂时没有文章。</p>
+          <a class="sc-inline-link" href="/articles?page=1">返回第一页 →</a>
         </div>
+      ) : (
+        <>
+          <div class="sc-post-list sc-compact-post-list sc-paper-index-list sc-article-card-list">
+            {pagePosts.map((post) => (
+              <article class:list={['sc-post-entry', 'sc-article-list-card', post.coverImageUrl && 'sc-article-list-card-with-cover']}>
+                <a class="sc-article-card-main" href={`/posts/${post.slug}`}>
+                  <h2>{post.title}</h2>
+                  {post.publishedAt ? (
+                    <p class="sc-post-meta">
+                      <span class="sc-calendar-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M8 2v4" />
+                          <path d="M16 2v4" />
+                          <path d="M3 10h18" />
+                          <rect x="3" y="4" width="18" height="18" rx="2" />
+                        </svg>
+                      </span>
+                      <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+                    </p>
+                  ) : null}
+                  {post.excerpt ? <p class="sc-post-excerpt">{post.excerpt}</p> : null}
+                  {post.tags.length > 0 ? (
+                    <div class="sc-tag-list">
+                      {post.tags.map((tag) => (
+                        <span class="sc-tag-link sc-tag-link-static">{tag.name}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </a>
+                {post.coverImageUrl ? (
+                  <a class="sc-article-card-cover" href={`/posts/${post.slug}`} aria-label={post.title}>
+                    <img src={post.coverImageUrl} alt="" loading="lazy" />
+                  </a>
+                ) : null}
+              </article>
+            ))}
+          </div>
+
+          <nav class="sc-article-pagination" aria-label="文章分页">
+            {currentPage > 1 ? (
+              <a href={`/articles?page=${currentPage - 1}`}>上一页</a>
+            ) : (
+              <span class="sc-pagination-disabled">上一页</span>
+            )}
+            <span>第 {currentPage} / {totalPages} 页</span>
+            {currentPage < totalPages ? (
+              <a href={`/articles?page=${currentPage + 1}`}>下一页</a>
+            ) : (
+              <span class="sc-pagination-disabled">下一页</span>
+            )}
+          </nav>
+        </>
       )}
     </div>
   </section>
