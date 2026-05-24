@@ -19,17 +19,17 @@ Set these with `wrangler secret put` or in the Cloudflare dashboard. Do not comm
 
 ```bash
 wrangler secret put ADMIN_USERNAME
-wrangler secret put ADMIN_PASSWORD_HASH
+wrangler secret put ADMIN_PASSWORD
 ```
 
 Recommended production variables:
 
 ```txt
 ADMIN_USERNAME=your-name
-ADMIN_PASSWORD_HASH=generated-password-hash
+ADMIN_PASSWORD=your-password
 ```
 
-`ADMIN_PASSWORD_HASH` stores a password hash, not the real password. Generate it locally:
+Advanced users may use `ADMIN_PASSWORD_HASH` instead of `ADMIN_PASSWORD`. If both are configured, `ADMIN_PASSWORD_HASH` takes priority. Generate it locally:
 
 ```bash
 node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
@@ -57,7 +57,7 @@ Use `.dev.vars` locally. Do not commit `.dev.vars`.
 
 ```txt
 ADMIN_USERNAME=sakura
-ADMIN_PASSWORD_HASH=pbkdf2_sha256$210000$example-salt$example-hash
+ADMIN_PASSWORD=change-me
 SITE_NAME=Sakura Cactus
 SITE_TAGLINE=温柔地写，安静地发布。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
@@ -88,7 +88,8 @@ Sakura Cactus no longer uses `SETUP_TOKEN`, `/admin/setup`, or a web-based first
 Administrator login is controlled by environment variables:
 
 - `ADMIN_USERNAME`
-- `ADMIN_PASSWORD_HASH`
+- `ADMIN_PASSWORD`
+- `ADMIN_PASSWORD_HASH` as an advanced optional override
 
 The login page is:
 

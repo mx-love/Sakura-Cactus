@@ -147,20 +147,20 @@ SITE_AVATAR_URL=https://你的头像地址
 
 ```txt
 ADMIN_USERNAME
-ADMIN_PASSWORD_HASH
+ADMIN_PASSWORD
 ```
 
 说明：
 
-- `ADMIN_USERNAME` 是管理员用户名。
-- `ADMIN_PASSWORD_HASH` 是管理员密码 hash，生产推荐使用。
+- `ADMIN_USERNAME` 是后台用户名。
+- `ADMIN_PASSWORD` 是后台密码，填写在 Cloudflare Secrets 中，不会写入前端。
 - 如果 Cloudflare 创建页面自动列出了旧变量，请删除无关变量，只手动添加这里需要的 Secrets 和可选 Variables。
 
-### 6. 生成 ADMIN_PASSWORD_HASH
+高级用户也可以改用 `ADMIN_PASSWORD_HASH`。如果同时配置了 `ADMIN_PASSWORD_HASH` 和 `ADMIN_PASSWORD`，系统会优先使用 `ADMIN_PASSWORD_HASH`。
 
-生产环境推荐使用 `ADMIN_PASSWORD_HASH`。
+### 6. 高级：使用 ADMIN_PASSWORD_HASH
 
-在本地终端运行：
+普通部署不需要这一步。如果你不想在 Secret 中保存明文密码，可以在本地生成 `ADMIN_PASSWORD_HASH`：
 
 ```bash
 node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
@@ -172,7 +172,7 @@ node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=cry
 ADMIN_PASSWORD_HASH
 ```
 
-提醒：不要把真实密码或 hash 提交到 GitHub。
+提醒：不要把真实密码或 hash 提交到 GitHub。配置了 `ADMIN_PASSWORD_HASH` 后，它会优先于 `ADMIN_PASSWORD`。
 
 ### 7. 数据库自动初始化
 
@@ -239,7 +239,8 @@ Settings -> Domains & Routes -> Custom Domain
 | `SITE_DESCRIPTION` | Variable | 否 | 首页描述 / RSS 描述 |
 | `SITE_AVATAR_URL` | Variable | 否 | Header 头像 |
 | `ADMIN_USERNAME` | Secret | 是 | 管理员用户名 |
-| `ADMIN_PASSWORD_HASH` | Secret | 是 | 管理员密码 hash |
+| `ADMIN_PASSWORD` | Secret | 是 | 管理员密码 |
+| `ADMIN_PASSWORD_HASH` | Secret | 否 | 高级可选，管理员密码 hash，存在时优先使用 |
 
 ## 最小排错
 
@@ -263,7 +264,7 @@ MEDIA_BUCKET
 
 ```txt
 ADMIN_USERNAME
-ADMIN_PASSWORD_HASH
+ADMIN_PASSWORD
 ```
 
 ### PowerShell 不能运行 pnpm
@@ -283,7 +284,7 @@ pnpm.cmd dev
 
 ```txt
 ADMIN_USERNAME=sakura
-ADMIN_PASSWORD_HASH=pbkdf2_sha256$210000$example-salt$example-hash
+ADMIN_PASSWORD=change-me
 SITE_NAME=Sakura Cactus
 SITE_TAGLINE=温柔地写，安静地发布。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。

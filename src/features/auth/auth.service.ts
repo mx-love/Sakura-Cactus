@@ -3,12 +3,12 @@ import { env } from 'cloudflare:workers';
 import type { UserRow } from '@/lib/database.types';
 import { getDb } from '@/lib/db';
 import { SESSION_COOKIE_NAME, SESSION_TOKEN_BYTES, SESSION_TTL_SECONDS } from './auth.constants';
-import { createRandomToken, sha256Base64Url } from './crypto.service';
+import { constantTimeEqual, createRandomToken, sha256Base64Url } from './crypto.service';
 import { verifyPassword } from './password.service';
 import { createSession, findActiveSessionRecordByTokenHash, revokeSessionByTokenHash } from './session.repo';
 import { ensureEnvironmentAdminUser, ENV_ADMIN_USER_ID, updateLastLogin } from './user.repo';
 
-let warnedAboutPlainAdminPassword = false;
+const TEXT_ENCODER = new TextEncoder();
 
 function readOptionalRuntimeEnv(name: string): string | undefined {
   const value = (env as unknown as Record<string, string | undefined>)[name];
@@ -62,25 +62,30 @@ export function getEnvironmentAdminPassword(): string {
   const password = readOptionalRuntimeEnv('ADMIN_PASSWORD');
 
   if (!password) {
-    throw new AuthConfigurationError('MISSING_ADMIN_PASSWORD', 'ADMIN_PASSWORD_HASH must be set.');
-  }
-
-  if (!env.ADMIN_PASSWORD_HASH && !import.meta.env.DEV && !warnedAboutPlainAdminPassword) {
-    console.warn('[Sakura Cactus] ADMIN_PASSWORD is set without ADMIN_PASSWORD_HASH. Use ADMIN_PASSWORD_HASH in production.');
-    warnedAboutPlainAdminPassword = true;
+    throw new AuthConfigurationError('MISSING_ADMIN_PASSWORD', 'ADMIN_PASSWORD or ADMIN_PASSWORD_HASH must be set.');
   }
 
   return password;
 }
 
+function getEnvironmentAdminPasswordHash(): string | undefined {
+  return readOptionalRuntimeEnv('ADMIN_PASSWORD_HASH');
+}
+
+async function constantTimePasswordEqual(actual: string, expected: string): Promise<boolean> {
+  const actualHash = await sha256Base64Url(actual);
+  const expectedHash = await sha256Base64Url(expected);
+  return constantTimeEqual(TEXT_ENCODER.encode(actualHash), TEXT_ENCODER.encode(expectedHash));
+}
+
 export async function verifyEnvironmentAdminPassword(password: string): Promise<boolean> {
-  const passwordHash = env.ADMIN_PASSWORD_HASH;
+  const passwordHash = getEnvironmentAdminPasswordHash();
 
   if (passwordHash) {
     return verifyPassword(password, passwordHash);
   }
 
-  return password === getEnvironmentAdminPassword();
+  return constantTimePasswordEqual(password, getEnvironmentAdminPassword());
 }
 
 export function getEnvironmentAdminUser(): PublicAdminUser {
@@ -102,22 +107,19 @@ export function getSessionSecret(): string {
     return secret;
   }
 
-  if (env.ADMIN_PASSWORD_HASH) {
-    return `admin-password-hash:${env.ADMIN_PASSWORD_HASH}`;
+  const passwordHash = getEnvironmentAdminPasswordHash();
+
+  if (passwordHash) {
+    return `admin-password-hash:${passwordHash}`;
   }
 
   const plainAdminPassword = readOptionalRuntimeEnv('ADMIN_PASSWORD');
 
   if (plainAdminPassword) {
-    if (!import.meta.env.DEV && !warnedAboutPlainAdminPassword) {
-      console.warn('[Sakura Cactus] ADMIN_PASSWORD is set without ADMIN_PASSWORD_HASH. Use ADMIN_PASSWORD_HASH in production.');
-      warnedAboutPlainAdminPassword = true;
-    }
-
     return `${import.meta.env.DEV ? 'dev' : 'plain'}-admin-password:${plainAdminPassword}`;
   }
 
-  throw new AuthConfigurationError('MISSING_SESSION_SECRET_SOURCE', 'ADMIN_PASSWORD_HASH must be set, or set SESSION_SECRET explicitly.');
+  throw new AuthConfigurationError('MISSING_SESSION_SECRET_SOURCE', 'ADMIN_PASSWORD or ADMIN_PASSWORD_HASH must be set, or set SESSION_SECRET explicitly.');
 }
 
 export function getCookieValue(request: Request, name: string): string | null {

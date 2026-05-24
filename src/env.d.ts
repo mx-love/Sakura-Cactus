@@ -16,5 +16,4 @@ interface Env {
   SITE_DESCRIPTION?: string;
   SITE_AVATAR_URL?: string;
   ADMIN_USERNAME?: string;
-  ADMIN_PASSWORD_HASH?: string;
 }
