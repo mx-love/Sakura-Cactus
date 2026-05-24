@@ -63,6 +63,37 @@ function formatDate(date: Date | null) {
           </nav>
         </aside>
       ) : null}
+      {showToc ? (
+        <>
+          <button class="sc-mobile-toc-trigger" type="button" aria-label="打开文章目录" title="打开文章目录" aria-expanded="false" data-mobile-toc-trigger hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 6h12" />
+              <path d="M8 12h12" />
+              <path d="M8 18h12" />
+              <path d="M4 6h.01" />
+              <path d="M4 12h.01" />
+              <path d="M4 18h.01" />
+            </svg>
+          </button>
+          <div class="sc-mobile-toc-overlay" data-mobile-toc-overlay hidden>
+            <button class="sc-mobile-toc-backdrop" type="button" aria-label="关闭文章目录" data-mobile-toc-close></button>
+            <section class="sc-mobile-toc-sheet" role="dialog" aria-modal="true" aria-label="本文目录">
+              <span class="sc-mobile-toc-handle" aria-hidden="true"></span>
+              <header class="sc-mobile-toc-head">
+                <h2>本文目录</h2>
+                <button class="sc-mobile-toc-close" type="button" aria-label="关闭文章目录" data-mobile-toc-close>关闭</button>
+              </header>
+              <nav>
+                {tocHeadings.map((heading) => (
+                  <a class={`sc-toc-link sc-mobile-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug} title={heading.text}>
+                    {heading.text}
+                  </a>
+                ))}
+              </nav>
+            </section>
+          </div>
+        </>
+      ) : null}
       <div class="sc-article-paper">
         <div class="sc-article-topbar">
           <span></span>
@@ -97,18 +128,6 @@ function formatDate(date: Date | null) {
                   <a class="sc-tag-pill" href={`/tags/${tag.slug}`}>{tag.name}</a>
                 ))}
               </div>
-            ) : null}
-            {showToc ? (
-              <details class="sc-article-toc-mobile">
-                <summary>本文目录</summary>
-                <nav>
-                  {tocHeadings.map((heading) => (
-                    <a class={`sc-toc-link sc-toc-depth-${heading.depth}`} href={`#${heading.slug}`} data-toc-link={heading.slug} title={heading.text}>
-                      {heading.text}
-                    </a>
-                  ))}
-                </nav>
-              </details>
             ) : null}
           </div>
         </header>
@@ -205,36 +224,101 @@ function formatDate(date: Date | null) {
         {showToc ? (
           <script>
             const tocLinks = Array.from(document.querySelectorAll('[data-toc-link]'));
-            const headings = tocLinks
-              .map((link) => {
+            const headingsById = new Map();
+
+            tocLinks.forEach((link) => {
                 const id = link instanceof HTMLElement ? link.dataset.tocLink : '';
-                return id ? document.getElementById(id) : null;
-              })
-              .filter(Boolean);
+                const heading = id ? document.getElementById(id) : null;
+
+                if (id && heading) {
+                  headingsById.set(id, heading);
+                }
+            });
+
+            const headings = Array.from(headingsById.values());
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const mobileTocTrigger = document.querySelector('[data-mobile-toc-trigger]');
+            const mobileTocOverlay = document.querySelector('[data-mobile-toc-overlay]');
+            const mobileTocCloseControls = Array.from(document.querySelectorAll('[data-mobile-toc-close]'));
 
-            if (!reduceMotion) {
-              tocLinks.forEach((link) => {
-                link.addEventListener('click', (event) => {
-                  const target = event.currentTarget;
+            function closeMobileToc() {
+              if (!(mobileTocOverlay instanceof HTMLElement)) {
+                return;
+              }
 
-                  if (!(target instanceof HTMLAnchorElement)) {
-                    return;
-                  }
+              mobileTocOverlay.hidden = true;
 
-                  const id = decodeURIComponent(target.hash.slice(1));
-                  const heading = document.getElementById(id);
+              if (mobileTocTrigger instanceof HTMLButtonElement) {
+                mobileTocTrigger.setAttribute('aria-expanded', 'false');
+              }
+            }
 
-                  if (!heading) {
-                    return;
-                  }
+            function openMobileToc() {
+              if (!(mobileTocOverlay instanceof HTMLElement)) {
+                return;
+              }
 
-                  event.preventDefault();
-                  heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  history.pushState(null, '', target.hash);
-                });
+              mobileTocOverlay.hidden = false;
+
+              if (mobileTocTrigger instanceof HTMLButtonElement) {
+                mobileTocTrigger.setAttribute('aria-expanded', 'true');
+              }
+            }
+
+            function syncMobileTocTrigger() {
+              if (!(mobileTocTrigger instanceof HTMLButtonElement)) {
+                return;
+              }
+
+              mobileTocTrigger.hidden = false;
+              mobileTocTrigger.classList.toggle('sc-mobile-toc-trigger-visible', window.scrollY > 240);
+            }
+
+            tocLinks.forEach((link) => {
+              link.addEventListener('click', (event) => {
+                const target = event.currentTarget;
+
+                if (!(target instanceof HTMLAnchorElement)) {
+                  return;
+                }
+
+                const id = decodeURIComponent(target.hash.slice(1));
+                const heading = document.getElementById(id);
+
+                if (!heading) {
+                  return;
+                }
+
+                event.preventDefault();
+                heading.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+                history.pushState(null, '', target.hash);
+                closeMobileToc();
+              });
+            });
+
+            if (mobileTocTrigger instanceof HTMLButtonElement) {
+              mobileTocTrigger.addEventListener('click', () => {
+                if (mobileTocOverlay instanceof HTMLElement && !mobileTocOverlay.hidden) {
+                  closeMobileToc();
+                  return;
+                }
+
+                openMobileToc();
               });
             }
+
+            mobileTocCloseControls.forEach((control) => {
+              control.addEventListener('click', closeMobileToc);
+            });
+
+            document.addEventListener('keydown', (event) => {
+              if (event.key === 'Escape') {
+                closeMobileToc();
+              }
+            });
+
+            window.addEventListener('scroll', syncMobileTocTrigger, { passive: true });
+            syncMobileTocTrigger();
 
             if ('IntersectionObserver' in window && headings.length > 0) {
               const observer = new IntersectionObserver(
