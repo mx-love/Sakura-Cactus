@@ -44,18 +44,6 @@ const isoWeek = Math.ceil(((isoWeekDate.getTime() - isoYearStart.getTime()) / 86
 const stem = heavenlyStems[(calendarYear - 4) % 10];
 const branchInfo = earthlyBranches[(calendarYear - 4) % 12];
 const ganzhiYear = `${stem}${branchInfo.branch}${branchInfo.zodiac}年`;
-const articleDays = new Set(
-  posts
-    .filter((post) => {
-      if (!post.publishedAt) {
-        return false;
-      }
-
-      const date = new Date(post.publishedAt);
-      return date.getFullYear() === calendarYear && date.getMonth() === calendarMonth;
-    })
-    .map((post) => new Date(post.publishedAt as string).getDate())
-);
 const tagMap = new Map<string, { name: string; slug: string; count: number }>();
 
 for (const post of posts) {
@@ -84,6 +72,10 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
 
 function formatDate(value: string | null) {
   return value ? dateFormatter.format(new Date(value)) : '';
+}
+
+function formatCalendarDate(year: number, monthIndex: number, day: number) {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 function getExternalOrigin(value: string | null | undefined): string | null {
@@ -115,28 +107,122 @@ function getExternalOrigin(value: string | null | undefined): string | null {
         <aside class="sc-calendar-note" aria-label="今日纸页">
           <div class="sc-calendar-note-head">
             <span>今日纸页</span>
-            <strong>{calendarYear}年{calendarMonth + 1}月 · {weekdays[now.getDay()]}</strong>
+            <strong data-calendar-title>{calendarYear}年{calendarMonth + 1}月 · {weekdays[now.getDay()]}</strong>
           </div>
           <div class="sc-calendar-weekdays" aria-hidden="true">
             {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
               <span>{day}</span>
             ))}
           </div>
-          <div class="sc-calendar-grid" aria-hidden="true">
+          <div class="sc-calendar-grid" aria-hidden="true" data-calendar-grid>
             {Array.from({ length: monthStartDay }).map(() => <span class="sc-calendar-empty"></span>)}
             {Array.from({ length: daysInMonth }).map((_, index) => {
               const day = index + 1;
               return (
-                <span class:list={['sc-calendar-day', day === now.getDate() && 'sc-calendar-today', articleDays.has(day) && 'sc-calendar-has-post']}>
+                <span class="sc-calendar-day" data-date={formatCalendarDate(calendarYear, calendarMonth, day)}>
                   {day}
                 </span>
               );
             })}
           </div>
           <div class="sc-calendar-note-foot">
-            <span>第{dayOfYear}天 第{isoWeek}周</span>
-            <span>{ganzhiYear}</span>
+            <span data-calendar-day-week>第{dayOfYear}天 第{isoWeek}周</span>
+            <span data-calendar-ganzhi>{ganzhiYear}</span>
           </div>
+          <script>
+            const calendarTitle = document.querySelector('[data-calendar-title]');
+            const calendarGrid = document.querySelector('[data-calendar-grid]');
+            const calendarDayWeek = document.querySelector('[data-calendar-day-week]');
+            const calendarGanzhi = document.querySelector('[data-calendar-ganzhi]');
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const stems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+            const branches = [
+              ['子', '鼠'],
+              ['丑', '牛'],
+              ['寅', '虎'],
+              ['卯', '兔'],
+              ['辰', '龙'],
+              ['巳', '蛇'],
+              ['午', '马'],
+              ['未', '羊'],
+              ['申', '猴'],
+              ['酉', '鸡'],
+              ['戌', '狗'],
+              ['亥', '猪']
+            ];
+
+            function formatLocalDate(date) {
+              return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            }
+
+            function getDayOfYear(date) {
+              const start = new Date(date.getFullYear(), 0, 1);
+              return Math.floor((date.getTime() - start.getTime()) / 86400000) + 1;
+            }
+
+            function getIsoWeek(date) {
+              const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+              const isoDay = utcDate.getUTCDay() || 7;
+              utcDate.setUTCDate(utcDate.getUTCDate() + 4 - isoDay);
+              const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+              return Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+            }
+
+            function getGanzhiYear(year) {
+              const stem = stems[(year - 4) % 10];
+              const [branch, zodiac] = branches[(year - 4) % 12];
+              return `${stem}${branch}${zodiac}年`;
+            }
+
+            function renderCalendar() {
+              const today = new Date();
+              const year = today.getFullYear();
+              const month = today.getMonth();
+              const todayKey = formatLocalDate(today);
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              const monthStartDay = new Date(year, month, 1).getDay();
+
+              if (calendarTitle) {
+                calendarTitle.textContent = `${year}年${month + 1}月 · ${weekdays[today.getDay()]}`;
+              }
+
+              if (calendarDayWeek) {
+                calendarDayWeek.textContent = `第${getDayOfYear(today)}天 第${getIsoWeek(today)}周`;
+              }
+
+              if (calendarGanzhi) {
+                calendarGanzhi.textContent = getGanzhiYear(year);
+              }
+
+              if (!calendarGrid) {
+                return;
+              }
+
+              calendarGrid.replaceChildren();
+
+              for (let index = 0; index < monthStartDay; index += 1) {
+                const empty = document.createElement('span');
+                empty.className = 'sc-calendar-empty';
+                calendarGrid.append(empty);
+              }
+
+              for (let day = 1; day <= daysInMonth; day += 1) {
+                const date = new Date(year, month, day);
+                const cell = document.createElement('span');
+                cell.className = 'sc-calendar-day';
+                cell.dataset.date = formatLocalDate(date);
+                cell.textContent = String(day);
+
+                if (cell.dataset.date === todayKey) {
+                  cell.classList.add('sc-calendar-today');
+                }
+
+                calendarGrid.append(cell);
+              }
+            }
+
+            renderCalendar();
+          </script>
         </aside>
       </div>
 

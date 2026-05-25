@@ -2191,21 +2191,6 @@ summary {
   color: var(--color-primary);
 }
 
-.sc-calendar-has-post {
-  position: relative;
-}
-
-.sc-calendar-has-post::after {
-  content: "";
-  position: absolute;
-  right: 0.32rem;
-  bottom: 0.22rem;
-  width: 0.28rem;
-  height: 0.28rem;
-  border-radius: 999px;
-  background: var(--color-primary-muted);
-}
-
 .sc-home-posts {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
