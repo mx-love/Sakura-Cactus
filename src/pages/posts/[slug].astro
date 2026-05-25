@@ -227,12 +227,12 @@ function formatDate(date: Date | null) {
             const headingsById = new Map();
 
             tocLinks.forEach((link) => {
-                const id = link instanceof HTMLElement ? link.dataset.tocLink : '';
-                const heading = id ? document.getElementById(id) : null;
+              const id = link instanceof HTMLElement ? link.dataset.tocLink : '';
+              const heading = id ? document.getElementById(id) : null;
 
-                if (id && heading) {
-                  headingsById.set(id, heading);
-                }
+              if (id && heading) {
+                headingsById.set(id, heading);
+              }
             });
 
             const headings = Array.from(headingsById.values());
@@ -240,6 +240,90 @@ function formatDate(date: Date | null) {
             const mobileTocTrigger = document.querySelector('[data-mobile-toc-trigger]');
             const mobileTocOverlay = document.querySelector('[data-mobile-toc-overlay]');
             const mobileTocCloseControls = Array.from(document.querySelectorAll('[data-mobile-toc-close]'));
+            let activeHeadingId = '';
+            let tocFrame = 0;
+
+            function getTocOffset() {
+              const header = document.querySelector('.sc-site-header');
+              const headerHeight = header instanceof HTMLElement ? header.getBoundingClientRect().height : 0;
+              return Math.max(96, headerHeight + 28);
+            }
+
+            function scrollActiveTocLinksIntoView() {
+              document.querySelectorAll('.sc-toc-link-active').forEach((link) => {
+                const container = link.closest('.sc-article-toc nav, .sc-mobile-toc-sheet');
+
+                if (!(container instanceof HTMLElement) || !(link instanceof HTMLElement)) {
+                  return;
+                }
+
+                const containerRect = container.getBoundingClientRect();
+                const linkRect = link.getBoundingClientRect();
+
+                if (linkRect.top < containerRect.top || linkRect.bottom > containerRect.bottom) {
+                  link.scrollIntoView({ block: 'nearest' });
+                }
+              });
+            }
+
+            function setActiveToc(id) {
+              activeHeadingId = id || '';
+
+              tocLinks.forEach((link) => {
+                if (!(link instanceof HTMLElement)) {
+                  return;
+                }
+
+                const isActive = Boolean(activeHeadingId) && link.dataset.tocLink === activeHeadingId;
+                link.classList.toggle('sc-toc-link-active', isActive);
+
+                if (isActive) {
+                  link.setAttribute('aria-current', 'location');
+                } else {
+                  link.removeAttribute('aria-current');
+                }
+              });
+
+              scrollActiveTocLinksIntoView();
+            }
+
+            function updateActiveHeading() {
+              if (headings.length === 0) {
+                return;
+              }
+
+              const offset = getTocOffset();
+              const documentElement = document.documentElement;
+              const nearBottom = window.innerHeight + window.scrollY >= documentElement.scrollHeight - 8;
+              let current = headings[0];
+
+              if (nearBottom) {
+                setActiveToc(headings[headings.length - 1].id);
+                return;
+              }
+
+              for (const heading of headings) {
+                if (heading.getBoundingClientRect().top <= offset) {
+                  current = heading;
+                } else {
+                  break;
+                }
+              }
+
+              setActiveToc(current.id);
+            }
+
+            function scheduleActiveUpdate() {
+              if (tocFrame) {
+                return;
+              }
+
+              tocFrame = window.requestAnimationFrame(() => {
+                tocFrame = 0;
+                syncMobileTocTrigger();
+                updateActiveHeading();
+              });
+            }
 
             function closeMobileToc() {
               if (!(mobileTocOverlay instanceof HTMLElement)) {
@@ -263,6 +347,8 @@ function formatDate(date: Date | null) {
               if (mobileTocTrigger instanceof HTMLButtonElement) {
                 mobileTocTrigger.setAttribute('aria-expanded', 'true');
               }
+
+              updateActiveHeading();
             }
 
             function syncMobileTocTrigger() {
@@ -292,6 +378,7 @@ function formatDate(date: Date | null) {
                 event.preventDefault();
                 heading.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
                 history.pushState(null, '', target.hash);
+                setActiveToc(id);
                 closeMobileToc();
               });
             });
@@ -317,31 +404,30 @@ function formatDate(date: Date | null) {
               }
             });
 
-            window.addEventListener('scroll', syncMobileTocTrigger, { passive: true });
+            window.addEventListener('scroll', scheduleActiveUpdate, { passive: true });
+            window.addEventListener('resize', scheduleActiveUpdate);
+            window.addEventListener('hashchange', () => {
+              const id = decodeURIComponent(window.location.hash.slice(1));
+
+              if (id && headingsById.has(id)) {
+                setActiveToc(id);
+                return;
+              }
+
+              scheduleActiveUpdate();
+            });
+
             syncMobileTocTrigger();
+            if (window.location.hash) {
+              const id = decodeURIComponent(window.location.hash.slice(1));
 
-            if ('IntersectionObserver' in window && headings.length > 0) {
-              const observer = new IntersectionObserver(
-                (entries) => {
-                  const visible = entries
-                    .filter((entry) => entry.isIntersecting)
-                    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-                  if (!visible?.target?.id) {
-                    return;
-                  }
-
-                  tocLinks.forEach((link) => {
-                    link.classList.toggle('sc-toc-link-active', link instanceof HTMLElement && link.dataset.tocLink === visible.target.id);
-                  });
-                },
-                {
-                  rootMargin: '-18% 0px -68% 0px',
-                  threshold: [0, 0.2, 0.6, 1]
-                }
-              );
-
-              headings.forEach((heading) => observer.observe(heading));
+              if (id && headingsById.has(id)) {
+                setActiveToc(id);
+              } else {
+                updateActiveHeading();
+              }
+            } else {
+              updateActiveHeading();
             }
           </script>
         ) : null}
