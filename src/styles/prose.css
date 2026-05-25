@@ -51,12 +51,14 @@
 .sc-prose ol,
 .sc-prose blockquote,
 .sc-prose pre,
+.sc-prose .sc-code-block,
 .sc-prose img,
 .prose-content p,
 .prose-content ul,
 .prose-content ol,
 .prose-content blockquote,
 .prose-content pre,
+.prose-content .sc-code-block,
 .prose-content img {
   margin: 1.16rem 0;
 }
@@ -208,9 +210,15 @@
   padding: 1rem;
 }
 
-.sc-prose pre.sc-code-block,
-.prose-content pre.sc-code-block {
+.sc-prose .sc-code-block,
+.prose-content .sc-code-block {
   position: relative;
+  max-width: 100%;
+}
+
+.sc-prose .sc-code-block pre,
+.prose-content .sc-code-block pre {
+  margin: 0;
   padding-right: 3.05rem;
 }
 
@@ -319,8 +327,8 @@
     line-height: 1.84;
   }
 
-  .sc-prose pre.sc-code-block,
-  .prose-content pre.sc-code-block {
+  .sc-prose .sc-code-block pre,
+  .prose-content .sc-code-block pre {
     padding-right: 2.65rem;
   }
 

@@ -86,12 +86,19 @@ export function enhanceCodeBlocks(root: ParentNode = document): void {
   for (const code of codeBlocks) {
     const pre = code.parentElement;
 
-    if (!(pre instanceof HTMLPreElement) || pre.dataset.copyEnhanced === 'true') {
+    if (!(pre instanceof HTMLPreElement)) {
       continue;
     }
 
-    pre.dataset.copyEnhanced = 'true';
-    pre.classList.add('sc-code-block');
+    const existingWrapper = pre.parentElement;
+
+    if (existingWrapper instanceof HTMLElement && existingWrapper.dataset.copyEnhanced === 'true') {
+      continue;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'sc-code-block';
+    wrapper.dataset.copyEnhanced = 'true';
 
     const button = document.createElement('button');
     button.type = 'button';
@@ -114,6 +121,7 @@ export function enhanceCodeBlocks(root: ParentNode = document): void {
       }
     });
 
-    pre.append(button);
+    pre.before(wrapper);
+    wrapper.append(pre, button);
   }
 }
