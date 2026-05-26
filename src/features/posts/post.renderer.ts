@@ -455,7 +455,7 @@ export function extractFirstImageUrl(markdown: string): string | null {
 
 export function extractAssetTokens(markdown: string): string[] {
   const tokens = new Set<string>();
-  const pattern = /!\[[^\]]*]\(\s*asset:([A-Za-z0-9_-]{24,64})\s*\)/g;
+  const pattern = /!\[[^\]]*]\(\s*(?:asset:|\/i\/)([A-Za-z0-9_-]{24,64})\s*\)/g;
   let match: RegExpExecArray | null;
 
   while ((match = pattern.exec(markdown)) !== null) {
