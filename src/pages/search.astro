@@ -1,59 +1,7 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicPosts } from '@/features/posts/post.service';
 
 export const prerender = false;
-
-function getSearchDateTerms(value: string | null) {
-  if (!value) {
-    return [];
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return [];
-  }
-
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const mm = String(month).padStart(2, '0');
-  const dd = String(day).padStart(2, '0');
-
-  return [
-    `${year}/${mm}/${dd}`,
-    `${year}-${mm}-${dd}`,
-    `${year}年${month}月${day}日`,
-    `${year}年${mm}月${dd}日`,
-    `${month}月${day}日`,
-    `${mm}/${dd}`,
-    `${month}/${day}`,
-    `${day}日`,
-    `${day}号`,
-    `${year}年${month}月`,
-    `${year}年${mm}月`,
-    `${year}/${mm}`,
-    `${year}-${month}`,
-    `${year}-${mm}`,
-    String(year)
-  ];
-}
-
-const posts = await getPublicPosts({ limit: 100, excludeAbout: true });
-const searchPosts = posts.map((post) => {
-  const tags = post.tags.map((tag) => tag.name);
-
-  return {
-    title: post.title,
-    excerpt: post.excerpt ?? '',
-    slug: post.slug,
-    publishedAt: post.publishedAt,
-    tags,
-    searchableText: [post.title, post.excerpt ?? '', ...tags, ...getSearchDateTerms(post.publishedAt)].join(' ').toLowerCase()
-  };
-});
-const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
 ---
 
 <SiteLayout title="搜索 | Sakura Cactus" description="搜索公开文章。">
@@ -82,19 +30,105 @@ const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
         </div>
       </template>
 
-      <script id="search-posts" type="application/json" set:html={searchJson}></script>
+      <template id="search-error-template">
+        <div class="sc-empty">
+          <p>搜索暂时不可用，请稍后再试。</p>
+        </div>
+      </template>
+
       <script is:inline>
-        const postsElement = document.getElementById('search-posts');
         const input = document.getElementById('search-input');
         const results = document.getElementById('search-results');
         const count = document.getElementById('search-count');
         const emptyTemplate = document.getElementById('search-empty-template');
-        const posts = JSON.parse(postsElement?.textContent || '[]');
+        const errorTemplate = document.getElementById('search-error-template');
         const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit'
         });
+        let posts = [];
+        let hasSearchIndexError = false;
+        let searchIndexPromise = null;
+
+        function getSearchDateTerms(value) {
+          if (!value) {
+            return [];
+          }
+
+          const date = new Date(value);
+
+          if (Number.isNaN(date.getTime())) {
+            return [];
+          }
+
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1;
+          const day = date.getDate();
+          const mm = String(month).padStart(2, '0');
+          const dd = String(day).padStart(2, '0');
+
+          return [
+            `${year}/${mm}/${dd}`,
+            `${year}-${mm}-${dd}`,
+            `${year}年${month}月${day}日`,
+            `${year}年${mm}月${dd}日`,
+            `${month}月${day}日`,
+            `${mm}/${dd}`,
+            `${month}/${day}`,
+            `${day}日`,
+            `${day}号`,
+            `${year}年${month}月`,
+            `${year}年${mm}月`,
+            `${year}/${mm}`,
+            `${year}-${month}`,
+            `${year}-${mm}`,
+            String(year)
+          ];
+        }
+
+        function normalizeSearchPost(post) {
+          const tags = Array.isArray(post.tags) ? post.tags : [];
+          const publishedAt = post.published_at || post.publishedAt || null;
+
+          return {
+            title: post.title || '',
+            excerpt: post.excerpt || '',
+            slug: post.slug || '',
+            publishedAt,
+            tags,
+            searchableText: [post.title || '', post.excerpt || '', ...tags, ...getSearchDateTerms(publishedAt)].join(' ').toLowerCase()
+          };
+        }
+
+        async function loadSearchIndex() {
+          if (searchIndexPromise) {
+            return searchIndexPromise;
+          }
+
+          searchIndexPromise = fetch('/api/search-index', {
+            headers: {
+              Accept: 'application/json'
+            }
+          })
+            .then(async (response) => {
+              if (!response.ok) {
+                throw new Error('Unable to load search index.');
+              }
+
+              const payload = await response.json();
+              posts = (payload?.data?.posts || []).map(normalizeSearchPost);
+              hasSearchIndexError = false;
+              return posts;
+            })
+            .catch(() => {
+              posts = [];
+              hasSearchIndexError = true;
+              return posts;
+            });
+
+          return searchIndexPromise;
+        }
 
         function createCalendarIcon() {
           const span = document.createElement('span');
@@ -105,12 +139,18 @@ const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
         }
 
         function render(items) {
-          if (!results || !count || !emptyTemplate) return;
+          if (!results || !count || !emptyTemplate || !errorTemplate) return;
 
           results.textContent = '';
           count.textContent = items.length ? `${items.length} 篇文章` : '';
 
           if (!input?.value.trim()) {
+            count.textContent = '';
+            return;
+          }
+
+          if (hasSearchIndexError) {
+            results.append(errorTemplate.content.cloneNode(true));
             count.textContent = '';
             return;
           }
@@ -164,19 +204,21 @@ const searchJson = JSON.stringify(searchPosts).replace(/</g, '\\u003c');
           }
         }
 
-        function search() {
+        async function search() {
           const query = input?.value.trim().toLowerCase() || '';
           if (!query) {
             render([]);
             return;
           }
 
-          render(posts.filter((post) => {
-            return String(post.searchableText || '').includes(query);
-          }));
+          await loadSearchIndex();
+          render(posts.filter((post) => String(post.searchableText || '').includes(query)));
         }
 
         input?.addEventListener('input', search);
+        input?.addEventListener('focus', () => {
+          void loadSearchIndex();
+        }, { once: true });
         render([]);
       </script>
     </div>
