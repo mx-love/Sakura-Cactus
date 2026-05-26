@@ -6,6 +6,7 @@ interface PostDetailAdminActionsProps {
   isPinned?: boolean;
   showPin?: boolean;
   deleteRedirectTo?: string;
+  editHref?: string;
 }
 
 function ShareIcon() {
@@ -55,7 +56,8 @@ export function PostDetailAdminActions({
   postId,
   isPinned = false,
   showPin = true,
-  deleteRedirectTo = '/articles'
+  deleteRedirectTo = '/articles',
+  editHref
 }: PostDetailAdminActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -155,7 +157,7 @@ export function PostDetailAdminActions({
               </button>
             ) : null}
             {postId ? (
-              <a className="sc-article-icon-action" href={`/write?post=${postId}`} aria-label="编辑" title="编辑">
+              <a className="sc-article-icon-action" href={editHref ?? `/write?post=${postId}`} aria-label="编辑" title="编辑">
                 <PencilIcon />
               </a>
             ) : null}

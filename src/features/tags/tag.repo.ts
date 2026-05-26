@@ -85,13 +85,7 @@ export async function listPublicTags(db: D1Database, now: string): Promise<Publi
          AND posts.deleted_at IS NULL
          AND posts.published_at IS NOT NULL
          AND posts.published_at <= ?
-         AND NOT EXISTS (
-           SELECT 1
-           FROM post_tags about_post_tags
-           INNER JOIN tags about_tags ON about_tags.id = about_post_tags.tag_id
-           WHERE about_post_tags.post_id = posts.id
-             AND (about_tags.slug = 'about' OR lower(about_tags.name) = 'about')
-         )
+         AND posts.slug != 'about'
        GROUP BY tags.id
        ORDER BY tags.name ASC`
     )
@@ -114,13 +108,7 @@ export async function listPublicPostsByTagSlug(db: D1Database, slug: string, now
          AND posts.deleted_at IS NULL
          AND posts.published_at IS NOT NULL
          AND posts.published_at <= ?
-         AND NOT EXISTS (
-           SELECT 1
-           FROM post_tags about_post_tags
-           INNER JOIN tags about_tags ON about_tags.id = about_post_tags.tag_id
-           WHERE about_post_tags.post_id = posts.id
-             AND (about_tags.slug = 'about' OR lower(about_tags.name) = 'about')
-         )
+         AND posts.slug != 'about'
        ORDER BY posts.published_at DESC, posts.updated_at DESC
        LIMIT 50`
     )

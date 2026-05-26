@@ -9,15 +9,11 @@ const slug = Astro.params.slug;
 const tags = await getPublicTags();
 const tag = slug ? tags.find((item) => item.slug === slug) : null;
 
-function isAboutTagLike(value: { name: string; slug: string }) {
-  return value.slug === 'about' || value.name.toLowerCase() === 'about';
-}
-
 const posts = slug
   ? await getPublicPosts({ limit: 100, excludeAbout: true, pinnedFirst: true, tagSlug: slug })
   : [];
 
-if (!slug || !tag || isAboutTagLike(tag)) {
+if (!slug || !tag) {
   return new Response('Not found', { status: 404 });
 }
 

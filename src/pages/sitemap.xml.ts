@@ -37,15 +37,11 @@ function sitemapUrl(path: string, siteUrl: string, options: { lastmod?: string; 
   </url>`;
 }
 
-function isAboutTagLike(value: { name: string; slug: string }): boolean {
-  return value.slug === 'about' || value.name.toLowerCase() === 'about';
-}
-
 export const GET: APIRoute = async ({ request }) => {
   const siteUrl = new URL(request.url).origin;
   const now = new Date().toISOString();
   const posts = await getPublicSitemapPosts();
-  const tags = (await getPublicTags()).filter((tag) => !isAboutTagLike(tag) && tag.post_count > 0);
+  const tags = (await getPublicTags()).filter((tag) => tag.post_count > 0);
 
   const staticUrls = [
     sitemapUrl('/', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '1.0' }),

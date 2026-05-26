@@ -18,6 +18,7 @@ import {
   listPublicSearchPosts,
   listPublicSitemapPosts,
   replacePostAssets,
+  restorePostAsDraft,
   setPostPinnedAt,
   setPostStatus,
   slugExists,
@@ -38,6 +39,7 @@ export class PostConflictError extends Error {
 const RANDOM_SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const RANDOM_SLUG_LENGTH = 12;
 const RANDOM_SLUG_MAX_ATTEMPTS = 20;
+const ABOUT_SLUG = 'about';
 
 function createRandomPostSlug(): string {
   const bytes = randomBytes(RANDOM_SLUG_LENGTH);
@@ -72,6 +74,25 @@ async function generateUniquePostSlug(db: D1Database): Promise<string> {
   }
 
   throw new PostConflictError('Unable to generate a unique post link.');
+}
+
+function buildAboutDraftInput() {
+  const contentMarkdown = '';
+
+  return {
+    title: '关于我',
+    excerpt: null,
+    contentMarkdown,
+    contentHtml: renderMarkdown(contentMarkdown),
+    status: 'draft' as const,
+    visibility: 'public' as const,
+    publishedAt: null,
+    tagNames: [],
+    seoTitle: '关于我',
+    seoDescription: null,
+    wordCount: calculateWordCount(contentMarkdown),
+    readingTimeMinutes: calculateReadingTimeMinutes(contentMarkdown)
+  };
 }
 
 async function syncPostAssetReferences(db: D1Database, post: PostRow): Promise<void> {
@@ -155,6 +176,31 @@ export async function getAdminPostBySlug(slug: string): Promise<PublicPostDetail
   const db = getDb();
   const post = await findPostBySlug(db, slug);
   return post && !post.deleted_at ? toPublicPostDetail(post, await getPostTags(db, post.id)) : null;
+}
+
+export async function getAdminAboutPost(): Promise<PublicPostDetail | null> {
+  return getAdminPostBySlug(ABOUT_SLUG);
+}
+
+export async function ensureAdminAboutPost(): Promise<PostRow> {
+  const db = getDb();
+  const existing = await findPostBySlug(db, ABOUT_SLUG);
+
+  if (existing && !existing.deleted_at) {
+    return (await attachPostTags(db, existing)) ?? existing;
+  }
+
+  const input = buildAboutDraftInput();
+  const post = existing
+    ? await restorePostAsDraft(db, existing.id, input)
+    : await createPost(db, input, ABOUT_SLUG);
+
+  if (!post) {
+    throw new Error('Unable to prepare about page.');
+  }
+
+  await syncPostTags(db, post.id, []);
+  return (await attachPostTags(db, await findPostById(db, post.id))) ?? post;
 }
 
 export async function createAdminPost(raw: unknown): Promise<PostRow> {
@@ -301,4 +347,8 @@ export async function getPublicPostBySlug(slug: string): Promise<PublicPostDetai
   const db = getDb();
   const post = await findPublicPostBySlug(db, slug);
   return post ? toPublicPostDetail(post, await getPostTags(db, post.id)) : null;
+}
+
+export async function getPublicAboutPost(): Promise<PublicPostDetail | null> {
+  return getPublicPostBySlug(ABOUT_SLUG);
 }

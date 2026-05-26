@@ -4,12 +4,8 @@ import { getPublicTags } from '@/features/tags/tag.service';
 
 export const prerender = false;
 
-function isAboutTag(tag: { name: string; slug: string }) {
-  return tag.slug === 'about' || tag.name.toLowerCase() === 'about';
-}
-
 const tags = (await getPublicTags())
-  .filter((tag) => !isAboutTag(tag) && tag.post_count > 0)
+  .filter((tag) => tag.post_count > 0)
   .map((tag) => ({ name: tag.name, slug: tag.slug, postCount: tag.post_count }))
   .sort((a, b) => a.name.localeCompare(b.name));
 ---

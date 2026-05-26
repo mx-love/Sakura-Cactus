@@ -219,6 +219,7 @@ pnpm.cmd db:migration:apply:local
 登录后可以进入：
 
 - `/write` 写文章
+- `/about` 编辑关于页面
 - `/settings` 设置
 - `/friends` 管理友人帐
 

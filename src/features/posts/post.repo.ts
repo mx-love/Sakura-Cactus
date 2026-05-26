@@ -65,15 +65,7 @@ function publicPostWhere(options: PublicPostQueryOptions = {}): { joins: string[
   const values: unknown[] = [nowIso()];
 
   if (options.excludeAbout) {
-    conditions.push(
-      `NOT EXISTS (
-        SELECT 1
-        FROM post_tags about_post_tags
-        INNER JOIN tags about_tags ON about_tags.id = about_post_tags.tag_id
-        WHERE about_post_tags.post_id = posts.id
-          AND (about_tags.slug = 'about' OR lower(about_tags.name) = 'about')
-      )`
-    );
+    conditions.push("posts.slug != 'about'");
   }
 
   if (options.tagSlug) {
@@ -280,6 +272,46 @@ export async function findPostBySlug(db: D1Database, slug: string): Promise<Post
     )
     .bind(slug)
     .first<PostRow>();
+}
+
+export async function restorePostAsDraft(db: D1Database, id: string, input: PersistedPostInput): Promise<PostRow | null> {
+  const now = nowIso();
+
+  await db
+    .prepare(
+      `UPDATE posts
+       SET title = ?,
+           excerpt = ?,
+           content_markdown = ?,
+           content_html = ?,
+           status = 'draft',
+           visibility = ?,
+           seo_title = ?,
+           seo_description = ?,
+           reading_time_minutes = ?,
+           word_count = ?,
+           published_at = NULL,
+           pinned_at = NULL,
+           updated_at = ?,
+           deleted_at = NULL
+       WHERE id = ?`
+    )
+    .bind(
+      input.title,
+      input.excerpt,
+      input.contentMarkdown,
+      input.contentHtml,
+      input.visibility,
+      input.seoTitle,
+      input.seoDescription,
+      input.readingTimeMinutes,
+      input.wordCount,
+      now,
+      id
+    )
+    .run();
+
+  return findPostById(db, id);
 }
 
 export async function findPublicPostBySlug(db: D1Database, slug: string): Promise<PostRow | null> {

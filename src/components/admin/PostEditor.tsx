@@ -14,6 +14,7 @@ interface ApiErrorResponse {
 
 interface PostEditorProps {
   post?: (PostRow & { tags?: Array<{ name: string }> }) | null;
+  aboutMode?: boolean;
 }
 
 type PostFormState = {
@@ -154,7 +155,7 @@ function extractAssetTokens(markdown: string): string[] {
   return [...tokens];
 }
 
-export function PostEditor({ post }: PostEditorProps) {
+export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const splitPreviewRef = useRef<HTMLDivElement | null>(null);
@@ -424,11 +425,11 @@ export function PostEditor({ post }: PostEditorProps) {
       setSaveFeedback('success');
 
       if (status === 'published' && isPubliclyReachablePost(savedPost)) {
-        window.location.href = `/posts/${encodeURIComponent(savedPost.slug)}?fresh=1`;
+        window.location.href = aboutMode ? '/about?fresh=1' : `/posts/${encodeURIComponent(savedPost.slug)}?fresh=1`;
         return;
       }
 
-      if (!postId) {
+      if (!postId && !aboutMode) {
         window.history.replaceState(null, '', `/write?post=${savedPost.id}`);
       }
     } finally {
@@ -498,7 +499,7 @@ export function PostEditor({ post }: PostEditorProps) {
       }
 
       cleanupUnsavedSessionUploads();
-      window.location.assign('/articles');
+      window.location.assign(aboutMode ? '/about?fresh=1' : '/articles');
     } finally {
       setIsSubmitting(false);
       setSubmitAction(null);

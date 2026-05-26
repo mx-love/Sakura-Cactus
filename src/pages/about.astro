@@ -2,14 +2,42 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
-import { getPublicPostBySlug, getPublicPosts } from '@/features/posts/post.service';
+import { getAdminAboutPost, getPublicAboutPost } from '@/features/posts/post.service';
 
 export const prerender = false;
 
-const posts = await getPublicPosts();
-const aboutSummary = posts.find((post) => post.tags.some((tag) => tag.slug === 'about' || tag.name.toLowerCase() === 'about'));
-const aboutPost = aboutSummary ? await getPublicPostBySlug(aboutSummary.slug) : null;
 const adminUser = await getCurrentAdminUser(Astro);
+const publicAboutPost = await getPublicAboutPost();
+const adminAboutPost = adminUser ? await getAdminAboutPost() : null;
+const aboutPost = publicAboutPost ?? adminAboutPost;
+const canEdit = Boolean(adminUser && adminAboutPost);
+const isPublicAbout = Boolean(publicAboutPost);
+
+function getAdminStatusNote() {
+  if (!adminAboutPost || isPublicAbout) {
+    return '';
+  }
+
+  if (adminAboutPost.status === 'draft') {
+    return '这份关于页面还是草稿，访客暂时看不到。';
+  }
+
+  if (adminAboutPost.visibility === 'private') {
+    return '这份关于页面目前仅自己可见，访客暂时看不到。';
+  }
+
+  if (adminAboutPost.publishedAt && new Date(adminAboutPost.publishedAt).getTime() > Date.now()) {
+    return '这份关于页面已设为未来发布时间，访客暂时看不到。';
+  }
+
+  if (adminAboutPost.status === 'archived') {
+    return '这份关于页面已下架，访客暂时看不到。';
+  }
+
+  return '这份关于页面暂时不对访客公开。';
+}
+
+const adminStatusNote = getAdminStatusNote();
 ---
 
 <SiteLayout
@@ -27,15 +55,23 @@ const adminUser = await getCurrentAdminUser(Astro);
 
       {aboutPost ? (
         <article>
-          {adminUser ? (
+          {canEdit ? (
             <div class="sc-article-topbar sc-about-action-bar">
               <span></span>
-              <PostDetailAdminActions client:load isAdmin={true} postId={aboutPost.id} showPin={false} deleteRedirectTo="/about" />
+              <PostDetailAdminActions
+                client:load
+                isAdmin={true}
+                postId={aboutPost.id}
+                showPin={false}
+                editHref="/write?type=about"
+                deleteRedirectTo="/about?fresh=1"
+              />
             </div>
           ) : null}
           <header class="sc-page-header">
             <h1>{aboutPost.title}</h1>
             {aboutPost.excerpt ? <p>{aboutPost.excerpt}</p> : null}
+            {adminStatusNote ? <p class="sc-about-admin-note">{adminStatusNote}</p> : null}
           </header>
           <div class="sc-prose prose-content" set:html={aboutPost.contentHtml} />
         </article>
@@ -44,9 +80,24 @@ const adminUser = await getCurrentAdminUser(Astro);
           <header class="sc-page-header">
             <h1>关于</h1>
           </header>
-          <div class="sc-empty">
+          <div class="sc-empty sc-about-empty">
+            <span class="sc-about-empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 3.5h7l3 3V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+                <path d="M14 3.5V7h3.5" />
+                <path d="M9 12h6" />
+                <path d="M9 16h4" />
+              </svg>
+            </span>
             <p>还没有关于页面。</p>
-            <p>发布一篇带 about 标签的文章后，它会显示在这里。</p>
+            {adminUser ? (
+              <>
+                <p>写一页简短的自我介绍，它会固定显示在这里。</p>
+                <a class="sc-button sc-button-primary sc-about-empty-action" href="/write?type=about">编辑关于页面</a>
+              </>
+            ) : (
+              <p>这里会显示站点主人的自我介绍。</p>
+            )}
           </div>
         </>
       )}

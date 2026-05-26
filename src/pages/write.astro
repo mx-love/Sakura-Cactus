@@ -1,18 +1,26 @@
 ---
 import AdminLayout from '@/components/layout/AdminLayout.astro';
 import { PostEditor } from '@/components/admin/PostEditor';
-import { getAdminPost } from '@/features/posts/post.service';
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { ensureAdminAboutPost, getAdminPost } from '@/features/posts/post.service';
+
+const adminUser = await getCurrentAdminUser(Astro);
+
+if (!adminUser) {
+  return Astro.redirect(`/admin/login?next=${encodeURIComponent(`${Astro.url.pathname}${Astro.url.search}`)}`);
+}
 
 const postId = Astro.url.searchParams.get('post');
-const post = postId ? await getAdminPost(postId) : null;
+const isAboutEditor = Astro.url.searchParams.get('type') === 'about';
+const post = isAboutEditor ? await ensureAdminAboutPost() : postId ? await getAdminPost(postId) : null;
 
-if (postId && !post) {
+if (!isAboutEditor && postId && !post) {
   return new Response('Not found', { status: 404 });
 }
 ---
 
 <AdminLayout title="写作 | Sakura Cactus" heading="写作" eyebrow="Private writing" wide bare>
   <div class="sc-writer-page">
-    <PostEditor client:load post={post} />
+    <PostEditor client:load post={post} aboutMode={isAboutEditor} />
   </div>
 </AdminLayout>

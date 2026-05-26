@@ -757,6 +757,19 @@ summary {
   margin-bottom: 0.75rem;
 }
 
+.sc-about-admin-note {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  border: 1px solid rgba(214, 145, 170, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 245, 249, 0.72);
+  padding: 0.32rem 0.7rem;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
 .sc-article-back {
   display: inline-flex;
   min-height: 2rem;
@@ -990,6 +1003,33 @@ summary {
 
 .sc-empty p + p {
   margin-top: 0.2rem;
+}
+
+.sc-about-empty {
+  display: grid;
+  justify-items: start;
+  gap: 0.45rem;
+}
+
+.sc-about-empty-icon {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(214, 145, 170, 0.22);
+  border-radius: 18px;
+  background: rgba(255, 245, 249, 0.72);
+  color: var(--color-primary);
+}
+
+.sc-about-empty-icon svg {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.sc-about-empty-action {
+  margin-top: 0.35rem;
 }
 
 .sc-empty-links {

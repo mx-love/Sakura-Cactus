@@ -48,6 +48,8 @@ export interface PublicPostDetail extends PublicPostSummary {
   contentHtml: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  status: PostStatus;
+  visibility: PostVisibility;
 }
 
 export function toPublicPostSummary(post: PostRow, tags: PublicPostTag[] = []): PublicPostSummary {
@@ -69,6 +71,8 @@ export function toPublicPostDetail(post: PostRow, tags: PublicPostTag[] = []): P
     ...toPublicPostSummary(post, tags),
     contentHtml: post.content_html ?? '',
     seoTitle: post.seo_title ? decodeHtmlEntities(post.seo_title) : null,
-    seoDescription: post.seo_description ? decodeHtmlEntities(post.seo_description) : null
+    seoDescription: post.seo_description ? decodeHtmlEntities(post.seo_description) : null,
+    status: post.status,
+    visibility: post.visibility
   };
 }

@@ -48,10 +48,6 @@ const tagMap = new Map<string, { name: string; slug: string; count: number }>();
 
 for (const post of posts) {
   for (const tag of post.tags) {
-    if (tag.slug === 'about' || tag.name.toLowerCase() === 'about') {
-      continue;
-    }
-
     const current = tagMap.get(tag.slug);
 
     if (current) {

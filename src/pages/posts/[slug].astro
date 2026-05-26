@@ -9,6 +9,11 @@ import { getPostViewCount, getSiteSettings } from '@/features/settings/settings.
 export const prerender = false;
 
 const slug = Astro.params.slug;
+
+if (slug === 'about') {
+  return Astro.redirect(`/about${Astro.url.search}`);
+}
+
 const adminUser = await getCurrentAdminUser(Astro);
 const publicPost = slug ? await getPublicPostBySlug(slug) : null;
 const post = slug ? (publicPost ?? (adminUser ? await getAdminPostBySlug(slug) : null)) : null;
