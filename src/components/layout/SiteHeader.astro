@@ -284,6 +284,15 @@ function isActive(href: string) {
         if (results) results.textContent = '';
       }
 
+      function resetSearchUi() {
+        if (input) input.value = '';
+        clearResults();
+        if (status) {
+          status.textContent = '';
+          status.hidden = true;
+        }
+      }
+
       function createTagList(tags) {
         const tagList = document.createElement('div');
         tagList.className = 'sc-tag-list sc-search-result-tags';
@@ -390,6 +399,7 @@ function isActive(href: string) {
         if (!(overlay instanceof HTMLElement)) return;
         overlay.hidden = true;
         document.documentElement.classList.remove('sc-search-open');
+        resetSearchUi();
       }
 
       input?.addEventListener('input', renderSearch);
