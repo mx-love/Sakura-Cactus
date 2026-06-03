@@ -68,7 +68,7 @@ Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 
 - 友链管理
 - 友链申请开关
 - 友链健康监测
-- 评论开关占位
+- 外部评论接入：Waline
 - 访问量开关
 - favicon 外链设置
 - 站点维护清理
@@ -99,6 +99,7 @@ Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 
    - `SITE_TAGLINE`
    - `SITE_DESCRIPTION`
    - `SITE_AVATAR_URL`
+   - `PUBLIC_COMMENTS_SERVER_URL` 可选，仅在已部署 Waline 评论服务时填写
 8. 部署 Worker。
 9. 绑定自定义域名。
 10. 打开 `/admin/login` 登录后台。
@@ -138,6 +139,7 @@ npx wrangler deploy
 | `SITE_TAGLINE` | Variable | 否 | 首页标语 |
 | `SITE_DESCRIPTION` | Variable | 否 | 首页描述 / RSS 描述 |
 | `SITE_AVATAR_URL` | Variable | 否 | Header 头像 URL |
+| `PUBLIC_COMMENTS_SERVER_URL` | Variable | 否 | 外部 Waline 服务地址，例如 `https://your-waline.example.com` |
 
 高级说明：`ADMIN_PASSWORD_HASH` 仍可作为高级方式替代 `ADMIN_PASSWORD`。如果同时配置 `ADMIN_PASSWORD_HASH` 和 `ADMIN_PASSWORD`，系统会优先使用 `ADMIN_PASSWORD_HASH`。
 
@@ -183,6 +185,24 @@ SITE_TAGLINE=温柔地写，安静地发布。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 SITE_AVATAR_URL=https://example.com/avatar.png
 ```
+
+可选评论服务：
+
+```txt
+PUBLIC_COMMENTS_SERVER_URL=https://your-waline.example.com
+```
+
+## 外部评论
+
+Sakura Cactus 不自建评论系统，不新增评论表，也不提供评论 API。评论内容由外部 Waline 服务保存。
+
+如果要启用评论，先部署自己的 Waline 服务，然后在 Cloudflare Workers Variables 中添加：
+
+```txt
+PUBLIC_COMMENTS_SERVER_URL=https://your-waline.example.com
+```
+
+是否显示评论由后台 `/settings` 中已有的“评论”开关控制。不需要配置 `PUBLIC_COMMENTS_ENABLED`，不需要配置 `PUBLIC_COMMENTS_PROVIDER`，也不需要新增 D1 或 R2。真实 Waline 服务地址只填写到部署平台环境变量中，不要提交到 GitHub。
 
 构建检查：
 

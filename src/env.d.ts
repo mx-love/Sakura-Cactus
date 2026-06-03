@@ -15,5 +15,6 @@ interface Env {
   SITE_TAGLINE?: string;
   SITE_DESCRIPTION?: string;
   SITE_AVATAR_URL?: string;
+  PUBLIC_COMMENTS_SERVER_URL?: string;
   ADMIN_USERNAME?: string;
 }

@@ -1,0 +1,48 @@
+---
+interface Props {
+  enabled: boolean;
+  serverURL?: string;
+  path: string;
+}
+
+const { enabled, serverURL = '', path } = Astro.props;
+const safeServerURL = serverURL.startsWith('https://') ? serverURL : '';
+const shouldRender = enabled && safeServerURL;
+---
+
+{shouldRender ? (
+  <section class="sc-comments sc-article-inner" aria-label="评论">
+    <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline.css" />
+    <div id="sakura-comments" data-server-url={safeServerURL} data-page-path={path}></div>
+    <script type="module" is:inline>
+      const container = document.getElementById('sakura-comments');
+
+      if (container && container.dataset.walineMounted !== 'true') {
+        const serverURL = container.dataset.serverUrl || '';
+        const path = container.dataset.pagePath || window.location.pathname;
+
+        if (serverURL.startsWith('https://')) {
+          container.dataset.walineMounted = 'true';
+
+          try {
+            const { init } = await import('https://unpkg.com/@waline/client@v3/dist/waline.js');
+
+            if (typeof init !== 'function') {
+              throw new Error('Waline init is not available.');
+            }
+
+            init({
+              el: '#sakura-comments',
+              serverURL,
+              path,
+              lang: 'zh-CN'
+            });
+          } catch (error) {
+            container.dataset.walineMounted = 'false';
+            console.warn('Waline failed to initialize.', error);
+          }
+        }
+      }
+    </script>
+  </section>
+) : null}

@@ -1,10 +1,12 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
+import CommentSlot from '@/components/comments/CommentSlot.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdjacentPublicPosts, getAdminPostBySlug, getPublicPostBySlug } from '@/features/posts/post.service';
 import { addHeadingIdsToHtml } from '@/features/posts/post.renderer';
 import { getPostViewCount, getSiteSettings } from '@/features/settings/settings.service';
+import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
@@ -39,6 +41,7 @@ const { previous: previousPost, next: nextPost } = publicPost
 const renderedContent = addHeadingIdsToHtml(post.contentHtml);
 const tocHeadings = renderedContent.headings.filter((heading) => heading.depth === 2);
 const showToc = tocHeadings.length >= 2;
+const commentsServerURL = env.PUBLIC_COMMENTS_SERVER_URL?.trim() || '';
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -137,12 +140,7 @@ function formatDate(date: Date | null) {
           </div>
         </header>
         <div class="sc-prose prose-content sc-article-prose sc-article-inner" set:html={renderedContent.html} />
-        {siteSettings.commentEnabled && adminUser ? (
-          <section class="sc-comments sc-article-inner">
-            <h2>留言</h2>
-            <p class="sc-comments-note">评论功能将在后续接入。</p>
-          </section>
-        ) : null}
+        <CommentSlot enabled={siteSettings.commentEnabled} serverURL={commentsServerURL} path={`/posts/${post.slug}`} />
         {previousPost || nextPost ? (
           <footer class="sc-article-nav sc-article-inner" aria-label="文章导航">
             {previousPost ? (

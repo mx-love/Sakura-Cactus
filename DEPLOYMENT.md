@@ -54,6 +54,18 @@ Empty or missing values fall back to the defaults above. `SITE_NAME` controls th
 
 `SITE_AVATAR_URL` is an optional public avatar URL. It is not a secret.
 
+## External Waline Comments
+
+Sakura Cactus does not store comments in D1 and does not provide a comment API. Comments are stored by your external Waline service.
+
+To enable comments, deploy Waline first, then add this normal Cloudflare Workers environment variable:
+
+```txt
+PUBLIC_COMMENTS_SERVER_URL=https://your-waline.example.com
+```
+
+The built-in comment switch in `/settings` controls whether the article comment slot is shown. Do not configure `PUBLIC_COMMENTS_ENABLED`, `PUBLIC_COMMENTS_PROVIDER`, or extra provider variables. Do not commit your real Waline service URL to GitHub.
+
 ## Local Development
 
 Use `.dev.vars` locally. Do not commit `.dev.vars`.
