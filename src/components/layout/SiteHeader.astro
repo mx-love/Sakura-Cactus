@@ -21,6 +21,11 @@ const nextPath = `${Astro.url.pathname}${Astro.url.search}`;
 const accountHref = `/admin/login?next=${encodeURIComponent(nextPath)}`;
 const avatarUrl = adminUser ? env.SITE_AVATAR_URL?.trim() : '';
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
+const shouldReloadAdminBfcache = Boolean(adminUser) && !(
+  pathname.startsWith('/admin') ||
+  pathname.startsWith('/write') ||
+  pathname.startsWith('/settings')
+);
 
 function isActive(href: string) {
   return pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
@@ -484,6 +489,15 @@ function isActive(href: string) {
           }
         });
       })();
+    </script>
+  ) : null}
+  {shouldReloadAdminBfcache ? (
+    <script is:inline>
+      window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+          window.location.reload();
+        }
+      });
     </script>
   ) : null}
 </header>
