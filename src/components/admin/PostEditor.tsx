@@ -558,8 +558,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     <form className="sc-writer" onSubmit={(event) => event.preventDefault()}>
       <div className="sc-writer-topbar">
         <div className="sc-writer-topbar-inner">
-          <a className="sc-writer-back" href="/articles">
-            ← 返回文章
+          <a className="sc-writer-back" href={aboutMode ? '/about' : '/admin/posts'}>
+            {aboutMode ? '← 返回关于' : '← 返回管理'}
           </a>
           <div className="sc-writer-top-actions" aria-hidden="true"></div>
         </div>
@@ -728,8 +728,14 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
             </div>
 
             {error ? <p className="sc-field-error sc-writer-error">{error}</p> : null}
+            {message ? (
+              <p className="sc-writer-message" role="status">
+                <span>{message}</span>
+                {!aboutMode ? <a href="/admin/posts">文章管理</a> : null}
+              </p>
+            ) : null}
             <p className="sc-writer-note">
-              公开发布后会显示在文章列表。
+              草稿保存在后台文章管理中；公开发布后会显示在文章列表。
             </p>
           </div>
         </div>

@@ -56,6 +56,80 @@
   border-top: 1px solid var(--color-border);
 }
 
+.sc-admin-post-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sc-admin-filter-link {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.45rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.sc-admin-filter-link span:last-child {
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+}
+
+.sc-admin-filter-link:hover,
+.sc-admin-filter-link-active {
+  border-color: rgba(217, 111, 145, 0.2);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.sc-admin-filter-link-active span:last-child {
+  color: var(--color-primary);
+}
+
+.sc-admin-post-title {
+  color: var(--color-text);
+  font-weight: 900;
+  transition: color 140ms ease;
+}
+
+.sc-admin-post-title:hover {
+  color: var(--color-primary);
+}
+
+.sc-admin-slug {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.sc-admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sc-admin-action-muted {
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.sc-badge-scheduled {
+  border-color: rgba(217, 111, 145, 0.28);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
 .sc-writer-page {
   min-height: 100vh;
   margin: -1.25rem -1rem -2rem;
@@ -109,6 +183,22 @@
 
 .sc-writer-error {
   margin-top: 0.5rem;
+}
+
+.sc-writer-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: #437765;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.sc-writer-message a {
+  color: var(--color-primary);
 }
 
 .sc-writer-grid {

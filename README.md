@@ -52,6 +52,7 @@ Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 
 写作后台：
 
 - 管理员登录
+- 文章管理 / 草稿找回
 - Markdown 编辑
 - 实时预览 / 分屏
 - 保存草稿
@@ -239,6 +240,7 @@ pnpm.cmd db:migration:apply:local
 登录后可以进入：
 
 - `/write` 写文章
+- `/admin/posts` 管理文章、找回草稿
 - `/about` 编辑关于页面
 - `/settings` 设置
 - `/friends` 管理友人帐

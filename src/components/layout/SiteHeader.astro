@@ -46,7 +46,10 @@ function isActive(href: string) {
         </a>
       ))}
       {adminUser ? (
-        <a class={`sc-site-nav-link ${pathname.startsWith('/write') ? 'sc-site-nav-link-active' : ''}`} href="/write">写作</a>
+        <>
+          <a class={`sc-site-nav-link ${pathname.startsWith('/write') ? 'sc-site-nav-link-active' : ''}`} href="/write">写作</a>
+          <a class={`sc-site-nav-link ${pathname.startsWith('/admin/posts') ? 'sc-site-nav-link-active' : ''}`} href="/admin/posts">管理</a>
+        </>
       ) : null}
       {trailingNavItems.map((item) => (
         <a
@@ -130,6 +133,7 @@ function isActive(href: string) {
             <>
               <div class="sc-mobile-menu-divider"></div>
               <a class="sc-mobile-menu-link" href="/write">写作</a>
+              <a class="sc-mobile-menu-link" href="/admin/posts">管理</a>
               <a class="sc-mobile-menu-link" href="/settings">设置</a>
             </>
           ) : null}

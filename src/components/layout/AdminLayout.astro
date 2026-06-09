@@ -22,7 +22,7 @@ const {
 const user = await getCurrentAdminUser(Astro);
 
 if (!user) {
-  return Astro.redirect('/admin/login');
+  return Astro.redirect(`/admin/login?next=${encodeURIComponent(`${Astro.url.pathname}${Astro.url.search}`)}`);
 }
 
 const pathname = Astro.url.pathname;
@@ -37,6 +37,7 @@ const pathname = Astro.url.pathname;
             <a class="font-extrabold tracking-tight" href="/">Sakura Cactus</a>
             <nav class="flex items-center gap-1">
               <a class={`sc-admin-nav-link ${pathname.startsWith('/write') ? 'sc-admin-nav-link-active' : ''}`} href="/write">写作</a>
+              <a class={`sc-admin-nav-link ${pathname.startsWith('/admin/posts') ? 'sc-admin-nav-link-active' : ''}`} href="/admin/posts">管理</a>
               <a class={`sc-admin-nav-link ${pathname === '/settings' ? 'sc-admin-nav-link-active' : ''}`} href="/settings">设置</a>
               <a class="sc-admin-nav-link" href="/articles">查看</a>
             </nav>
