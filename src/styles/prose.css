@@ -104,22 +104,27 @@
 
 .sc-prose blockquote.sc-callout,
 .prose-content blockquote.sc-callout {
-  --sc-callout-accent: #4e83a8;
-  margin: 1rem 0;
-  border: 0;
-  border-left: 0.25em solid var(--sc-callout-accent);
-  border-radius: 0;
-  background: transparent;
+  --sc-callout-accent: #3b82f6;
+  --sc-callout-border: rgba(59, 130, 246, 0.22);
+  --sc-callout-bg: rgba(59, 130, 246, 0.075);
+  margin: 1.15rem 0;
+  border: 1px solid var(--sc-callout-border);
+  border-left: 4px solid var(--sc-callout-accent);
+  border-radius: 0.85rem;
+  background: var(--sc-callout-bg);
   color: var(--color-text);
-  padding: 0.5rem 1rem;
-  box-shadow: none;
+  padding: 0.85rem 1rem 0.85rem 1.05rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
-.sc-prose blockquote.sc-callout > :first-child,
-.prose-content blockquote.sc-callout > :first-child {
+.sc-prose blockquote.sc-callout p,
+.prose-content blockquote.sc-callout p {
   margin-top: 0;
+  margin-bottom: 0.55rem;
 }
 
+.sc-prose blockquote.sc-callout p:last-child,
+.prose-content blockquote.sc-callout p:last-child,
 .sc-prose blockquote.sc-callout > :last-child,
 .prose-content blockquote.sc-callout > :last-child {
   margin-bottom: 0;
@@ -130,32 +135,48 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.45rem;
+  padding: 0;
   color: var(--sc-callout-accent);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0;
-  line-height: 1.35;
+  line-height: 1.4;
+}
+
+.sc-prose blockquote.sc-callout-note,
+.prose-content blockquote.sc-callout-note {
+  --sc-callout-accent: #3b82f6;
+  --sc-callout-border: rgba(59, 130, 246, 0.22);
+  --sc-callout-bg: rgba(59, 130, 246, 0.075);
 }
 
 .sc-prose blockquote.sc-callout-tip,
 .prose-content blockquote.sc-callout-tip {
-  --sc-callout-accent: #4f9174;
+  --sc-callout-accent: #16a34a;
+  --sc-callout-border: rgba(22, 163, 74, 0.22);
+  --sc-callout-bg: rgba(22, 163, 74, 0.075);
 }
 
 .sc-prose blockquote.sc-callout-important,
 .prose-content blockquote.sc-callout-important {
-  --sc-callout-accent: #9b6aa8;
+  --sc-callout-accent: #9333ea;
+  --sc-callout-border: rgba(147, 51, 234, 0.22);
+  --sc-callout-bg: rgba(147, 51, 234, 0.075);
 }
 
 .sc-prose blockquote.sc-callout-warning,
 .prose-content blockquote.sc-callout-warning {
-  --sc-callout-accent: #b37c28;
+  --sc-callout-accent: #d97706;
+  --sc-callout-border: rgba(217, 119, 6, 0.24);
+  --sc-callout-bg: rgba(217, 119, 6, 0.09);
 }
 
 .sc-prose blockquote.sc-callout-caution,
 .prose-content blockquote.sc-callout-caution {
-  --sc-callout-accent: #b45750;
+  --sc-callout-accent: #dc2626;
+  --sc-callout-border: rgba(220, 38, 38, 0.22);
+  --sc-callout-bg: rgba(220, 38, 38, 0.075);
 }
 
 .sc-prose table,
