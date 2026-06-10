@@ -104,16 +104,15 @@
 
 .sc-prose blockquote.sc-callout,
 .prose-content blockquote.sc-callout {
-  --sc-callout-accent: #6f8fa4;
-  --sc-callout-bg: rgba(239, 245, 248, 0.74);
-  --sc-callout-border: rgba(111, 143, 164, 0.28);
-  border: 1px solid var(--sc-callout-border);
-  border-left: 4px solid var(--sc-callout-accent);
-  border-radius: 0.9rem;
-  background: var(--sc-callout-bg);
-  color: #4f474b;
-  padding: 0.9rem 1rem;
-  box-shadow: 0 8px 22px rgba(102, 66, 82, 0.035);
+  --sc-callout-accent: #4e83a8;
+  margin: 1rem 0;
+  border: 0;
+  border-left: 0.25em solid var(--sc-callout-accent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+  padding: 0.5rem 1rem;
+  box-shadow: none;
 }
 
 .sc-prose blockquote.sc-callout > :first-child,
@@ -128,40 +127,35 @@
 
 .sc-prose .sc-callout-title,
 .prose-content .sc-callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0 0 0.35rem;
   color: var(--sc-callout-accent);
   font-size: 0.82rem;
-  font-weight: 760;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1.35;
 }
 
 .sc-prose blockquote.sc-callout-tip,
 .prose-content blockquote.sc-callout-tip {
-  --sc-callout-accent: #6f9f8c;
-  --sc-callout-bg: rgba(236, 247, 241, 0.72);
-  --sc-callout-border: rgba(111, 159, 140, 0.28);
+  --sc-callout-accent: #4f9174;
 }
 
 .sc-prose blockquote.sc-callout-important,
 .prose-content blockquote.sc-callout-important {
-  --sc-callout-accent: #a477a7;
-  --sc-callout-bg: rgba(248, 240, 249, 0.76);
-  --sc-callout-border: rgba(164, 119, 167, 0.26);
+  --sc-callout-accent: #9b6aa8;
 }
 
 .sc-prose blockquote.sc-callout-warning,
 .prose-content blockquote.sc-callout-warning {
-  --sc-callout-accent: #b18b4e;
-  --sc-callout-bg: rgba(252, 247, 225, 0.78);
-  --sc-callout-border: rgba(177, 139, 78, 0.27);
+  --sc-callout-accent: #b37c28;
 }
 
 .sc-prose blockquote.sc-callout-caution,
 .prose-content blockquote.sc-callout-caution {
-  --sc-callout-accent: #b56d65;
-  --sc-callout-bg: rgba(253, 239, 237, 0.78);
-  --sc-callout-border: rgba(181, 109, 101, 0.27);
+  --sc-callout-accent: #b45750;
 }
 
 .sc-prose table,
@@ -294,13 +288,16 @@
   justify-content: center;
   width: 1.875rem;
   height: 1.875rem;
-  border: 0;
+  border: 1px solid rgba(40, 30, 35, 0.08);
   border-radius: 999px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.82);
   color: #747077;
-  opacity: 0.68;
+  opacity: 0.88;
   padding: 0;
+  box-shadow: 0 4px 12px rgba(40, 30, 35, 0.055);
   transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
     color 140ms ease,
     opacity 140ms ease;
 }
@@ -311,6 +308,8 @@
 }
 
 .sc-code-copy:hover {
+  border-color: rgba(40, 30, 35, 0.14);
+  background: rgba(255, 255, 255, 0.96);
   color: #4f4f4f;
   opacity: 1;
 }

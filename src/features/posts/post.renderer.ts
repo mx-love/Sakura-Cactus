@@ -7,11 +7,11 @@ import { unified } from 'unified';
 
 const ASSET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,64}$/;
 const CALLOUT_LABELS = {
-  NOTE: '注记',
-  TIP: '提示',
-  IMPORTANT: '重点',
-  WARNING: '警告',
-  CAUTION: '谨慎'
+  NOTE: 'Note',
+  TIP: 'Tip',
+  IMPORTANT: 'Important',
+  WARNING: 'Warning',
+  CAUTION: 'Caution'
 } as const;
 const CALLOUT_MARKER_PATTERN = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:[ \t]*(?:\r?\n)?[ \t]*)?/;
 
