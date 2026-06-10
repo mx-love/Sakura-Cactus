@@ -26,7 +26,7 @@ export const prerender = false;
 
       <template id="search-empty-template">
         <div class="sc-empty">
-          <p>没有找到匹配的文章。</p>
+          <p>没有翻到相关纸页。</p>
         </div>
       </template>
 
@@ -138,13 +138,44 @@ export const prerender = false;
           return span;
         }
 
+        function appendHighlightedText(parent, value, query) {
+          const text = String(value || '');
+
+          if (!query) {
+            parent.append(document.createTextNode(text));
+            return;
+          }
+
+          const normalizedText = text.toLowerCase();
+          let cursor = 0;
+          let index = normalizedText.indexOf(query, cursor);
+
+          while (index !== -1) {
+            if (index > cursor) {
+              parent.append(document.createTextNode(text.slice(cursor, index)));
+            }
+
+            const mark = document.createElement('mark');
+            mark.className = 'sc-search-highlight';
+            mark.textContent = text.slice(index, index + query.length);
+            parent.append(mark);
+            cursor = index + query.length;
+            index = normalizedText.indexOf(query, cursor);
+          }
+
+          if (cursor < text.length) {
+            parent.append(document.createTextNode(text.slice(cursor)));
+          }
+        }
+
         function render(items) {
           if (!results || !count || !emptyTemplate || !errorTemplate) return;
 
+          const query = input?.value.trim().toLowerCase() || '';
           results.textContent = '';
           count.textContent = items.length ? `${items.length} 篇文章` : '';
 
-          if (!input?.value.trim()) {
+          if (!query) {
             count.textContent = '';
             return;
           }
@@ -167,7 +198,7 @@ export const prerender = false;
             const title = document.createElement('h2');
             const link = document.createElement('a');
             link.href = `/posts/${post.slug}`;
-            link.textContent = post.title;
+            appendHighlightedText(link, post.title, query);
             title.append(link);
             article.append(title);
 
@@ -184,7 +215,7 @@ export const prerender = false;
             if (post.excerpt) {
               const excerpt = document.createElement('p');
               excerpt.className = 'sc-post-excerpt';
-              excerpt.textContent = post.excerpt;
+              appendHighlightedText(excerpt, post.excerpt, query);
               article.append(excerpt);
             }
 
@@ -194,7 +225,7 @@ export const prerender = false;
               for (const tag of post.tags) {
                 const tagItem = document.createElement('span');
                 tagItem.className = 'sc-tag-link sc-tag-link-static';
-                tagItem.textContent = tag;
+                appendHighlightedText(tagItem, tag, query);
                 tagList.append(tagItem);
               }
               article.append(tagList);
@@ -211,6 +242,9 @@ export const prerender = false;
             return;
           }
 
+          if (count) {
+            count.textContent = '正在翻找纸页……';
+          }
           await loadSearchIndex();
           render(posts.filter((post) => String(post.searchableText || '').includes(query)));
         }

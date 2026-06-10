@@ -57,6 +57,9 @@ function formatDate(date: Date | null) {
 
 <SiteLayout title={`${title} | Sakura Cactus`} description={description} canonicalUrl={canonicalUrl} ogImage={ogImage ?? undefined}>
   <article class="sc-page">
+    <div class="sc-reading-progress" aria-hidden="true">
+      <span class="sc-reading-progress-bar" data-reading-progress></span>
+    </div>
     <div class="sc-article-shell">
       <a class="sc-article-back" href="/articles">← 返回文章</a>
       {showToc ? (
@@ -224,6 +227,50 @@ function formatDate(date: Date | null) {
             }
           </script>
         ) : null}
+        <script>
+          (() => {
+            const bar = document.querySelector('[data-reading-progress]');
+
+            if (!(bar instanceof HTMLElement)) {
+              return;
+            }
+
+            const root = document.documentElement;
+            let frame = 0;
+
+            function syncProgressTop() {
+              const header = document.querySelector('.sc-site-header');
+              const headerHeight = header instanceof HTMLElement ? header.getBoundingClientRect().height : 0;
+              root.style.setProperty('--sc-reading-progress-top', `${Math.round(headerHeight)}px`);
+            }
+
+            function updateProgress() {
+              frame = 0;
+
+              const maxScroll = root.scrollHeight - window.innerHeight;
+              const progress = maxScroll <= 0 ? 1 : Math.min(1, Math.max(0, window.scrollY / maxScroll));
+              bar.style.transform = `scaleX(${progress})`;
+            }
+
+            function scheduleProgressUpdate() {
+              if (frame) {
+                return;
+              }
+
+              frame = window.requestAnimationFrame(updateProgress);
+            }
+
+            function syncLayout() {
+              syncProgressTop();
+              scheduleProgressUpdate();
+            }
+
+            window.addEventListener('scroll', scheduleProgressUpdate, { passive: true });
+            window.addEventListener('resize', syncLayout);
+            window.addEventListener('pageshow', syncLayout);
+            syncLayout();
+          })();
+        </script>
         {showToc ? (
           <script>
             const tocLinks = Array.from(document.querySelectorAll('[data-toc-link]'));

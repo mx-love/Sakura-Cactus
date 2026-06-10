@@ -105,5 +105,55 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
         </div>
       </footer>
     ) : null}
+    <script is:inline>
+      (() => {
+        const imageSelector = '.sc-prose img, .prose-content img, .sc-featured-cover img, .sc-article-card-cover img';
+
+        function markReady(image) {
+          image.classList.add('sc-image-ready');
+        }
+
+        function enhanceImage(image) {
+          if (!(image instanceof HTMLImageElement) || image.dataset.imageFadeEnhanced === 'true') {
+            return;
+          }
+
+          image.dataset.imageFadeEnhanced = 'true';
+          image.classList.add('sc-image-fade');
+
+          if (image.complete) {
+            markReady(image);
+            return;
+          }
+
+          image.addEventListener('load', () => markReady(image), { once: true });
+          image.addEventListener('error', () => markReady(image), { once: true });
+        }
+
+        function enhanceImages(root = document) {
+          root.querySelectorAll?.(imageSelector).forEach(enhanceImage);
+        }
+
+        enhanceImages();
+
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+              if (!(node instanceof Element)) {
+                continue;
+              }
+
+              if (node.matches(imageSelector)) {
+                enhanceImage(node);
+              }
+
+              enhanceImages(node);
+            }
+          }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+      })();
+    </script>
   </body>
 </html>

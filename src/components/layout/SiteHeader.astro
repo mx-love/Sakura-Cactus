@@ -298,27 +298,57 @@ function isActive(href: string) {
         }
       }
 
-      function createTagList(tags) {
+      function appendHighlightedText(parent, value, query) {
+        const text = String(value || '');
+
+        if (!query) {
+          parent.append(document.createTextNode(text));
+          return;
+        }
+
+        const normalizedText = text.toLowerCase();
+        let cursor = 0;
+        let index = normalizedText.indexOf(query, cursor);
+
+        while (index !== -1) {
+          if (index > cursor) {
+            parent.append(document.createTextNode(text.slice(cursor, index)));
+          }
+
+          const mark = document.createElement('mark');
+          mark.className = 'sc-search-highlight';
+          mark.textContent = text.slice(index, index + query.length);
+          parent.append(mark);
+          cursor = index + query.length;
+          index = normalizedText.indexOf(query, cursor);
+        }
+
+        if (cursor < text.length) {
+          parent.append(document.createTextNode(text.slice(cursor)));
+        }
+      }
+
+      function createTagList(tags, query) {
         const tagList = document.createElement('div');
         tagList.className = 'sc-tag-list sc-search-result-tags';
 
         for (const tag of tags) {
           const item = document.createElement('span');
           item.className = 'sc-tag-link sc-tag-link-static';
-          item.textContent = tag;
+          appendHighlightedText(item, tag, query);
           tagList.append(item);
         }
 
         return tagList;
       }
 
-      function createResult(post) {
+      function createResult(post, query) {
         const link = document.createElement('a');
         link.className = 'sc-search-overlay-result';
         link.href = `/posts/${post.slug}`;
 
         const title = document.createElement('strong');
-        title.textContent = post.title;
+        appendHighlightedText(title, post.title, query);
         link.append(title);
 
         if (post.publishedAt) {
@@ -329,12 +359,12 @@ function isActive(href: string) {
 
         if (post.excerpt) {
           const excerpt = document.createElement('span');
-          excerpt.textContent = post.excerpt;
+          appendHighlightedText(excerpt, post.excerpt, query);
           link.append(excerpt);
         }
 
         if (post.tags?.length) {
-          link.append(createTagList(post.tags));
+          link.append(createTagList(post.tags, query));
         }
 
         return link;
@@ -350,6 +380,11 @@ function isActive(href: string) {
             status.hidden = true;
           }
           return;
+        }
+
+        if (status) {
+          status.textContent = '正在翻找纸页……';
+          status.hidden = false;
         }
 
         try {
@@ -368,7 +403,7 @@ function isActive(href: string) {
 
         if (matched.length === 0) {
           if (status) {
-            status.textContent = '没有找到相关文章。';
+            status.textContent = '没有翻到相关纸页。';
             status.hidden = false;
           }
           return;
@@ -379,7 +414,7 @@ function isActive(href: string) {
           status.hidden = true;
         }
         for (const post of matched.slice(0, 8)) {
-          results?.append(createResult(post));
+          results?.append(createResult(post, query));
         }
       }
 
