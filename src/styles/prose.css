@@ -166,13 +166,6 @@
   --sc-callout-border: rgba(189, 127, 88, 0.27);
 }
 
-.sc-prose blockquote.sc-callout-quote,
-.prose-content blockquote.sc-callout-quote {
-  --sc-callout-accent: #8d8587;
-  --sc-callout-bg: rgba(247, 246, 245, 0.82);
-  --sc-callout-border: rgba(141, 133, 135, 0.22);
-}
-
 .sc-prose blockquote.sc-callout-tip::before,
 .prose-content blockquote.sc-callout-tip::before {
   content: "TIP";
@@ -191,11 +184,6 @@
 .sc-prose blockquote.sc-callout-caution::before,
 .prose-content blockquote.sc-callout-caution::before {
   content: "CAUTION";
-}
-
-.sc-prose blockquote.sc-callout-quote::before,
-.prose-content blockquote.sc-callout-quote::before {
-  content: "QUOTE";
 }
 
 .sc-prose table,
