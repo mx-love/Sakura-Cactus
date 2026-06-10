@@ -6,6 +6,8 @@ import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 
 const ASSET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,64}$/;
+const CALLOUT_TYPES = new Set(['note', 'tip', 'important', 'warning', 'caution', 'quote']);
+const CALLOUT_MARKER_PATTERN = /^\s*\[!([A-Za-z]+)\](?:[ \t]*(?:\r?\n)?[ \t]*)?/;
 
 export interface MarkdownHeading {
   depth: 2 | 3;
@@ -178,6 +180,10 @@ function isWhitespaceText(node: any): boolean {
   return node?.type === 'text' && String(node.value ?? '').trim() === '';
 }
 
+function isEmptyElement(node: any): boolean {
+  return !Array.isArray(node?.children) || node.children.every(isWhitespaceText);
+}
+
 function isImageOnlyParagraph(node: any): boolean {
   if (node?.type !== 'element' || node.tagName !== 'p' || !Array.isArray(node.children)) {
     return false;
@@ -193,6 +199,83 @@ function isPlainTextEmphasis(node: any): boolean {
   }
 
   return node.children.length > 0 && node.children.every((child: any) => child.type === 'text');
+}
+
+function takeCalloutType(paragraph: any): string | null {
+  if (paragraph?.type !== 'element' || paragraph.tagName !== 'p' || !Array.isArray(paragraph.children)) {
+    return null;
+  }
+
+  for (let index = 0; index < paragraph.children.length; index += 1) {
+    const child = paragraph.children[index];
+
+    if (isWhitespaceText(child)) {
+      continue;
+    }
+
+    if (child?.type !== 'text') {
+      return null;
+    }
+
+    const value = String(child.value ?? '');
+    const marker = CALLOUT_MARKER_PATTERN.exec(value);
+
+    if (!marker) {
+      return null;
+    }
+
+    const calloutType = marker[1].toLowerCase();
+
+    if (!CALLOUT_TYPES.has(calloutType)) {
+      return null;
+    }
+
+    child.value = value.slice(marker[0].length);
+    paragraph.children.splice(0, index);
+
+    if (isWhitespaceText(paragraph.children[0])) {
+      paragraph.children.shift();
+    }
+
+    return calloutType;
+  }
+
+  return null;
+}
+
+function rehypeTransformCallouts() {
+  return (tree: any) => {
+    visitTree(tree, (node) => {
+      if (node?.type !== 'element' || node.tagName !== 'blockquote' || !Array.isArray(node.children)) {
+        return;
+      }
+
+      const firstContentIndex = node.children.findIndex((child: any) => !isWhitespaceText(child));
+
+      if (firstContentIndex === -1) {
+        return;
+      }
+
+      const firstContent = node.children[firstContentIndex];
+
+      if (firstContent?.type !== 'element' || firstContent.tagName !== 'p') {
+        return;
+      }
+
+      const calloutType = takeCalloutType(firstContent);
+
+      if (!calloutType) {
+        return;
+      }
+
+      appendClassName(node, 'sc-callout');
+      appendClassName(node, `sc-callout-${calloutType}`);
+
+      if (isEmptyElement(firstContent)) {
+        node.children.splice(firstContentIndex, 1);
+      }
+    });
+  };
 }
 
 function isItalicOnlyParagraph(node: any): boolean {
@@ -304,6 +387,19 @@ const sanitizeSchema = {
     a: [...(defaultSchema.attributes?.a ?? []), 'href', 'title', 'rel'],
     code: [...(defaultSchema.attributes?.code ?? []), 'className'],
     img: [...(defaultSchema.attributes?.img ?? []), 'src', 'alt', 'title', 'loading'],
+    blockquote: [
+      ...(defaultSchema.attributes?.blockquote ?? []),
+      [
+        'className',
+        'sc-callout',
+        'sc-callout-note',
+        'sc-callout-tip',
+        'sc-callout-important',
+        'sc-callout-warning',
+        'sc-callout-caution',
+        'sc-callout-quote'
+      ]
+    ],
     h2: [...(defaultSchema.attributes?.h2 ?? []), 'id'],
     h3: [...(defaultSchema.attributes?.h3 ?? []), 'id'],
     input: [
@@ -327,6 +423,7 @@ function createMarkdownProcessor(headings: MarkdownHeading[]) {
     .use(remarkGfm)
     .use(remarkEscapeRawHtml)
     .use(remarkRehype)
+    .use(rehypeTransformCallouts)
     .use(rehypeRewriteAssetImages)
     .use(rehypeAddHeadingIds, headings)
     .use(rehypeSanitize, sanitizeSchema)
