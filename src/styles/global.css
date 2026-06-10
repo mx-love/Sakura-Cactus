@@ -523,7 +523,15 @@ summary {
   padding-block: clamp(1.25rem, 4vw, 3rem);
 }
 
-.sc-home-intro h1,
+.sc-home-intro h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(1.85rem, 4.6vw, 2.55rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
 .sc-page-header h1 {
   margin: 0;
   color: var(--color-text);
@@ -534,13 +542,21 @@ summary {
 }
 
 .sc-home-signature {
-  margin: 1rem 0 0;
+  margin: 0.85rem 0 0;
   color: var(--color-text);
-  font-size: clamp(1.05rem, 2.5vw, 1.25rem);
-  line-height: 1.75;
+  font-size: clamp(1.08rem, 2.15vw, 1.22rem);
+  font-weight: 520;
+  line-height: 1.78;
 }
 
-.sc-home-description,
+.sc-home-description {
+  max-width: 40rem;
+  margin: 0.68rem 0 0;
+  color: var(--color-muted);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
 .sc-page-header p {
   max-width: 40rem;
   margin: 0.75rem 0 0;
