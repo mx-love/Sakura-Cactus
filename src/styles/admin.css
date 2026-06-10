@@ -36,8 +36,9 @@
   margin: -1.25rem -1rem -2rem;
   padding: 0 1rem;
   background:
-    radial-gradient(circle at 20% 0%, rgba(217, 111, 145, 0.055), transparent 26rem),
-    #f7f7f8;
+    radial-gradient(circle at 18% 0%, rgba(217, 111, 145, 0.048), transparent 26rem),
+    linear-gradient(180deg, rgba(255, 250, 252, 0.78), rgba(255, 255, 255, 0.58) 46%, rgba(255, 250, 252, 0.42)),
+    var(--color-bg);
 }
 
 .sc-writer {
@@ -52,7 +53,7 @@
   z-index: 20;
   margin-bottom: 1rem;
   padding: 0.65rem 0;
-  background: rgba(247, 247, 248, 0.86);
+  background: rgba(255, 250, 252, 0.82);
   backdrop-filter: blur(14px);
 }
 
@@ -128,15 +129,18 @@
 .sc-writer-canvas,
 .sc-writer-card,
 .sc-writer-danger {
-  border: 1px solid rgba(228, 228, 231, 0.78);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 45px rgba(47, 41, 44, 0.055);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--paper-radius-raised);
+  background: var(--paper-bg-raised);
+  box-shadow: var(--paper-shadow-raised);
 }
 
 .sc-writer-canvas {
   min-height: 72vh;
   overflow: hidden;
+  border-color: var(--paper-border-strong);
+  background: var(--paper-bg-floating);
+  box-shadow: var(--paper-shadow-floating);
 }
 
 .sc-writer-tabs {
@@ -144,7 +148,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid rgba(238, 238, 241, 0.9);
+  border-bottom: 1px solid var(--paper-divider);
   padding: 0.85rem 1rem;
 }
 
@@ -152,8 +156,9 @@
   display: inline-flex;
   gap: 0.25rem;
   border-radius: 999px;
-  background: #f6f6f7;
+  background: rgba(255, 250, 252, 0.86);
   padding: 0.25rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.84) inset;
 }
 
 .sc-writer-tab {
@@ -174,7 +179,7 @@
 }
 
 .sc-writer-tab-active {
-  background: var(--color-primary-soft);
+  background: rgba(253, 219, 229, 0.74);
   color: var(--color-primary);
 }
 
@@ -198,7 +203,8 @@
   min-height: calc(72vh - 4.1rem);
   resize: vertical;
   border: 0;
-  background: transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0));
   padding: clamp(1rem, 2vw, 1.5rem);
   color: var(--color-text);
   font-family: var(--font-mono);
@@ -216,7 +222,7 @@
   max-height: calc(72vh - 4.1rem);
   overflow: auto;
   padding: clamp(1rem, 2vw, 1.5rem);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .sc-writer-preview-wrap {
@@ -230,7 +236,7 @@
 }
 
 .sc-writer-split .sc-writer-preview {
-  border-left: 1px solid rgba(238, 238, 241, 0.9);
+  border-left: 1px solid var(--paper-divider);
 }
 
 .sc-preview-top-button {
@@ -238,7 +244,7 @@
   right: 0.9rem;
   bottom: 0.9rem;
   z-index: 2;
-  border: 1px solid rgba(240, 227, 231, 0.9);
+  border: 1px solid var(--paper-border);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.86);
   color: var(--color-muted);
@@ -246,7 +252,7 @@
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.2;
-  box-shadow: 0 10px 28px rgba(102, 66, 82, 0.08);
+  box-shadow: var(--paper-shadow-flat);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -277,6 +283,7 @@
 .sc-writer-card,
 .sc-writer-danger {
   padding: 1.05rem;
+  box-shadow: var(--paper-shadow-flat);
 }
 
 .sc-writer-card-title,
@@ -295,9 +302,9 @@
   justify-content: space-between;
   gap: 0.55rem;
   margin: 0 0 1rem;
-  border: 1px solid rgba(240, 227, 231, 0.9);
-  border-radius: 14px;
-  background: rgba(255, 250, 251, 0.78);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--paper-radius-flat);
+  background: rgba(255, 250, 252, 0.82);
   padding: 0.65rem 0.75rem;
   color: var(--color-muted);
   font-size: 0.78rem;
@@ -346,9 +353,9 @@
 }
 
 .sc-writer-control {
-  border-color: transparent;
+  border-color: var(--paper-border);
   border-radius: 14px;
-  background: #f7f7f8;
+  background: rgba(255, 250, 252, 0.72);
   font-size: 0.875rem;
 }
 
@@ -359,6 +366,7 @@
 
 .sc-writer-control:focus {
   background: white;
+  box-shadow: 0 0 0 3px rgba(217, 111, 145, 0.08);
 }
 
 .sc-writer-summary {
@@ -385,8 +393,12 @@
 
 .sc-writer-danger {
   border-color: rgba(184, 91, 106, 0.18);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 12px 30px rgba(184, 91, 106, 0.035);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 248, 250, 0.78)),
+    rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.82) inset,
+    0 12px 30px rgba(184, 91, 106, 0.035);
 }
 
 .sc-writer-danger h2 {
