@@ -291,36 +291,47 @@
 .prose-content .sc-code-block {
   position: relative;
   max-width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.85rem;
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.035);
 }
 
 .sc-prose .sc-code-block pre,
 .prose-content .sc-code-block pre {
   margin: 0;
-  padding-right: 3.05rem;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 1rem 3.25rem 1rem 1rem;
 }
 
 .sc-code-copy {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.875rem;
-  height: 1.875rem;
-  border: 1px solid rgba(40, 30, 35, 0.08);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #747077;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.88);
+  color: rgba(15, 23, 42, 0.78);
+  cursor: pointer;
   opacity: 0.88;
   padding: 0;
-  box-shadow: 0 4px 12px rgba(40, 30, 35, 0.055);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
   transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    opacity 140ms ease;
+    opacity 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .sc-code-block:hover .sc-code-copy,
@@ -329,15 +340,21 @@
 }
 
 .sc-code-copy:hover {
-  border-color: rgba(40, 30, 35, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  color: #4f4f4f;
+  border-color: rgba(15, 23, 42, 0.2);
+  background: #ffffff;
+  color: rgba(15, 23, 42, 0.92);
   opacity: 1;
+  transform: translateY(-1px);
 }
 
 .sc-code-copy:focus-visible {
-  outline: 2px solid rgba(217, 111, 145, 0.34);
+  border-color: rgba(15, 23, 42, 0.2);
+  background: #ffffff;
+  color: rgba(15, 23, 42, 0.92);
+  opacity: 1;
+  outline: 2px solid rgba(59, 130, 246, 0.45);
   outline-offset: 2px;
+  transform: translateY(-1px);
 }
 
 .sc-code-copy-icon {
@@ -411,15 +428,15 @@
 
   .sc-prose .sc-code-block pre,
   .prose-content .sc-code-block pre {
-    padding-right: 2.65rem;
+    padding-right: 3rem;
   }
 
   .sc-code-copy {
-    top: 0.48rem;
-    right: 0.48rem;
-    width: 1.75rem;
-    height: 1.75rem;
-    opacity: 0.76;
+    top: 0.55rem;
+    right: 0.55rem;
+    width: 1.875rem;
+    height: 1.875rem;
+    opacity: 0.9;
   }
 
   .sc-code-copy-icon {
