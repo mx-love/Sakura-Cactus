@@ -66,7 +66,6 @@ function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success') {
 
   button.classList.toggle('sc-code-copy-success', state === 'success');
   button.setAttribute('aria-label', label);
-  button.title = label;
 
   if (icon) {
     icon.replaceChildren(state === 'success' ? createCheckIcon() : createCopyIcon());
@@ -104,7 +103,6 @@ export function enhanceCodeBlocks(root: ParentNode = document): void {
     button.type = 'button';
     button.className = 'sc-code-copy';
     button.setAttribute('aria-label', '复制代码');
-    button.title = '复制代码';
 
     const icon = document.createElement('span');
     icon.className = 'sc-code-copy-icon';
