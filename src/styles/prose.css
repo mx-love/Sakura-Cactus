@@ -102,6 +102,68 @@
   font-style: normal;
 }
 
+.sc-prose blockquote.sc-callout,
+.prose-content blockquote.sc-callout {
+  --sc-callout-accent: #6f8fa4;
+  --sc-callout-bg: rgba(239, 245, 248, 0.74);
+  --sc-callout-border: rgba(111, 143, 164, 0.28);
+  border: 1px solid var(--sc-callout-border);
+  border-left: 4px solid var(--sc-callout-accent);
+  border-radius: 0.9rem;
+  background: var(--sc-callout-bg);
+  color: #4f474b;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 8px 22px rgba(102, 66, 82, 0.035);
+}
+
+.sc-prose blockquote.sc-callout > :first-child,
+.prose-content blockquote.sc-callout > :first-child {
+  margin-top: 0;
+}
+
+.sc-prose blockquote.sc-callout > :last-child,
+.prose-content blockquote.sc-callout > :last-child {
+  margin-bottom: 0;
+}
+
+.sc-prose .sc-callout-title,
+.prose-content .sc-callout-title {
+  margin: 0 0 0.35rem;
+  color: var(--sc-callout-accent);
+  font-size: 0.82rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+}
+
+.sc-prose blockquote.sc-callout-tip,
+.prose-content blockquote.sc-callout-tip {
+  --sc-callout-accent: #6f9f8c;
+  --sc-callout-bg: rgba(236, 247, 241, 0.72);
+  --sc-callout-border: rgba(111, 159, 140, 0.28);
+}
+
+.sc-prose blockquote.sc-callout-important,
+.prose-content blockquote.sc-callout-important {
+  --sc-callout-accent: #a477a7;
+  --sc-callout-bg: rgba(248, 240, 249, 0.76);
+  --sc-callout-border: rgba(164, 119, 167, 0.26);
+}
+
+.sc-prose blockquote.sc-callout-warning,
+.prose-content blockquote.sc-callout-warning {
+  --sc-callout-accent: #b18b4e;
+  --sc-callout-bg: rgba(252, 247, 225, 0.78);
+  --sc-callout-border: rgba(177, 139, 78, 0.27);
+}
+
+.sc-prose blockquote.sc-callout-caution,
+.prose-content blockquote.sc-callout-caution {
+  --sc-callout-accent: #b56d65;
+  --sc-callout-bg: rgba(253, 239, 237, 0.78);
+  --sc-callout-border: rgba(181, 109, 101, 0.27);
+}
+
 .sc-prose table,
 .prose-content table {
   width: 100%;

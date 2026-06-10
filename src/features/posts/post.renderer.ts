@@ -6,6 +6,14 @@ import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 
 const ASSET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,64}$/;
+const CALLOUT_LABELS = {
+  NOTE: '注记',
+  TIP: '提示',
+  IMPORTANT: '重点',
+  WARNING: '警告',
+  CAUTION: '谨慎'
+} as const;
+const CALLOUT_MARKER_PATTERN = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:[ \t]*(?:\r?\n)?[ \t]*)?/;
 
 export interface MarkdownHeading {
   depth: 2 | 3;
@@ -178,6 +186,10 @@ function isWhitespaceText(node: any): boolean {
   return node?.type === 'text' && String(node.value ?? '').trim() === '';
 }
 
+function isEmptyElement(node: any): boolean {
+  return !Array.isArray(node?.children) || node.children.every(isWhitespaceText);
+}
+
 function isImageOnlyParagraph(node: any): boolean {
   if (node?.type !== 'element' || node.tagName !== 'p' || !Array.isArray(node.children)) {
     return false;
@@ -193,6 +205,94 @@ function isPlainTextEmphasis(node: any): boolean {
   }
 
   return node.children.length > 0 && node.children.every((child: any) => child.type === 'text');
+}
+
+function takeCalloutType(paragraph: any): keyof typeof CALLOUT_LABELS | null {
+  if (paragraph?.type !== 'element' || paragraph.tagName !== 'p' || !Array.isArray(paragraph.children)) {
+    return null;
+  }
+
+  for (let index = 0; index < paragraph.children.length; index += 1) {
+    const child = paragraph.children[index];
+
+    if (isWhitespaceText(child)) {
+      continue;
+    }
+
+    if (child?.type !== 'text') {
+      return null;
+    }
+
+    const value = String(child.value ?? '');
+    const marker = CALLOUT_MARKER_PATTERN.exec(value);
+
+    if (!marker) {
+      return null;
+    }
+
+    const calloutType = marker[1] as keyof typeof CALLOUT_LABELS;
+    child.value = value.slice(marker[0].length);
+    paragraph.children.splice(0, index);
+
+    if (isWhitespaceText(paragraph.children[0])) {
+      paragraph.children.shift();
+    }
+
+    return calloutType;
+  }
+
+  return null;
+}
+
+function rehypeTransformCallouts() {
+  return (tree: any) => {
+    visitTree(tree, (node) => {
+      if (node?.type !== 'element' || node.tagName !== 'blockquote' || !Array.isArray(node.children)) {
+        return;
+      }
+
+      const firstContentIndex = node.children.findIndex((child: any) => !isWhitespaceText(child));
+
+      if (firstContentIndex === -1) {
+        return;
+      }
+
+      const firstContent = node.children[firstContentIndex];
+
+      if (firstContent?.type !== 'element' || firstContent.tagName !== 'p') {
+        return;
+      }
+
+      const calloutType = takeCalloutType(firstContent);
+
+      if (!calloutType) {
+        return;
+      }
+
+      const calloutName = calloutType.toLowerCase();
+      appendClassName(node, 'sc-callout');
+      appendClassName(node, `sc-callout-${calloutName}`);
+      node.properties = node.properties ?? {};
+      node.properties.dataCallout = calloutName;
+      node.children.splice(firstContentIndex, 0, {
+        type: 'element',
+        tagName: 'p',
+        properties: {
+          className: ['sc-callout-title']
+        },
+        children: [
+          {
+            type: 'text',
+            value: CALLOUT_LABELS[calloutType]
+          }
+        ]
+      });
+
+      if (isEmptyElement(firstContent)) {
+        node.children.splice(firstContentIndex + 1, 1);
+      }
+    });
+  };
 }
 
 function isItalicOnlyParagraph(node: any): boolean {
@@ -304,6 +404,19 @@ const sanitizeSchema = {
     a: [...(defaultSchema.attributes?.a ?? []), 'href', 'title', 'rel'],
     code: [...(defaultSchema.attributes?.code ?? []), 'className'],
     img: [...(defaultSchema.attributes?.img ?? []), 'src', 'alt', 'title', 'loading'],
+    blockquote: [
+      ...(defaultSchema.attributes?.blockquote ?? []),
+      [
+        'className',
+        'sc-callout',
+        'sc-callout-note',
+        'sc-callout-tip',
+        'sc-callout-important',
+        'sc-callout-warning',
+        'sc-callout-caution'
+      ],
+      ['dataCallout', 'note', 'tip', 'important', 'warning', 'caution']
+    ],
     h2: [...(defaultSchema.attributes?.h2 ?? []), 'id'],
     h3: [...(defaultSchema.attributes?.h3 ?? []), 'id'],
     input: [
@@ -312,6 +425,7 @@ const sanitizeSchema = {
       'disabled'
     ],
     li: [...(defaultSchema.attributes?.li ?? []), ['className', 'task-list-item']],
+    p: [...(defaultSchema.attributes?.p ?? []), ['className', 'sc-callout-title']],
     ul: [...(defaultSchema.attributes?.ul ?? []), ['className', 'contains-task-list']]
   },
   protocols: {
@@ -327,6 +441,7 @@ function createMarkdownProcessor(headings: MarkdownHeading[]) {
     .use(remarkGfm)
     .use(remarkEscapeRawHtml)
     .use(remarkRehype)
+    .use(rehypeTransformCallouts)
     .use(rehypeRewriteAssetImages)
     .use(rehypeAddHeadingIds, headings)
     .use(rehypeSanitize, sanitizeSchema)
