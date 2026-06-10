@@ -8,7 +8,7 @@ Sakura Cactus 不是传统静态博客，也不是大型 CMS。
 
 它的目标是做一个轻量、安静、适合个人长期写作的博客：
 
-- 文章写作和发布在自己的后台完成
+- 文章写作和收录在自己的后台完成
 - Markdown 为核心
 - 图片存到 Cloudflare R2
 - 数据存到 Cloudflare D1
@@ -52,13 +52,10 @@ Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 
 写作后台：
 
 - 管理员登录
-- 文章管理 / 草稿找回
 - Markdown 编辑
 - 实时预览 / 分屏
-- 保存草稿
-- 发布 / 更新
-- 私密文章
-- 定时发布
+- 临时纸页：暂存到当前浏览器，24 小时后失效
+- 收录 / 保存修订
 - 置顶
 - 删除
 - 图片上传 / 粘贴 / 拖拽
@@ -182,7 +179,7 @@ ADMIN_PASSWORD=change-me
 
 ```txt
 SITE_NAME=Sakura Cactus
-SITE_TAGLINE=温柔地写，安静地发布。
+SITE_TAGLINE=温柔地写，安静地收录。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 SITE_AVATAR_URL=https://example.com/avatar.png
 ```
@@ -240,7 +237,6 @@ pnpm.cmd db:migration:apply:local
 登录后可以进入：
 
 - `/write` 写文章
-- `/admin/posts` 管理文章、找回草稿
 - `/about` 编辑关于页面
 - `/settings` 设置
 - `/friends` 管理友人帐

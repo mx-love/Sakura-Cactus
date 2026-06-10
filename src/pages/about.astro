@@ -19,15 +19,15 @@ function getAdminStatusNote() {
   }
 
   if (adminAboutPost.status === 'draft') {
-    return '这份关于页面还是草稿，访客暂时看不到。';
+    return '这份关于页面尚未收录，访客暂时看不到。';
   }
 
   if (adminAboutPost.visibility === 'private') {
-    return '这份关于页面目前仅自己可见，访客暂时看不到。';
+    return '这份关于页面暂时不对访客公开。';
   }
 
   if (adminAboutPost.publishedAt && new Date(adminAboutPost.publishedAt).getTime() > Date.now()) {
-    return '这份关于页面已设为未来发布时间，访客暂时看不到。';
+    return '这份关于页面暂未到公开时间，访客暂时看不到。';
   }
 
   if (adminAboutPost.status === 'archived') {

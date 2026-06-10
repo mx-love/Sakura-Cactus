@@ -37,7 +37,7 @@ const archive = posts.reduce<Record<string, Record<string, typeof posts>>>((acc,
 const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
 ---
 
-<SiteLayout title="时间轴 | Sakura Cactus" description="所有公开文章按发布时间归档。">
+<SiteLayout title="时间轴 | Sakura Cactus" description="公开文章按收录时间归档。">
   <section class="sc-page">
     <div class="sc-public-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">
@@ -48,7 +48,7 @@ const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
 
       <header class="sc-page-header">
         <h1>时间轴</h1>
-        <p>所有公开文章按发布时间归档。</p>
+        <p>公开文章按收录时间归档。</p>
       </header>
 
       {years.length === 0 ? (

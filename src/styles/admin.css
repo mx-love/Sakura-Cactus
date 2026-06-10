@@ -31,105 +31,6 @@
   color: var(--color-primary);
 }
 
-.sc-admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.sc-admin-table th {
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-muted);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-align: left;
-  text-transform: uppercase;
-}
-
-.sc-admin-table th,
-.sc-admin-table td {
-  padding: 0.8rem 0;
-}
-
-.sc-admin-table tr + tr td {
-  border-top: 1px solid var(--color-border);
-}
-
-.sc-admin-post-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.sc-admin-filter-link {
-  display: inline-flex;
-  min-height: 2.25rem;
-  align-items: center;
-  gap: 0.45rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.72);
-  padding: 0.45rem 0.75rem;
-  color: var(--color-muted);
-  font-size: 0.8125rem;
-  font-weight: 800;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
-}
-
-.sc-admin-filter-link span:last-child {
-  color: var(--color-subtle);
-  font-size: 0.75rem;
-}
-
-.sc-admin-filter-link:hover,
-.sc-admin-filter-link-active {
-  border-color: rgba(217, 111, 145, 0.2);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-
-.sc-admin-filter-link-active span:last-child {
-  color: var(--color-primary);
-}
-
-.sc-admin-post-title {
-  color: var(--color-text);
-  font-weight: 900;
-  transition: color 140ms ease;
-}
-
-.sc-admin-post-title:hover {
-  color: var(--color-primary);
-}
-
-.sc-admin-slug {
-  color: var(--color-muted);
-  font-size: 0.78rem;
-}
-
-.sc-admin-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.sc-admin-action-muted {
-  color: var(--color-subtle);
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.sc-badge-scheduled {
-  border-color: rgba(217, 111, 145, 0.28);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-
 .sc-writer-page {
   min-height: 100vh;
   margin: -1.25rem -1rem -2rem;
@@ -183,6 +84,18 @@
 
 .sc-writer-error {
   margin-top: 0.5rem;
+}
+
+.sc-writer-heading {
+  margin: 0 0 0.85rem;
+}
+
+.sc-writer-heading h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(1.55rem, 2vw, 2rem);
+  font-weight: 950;
+  line-height: 1.2;
 }
 
 .sc-writer-message {
@@ -375,6 +288,42 @@
   line-height: 1.35;
 }
 
+.sc-temporary-paper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  border: 1px solid rgba(240, 227, 231, 0.9);
+  border-radius: 14px;
+  background: rgba(255, 250, 251, 0.78);
+  padding: 0.65rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.sc-temporary-paper-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.sc-temporary-paper-actions button {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.sc-temporary-paper-actions button:hover {
+  color: var(--color-danger);
+}
+
 .sc-writer-fields {
   display: grid;
   gap: 0.85rem;
@@ -390,8 +339,7 @@
   gap: 0;
 }
 
-.sc-writer-field > span,
-.sc-writer-status-row > span:first-child {
+.sc-writer-field > span {
   color: var(--color-muted);
   font-size: 0.75rem;
   font-weight: 850;
@@ -415,46 +363,6 @@
 
 .sc-writer-summary {
   min-height: 6.5rem;
-}
-
-.sc-writer-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid rgba(238, 238, 241, 0.78);
-  padding-bottom: 0.7rem;
-}
-
-.sc-writer-visibility {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.25rem;
-  border: 1px solid rgba(228, 228, 231, 0.78);
-  border-radius: 15px;
-  background: #f6f6f7;
-  padding: 0.25rem;
-}
-
-.sc-writer-choice {
-  min-height: 2.25rem;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--color-muted);
-  font-size: 0.875rem;
-  font-weight: 850;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
-}
-
-.sc-writer-choice-active {
-  border-color: rgba(217, 111, 145, 0.18);
-  background: white;
-  box-shadow: 0 6px 18px rgba(102, 66, 82, 0.06);
-  color: var(--color-primary);
 }
 
 .sc-writer-publish-actions {

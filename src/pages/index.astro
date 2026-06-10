@@ -8,7 +8,7 @@ export const prerender = false;
 const posts = await getPublicPosts({ limit: 12, excludeAbout: true, pinnedFirst: true });
 const latestPosts = posts.slice(0, 5);
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
-const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地发布。';
+const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地收录。';
 const siteDescription = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。';
 const leadPost = latestPosts[0] ?? null;
 const notePosts = latestPosts.slice(1);
@@ -231,7 +231,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
         {latestPosts.length === 0 ? (
           <div class="sc-empty">
             <p>还没有公开文章。</p>
-            <p>第一篇文章发布后会显示在这里。</p>
+            <p>第一篇文章收录后会显示在这里。</p>
           </div>
         ) : (
           <div class="sc-home-posts">

@@ -46,7 +46,7 @@ These are normal Cloudflare Workers environment variables, not secrets. Configur
 
 ```txt
 SITE_NAME=Sakura Cactus
-SITE_TAGLINE=温柔地写，安静地发布。
+SITE_TAGLINE=温柔地写，安静地收录。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 ```
 
@@ -74,7 +74,7 @@ Use `.dev.vars` locally. Do not commit `.dev.vars`.
 ADMIN_USERNAME=sakura
 ADMIN_PASSWORD=change-me
 SITE_NAME=Sakura Cactus
-SITE_TAGLINE=温柔地写，安静地发布。
+SITE_TAGLINE=温柔地写，安静地收录。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 ```
 

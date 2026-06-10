@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { AssetRow } from '@/features/assets/asset.types';
 import { renderMarkdown } from '@/features/posts/post.renderer';
-import type { PostRow, PostStatus, PostVisibility } from '@/features/posts/post.types';
+import type { PostRow, PostStatus } from '@/features/posts/post.types';
 import { enhanceCodeBlocks } from '@/lib/prose-controls';
+
+const TEMPORARY_PAPER_KEY = 'sakura-cactus:temporary-paper';
+const TEMPORARY_PAPER_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface ApiErrorResponse {
   ok: false;
@@ -24,19 +27,29 @@ type PostFormState = {
   publishedAt: string;
   contentMarkdown: string;
   status: Exclude<PostStatus, 'deleted'>;
-  visibility: PostVisibility;
 };
 
-type SubmitAction = 'draft' | 'publish' | 'unpublish' | 'delete';
+type SubmitAction = 'publish' | 'unpublish' | 'delete';
 type SaveFeedback = 'idle' | 'success' | 'error';
 
 type FormSnapshot = {
   title: string;
   excerpt: string;
   contentMarkdown: string;
-  visibility: PostVisibility;
   publishedAt: string;
   tags: string[];
+};
+
+type TemporaryPaper = {
+  postId?: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  contentMarkdown: string;
+  tags: string;
+  coverImage: string;
+  updatedAt: string;
+  expiresAt: string;
 };
 
 function toDateTimeLocal(value: string | null | undefined): string {
@@ -66,8 +79,7 @@ function postToState(post?: (PostRow & { tags?: Array<{ name: string }> }) | nul
     tagInput: post?.tags?.map((tag) => tag.name).join(', ') ?? '',
     publishedAt: toDateTimeLocal(post?.published_at),
     contentMarkdown: post?.content_markdown ?? '',
-    status: post?.status === 'deleted' ? 'draft' : (post?.status ?? 'draft'),
-    visibility: post?.visibility ?? 'public'
+    status: post?.status === 'deleted' ? 'draft' : (post?.status ?? 'draft')
   };
 }
 
@@ -85,7 +97,6 @@ function createSnapshot(form: PostFormState): FormSnapshot {
     title: form.title.trim(),
     excerpt: form.excerpt.trim(),
     contentMarkdown: form.contentMarkdown,
-    visibility: form.visibility,
     publishedAt: form.publishedAt,
     tags: normalizeTagInput(form.tagInput)
   };
@@ -100,32 +111,75 @@ function snapshotsEqual(saved: FormSnapshot | null, current: FormSnapshot): bool
     saved.title === current.title &&
     saved.excerpt === current.excerpt &&
     saved.contentMarkdown === current.contentMarkdown &&
-    saved.visibility === current.visibility &&
     saved.publishedAt === current.publishedAt &&
     saved.tags.length === current.tags.length &&
     saved.tags.every((tag, index) => tag === current.tags[index])
   );
 }
 
-function statusLabel(status: Exclude<PostStatus, 'deleted'>): string {
-  if (status === 'published') {
-    return '已发布';
-  }
-
-  if (status === 'archived') {
-    return '已下架';
-  }
-
-  return '草稿';
-}
-
-function isPubliclyReachablePost(post: PostRow): boolean {
-  if (post.status !== 'published' || post.visibility !== 'public' || !post.slug || !post.published_at) {
+function isTemporaryPaper(value: unknown): value is TemporaryPaper {
+  if (!value || typeof value !== 'object') {
     return false;
   }
 
-  const publishedAt = new Date(post.published_at);
-  return !Number.isNaN(publishedAt.getTime()) && publishedAt.getTime() <= Date.now();
+  const paper = value as Record<string, unknown>;
+  return (
+    (typeof paper.postId === 'string' || typeof paper.postId === 'undefined') &&
+    typeof paper.title === 'string' &&
+    typeof paper.slug === 'string' &&
+    typeof paper.excerpt === 'string' &&
+    typeof paper.contentMarkdown === 'string' &&
+    typeof paper.tags === 'string' &&
+    typeof paper.coverImage === 'string' &&
+    typeof paper.updatedAt === 'string' &&
+    typeof paper.expiresAt === 'string'
+  );
+}
+
+function clearStoredTemporaryPaper() {
+  try {
+    window.localStorage.removeItem(TEMPORARY_PAPER_KEY);
+  } catch {
+    // localStorage may be unavailable in hardened browser contexts.
+  }
+}
+
+function readStoredTemporaryPaper(): TemporaryPaper | null {
+  try {
+    const raw = window.localStorage.getItem(TEMPORARY_PAPER_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as unknown;
+
+    if (!isTemporaryPaper(parsed)) {
+      clearStoredTemporaryPaper();
+      return null;
+    }
+
+    const expiresAt = new Date(parsed.expiresAt).getTime();
+
+    if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      clearStoredTemporaryPaper();
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    clearStoredTemporaryPaper();
+    return null;
+  }
+}
+
+function writeStoredTemporaryPaper(paper: TemporaryPaper): boolean {
+  try {
+    window.localStorage.setItem(TEMPORARY_PAPER_KEY, JSON.stringify(paper));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function isImageUrl(value: string): boolean {
@@ -171,15 +225,23 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const [showPreviewTop, setShowPreviewTop] = useState(false);
+  const [temporaryPaper, setTemporaryPaper] = useState<TemporaryPaper | null>(null);
   const isExisting = useMemo(() => Boolean(postId), [postId]);
   const currentSnapshot = useMemo(() => createSnapshot(form), [form]);
   const isDirty = useMemo(() => !snapshotsEqual(savedSnapshot, currentSnapshot), [savedSnapshot, currentSnapshot]);
   const previewHtml = useMemo(() => renderMarkdown(form.contentMarkdown), [form.contentMarkdown]);
-  const isPublished = form.status === 'published';
   const isBusy = isSubmitting || isUploadingImage;
-  const statusClass = form.status === 'published' ? 'sc-badge-published' : form.status === 'archived' ? 'sc-badge-archived' : 'sc-badge-draft';
-  const isCleanExistingPost = isExisting && !isDirty && saveFeedback !== 'error';
-  const mainActionLabel = isCleanExistingPost ? '已保存' : isPublished ? '更新' : '发布';
+  const isCollected = form.status === 'published';
+  const isCleanExistingPost = isExisting && isCollected && !isDirty && saveFeedback !== 'error';
+  const mainActionLabel = isCollected ? '保存修订' : '收录';
+
+  useEffect(() => {
+    if (aboutMode) {
+      return;
+    }
+
+    setTemporaryPaper(readStoredTemporaryPaper());
+  }, [aboutMode]);
 
   useEffect(() => {
     const handlePageExit = () => {
@@ -381,12 +443,77 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     }).catch(() => undefined);
   }
 
-  async function saveWithStatus(status: Exclude<PostStatus, 'deleted'>) {
-    const action: SubmitAction = status === 'published' ? 'publish' : 'draft';
+  function restoreTemporaryPaper() {
+    const paper = readStoredTemporaryPaper();
+
+    if (!paper) {
+      setTemporaryPaper(null);
+      setMessage(null);
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      title: paper.title,
+      excerpt: paper.excerpt,
+      tagInput: paper.tags,
+      contentMarkdown: paper.contentMarkdown
+    }));
+    setTemporaryPaper(paper);
+    setMessage(null);
+    setError(null);
+
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }
+
+  function clearTemporaryPaper() {
+    clearStoredTemporaryPaper();
+    setTemporaryPaper(null);
+    setMessage(null);
+    setError(null);
+  }
+
+  function saveTemporaryPaper() {
+    if (aboutMode) {
+      return;
+    }
+
+    const now = new Date();
+    const paper: TemporaryPaper = {
+      postId: postId ?? undefined,
+      title: form.title,
+      slug: post?.slug ?? '',
+      excerpt: form.excerpt,
+      contentMarkdown: form.contentMarkdown,
+      tags: form.tagInput,
+      coverImage: '',
+      updatedAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + TEMPORARY_PAPER_TTL_MS).toISOString()
+    };
+
+    setError(null);
+    setSaveFeedback('idle');
+    setSubmitAction(null);
+
+    if (!writeStoredTemporaryPaper(paper)) {
+      setMessage(null);
+      setError('当前浏览器无法暂存临时纸页。');
+      return;
+    }
+
+    setTemporaryPaper(paper);
+    setMessage('已暂存为临时纸页，24 小时内可继续写。');
+  }
+
+  async function collectPost() {
+    const wasCollected = isCollected;
+    const publishedAt = postId ? toIsoDateTime(form.publishedAt) : null;
     setError(null);
     setMessage(null);
     setSaveFeedback('idle');
-    setSubmitAction(action);
+    setSubmitAction('publish');
     setIsSubmitting(true);
 
     try {
@@ -401,9 +528,9 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
           title: form.title,
           excerpt: form.excerpt,
           contentMarkdown: form.contentMarkdown,
-          status,
-          visibility: form.visibility,
-          publishedAt: toIsoDateTime(form.publishedAt),
+          status: 'published',
+          visibility: 'public',
+          publishedAt,
           tags: form.tagInput
         })
       });
@@ -421,13 +548,10 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       setForm(nextForm);
       setSavedSnapshot(createSnapshot(nextForm));
       markSavedAssetTokens(savedPost.content_markdown);
-      setMessage(status === 'published' ? '已发布' : '已保存');
+      clearStoredTemporaryPaper();
+      setTemporaryPaper(null);
+      setMessage(wasCollected ? '修订已保存。' : '已收录到博客。');
       setSaveFeedback('success');
-
-      if (status === 'published' && isPubliclyReachablePost(savedPost)) {
-        window.location.href = aboutMode ? '/about?fresh=1' : `/posts/${encodeURIComponent(savedPost.slug)}?fresh=1`;
-        return;
-      }
 
       if (!postId && !aboutMode) {
         window.history.replaceState(null, '', `/write?post=${savedPost.id}`);
@@ -506,20 +630,16 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     }
   }
 
-  function saveButtonText(action: SubmitAction, idleLabel: string) {
-    if (submitAction === action && isSubmitting) {
-      return action === 'publish' && isPublished ? '更新中...' : '保存中...';
+  function primaryButtonText() {
+    if (submitAction === 'publish' && isSubmitting) {
+      return isCollected ? '保存中...' : '收录中...';
     }
 
-    if (submitAction === action && saveFeedback === 'success') {
-      return '已保存';
-    }
-
-    if (submitAction === action && saveFeedback === 'error') {
+    if (submitAction === 'publish' && saveFeedback === 'error') {
       return '保存失败，重试';
     }
 
-    return idleLabel;
+    return mainActionLabel;
   }
 
   function scrollPreviewToTop() {
@@ -558,12 +678,26 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     <form className="sc-writer" onSubmit={(event) => event.preventDefault()}>
       <div className="sc-writer-topbar">
         <div className="sc-writer-topbar-inner">
-          <a className="sc-writer-back" href={aboutMode ? '/about' : '/admin/posts'}>
-            {aboutMode ? '← 返回关于' : '← 返回管理'}
+          <a className="sc-writer-back" href={aboutMode ? '/about' : '/articles'}>
+            {aboutMode ? '← 返回关于' : '← 返回文章'}
           </a>
           <div className="sc-writer-top-actions" aria-hidden="true"></div>
         </div>
       </div>
+
+      <header className="sc-writer-heading">
+        <h1>{aboutMode ? '关于' : '写作'}</h1>
+      </header>
+
+      {!aboutMode && temporaryPaper ? (
+        <div className="sc-temporary-paper" role="status">
+          <span>有一页临时纸页 · 24 小时内可继续写</span>
+          <div className="sc-temporary-paper-actions">
+            <button type="button" onClick={restoreTemporaryPaper}>继续写</button>
+            <button type="button" onClick={clearTemporaryPaper}>清空</button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="sc-writer-grid">
       <div className="sc-writer-main">
@@ -658,64 +792,29 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
         </div>
 
         <div className="sc-writer-card">
-          <h2 className="sc-writer-card-title">发布设置</h2>
+          <h2 className="sc-writer-card-title">收录</h2>
           <div className="sc-writer-fields">
-            <div className="sc-writer-status-row">
-              <span>状态</span>
-              <span className={`sc-badge ${statusClass}`}>{statusLabel(form.status)}</span>
-            </div>
-
-            <div className="sc-writer-field">
-              <span>可见性</span>
-              <div className="sc-writer-visibility">
-                <button
-                  className={form.visibility === 'public' ? 'sc-writer-choice sc-writer-choice-active' : 'sc-writer-choice'}
-                  onClick={() => updateField('visibility', 'public')}
-                  type="button"
-                >
-                  公开
-                </button>
-                <button
-                  className={form.visibility === 'private' ? 'sc-writer-choice sc-writer-choice-active' : 'sc-writer-choice'}
-                  onClick={() => updateField('visibility', 'private')}
-                  type="button"
-                >
-                  仅自己
-                </button>
-              </div>
-            </div>
-
-            <label className="sc-writer-field">
-              <span>发布时间</span>
-              <input
-                className="sc-input sc-writer-control"
-                type="datetime-local"
-                value={form.publishedAt}
-                onChange={(event) => updateField('publishedAt', event.target.value)}
-              />
-            </label>
-
             <div className="sc-writer-publish-actions">
-              {!isPublished ? (
+              {!aboutMode ? (
                 <button
                   className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
-                  disabled={isBusy || isCleanExistingPost}
-                  onClick={() => saveWithStatus('draft')}
+                  disabled={isBusy}
+                  onClick={saveTemporaryPaper}
                   type="button"
                 >
-                  {saveButtonText('draft', '保存草稿')}
+                  暂存
                 </button>
               ) : null}
               <button
                 className="sc-button sc-button-primary sc-writer-primary-action disabled:opacity-60"
                 disabled={isBusy || isCleanExistingPost}
-                onClick={() => saveWithStatus('published')}
+                onClick={collectPost}
                 type="button"
               >
-                {saveButtonText('publish', mainActionLabel)}
+                {primaryButtonText()}
               </button>
 
-            {isPublished ? (
+            {isCollected ? (
               <button
                 className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
                 disabled={isSubmitting || !isExisting}
@@ -731,11 +830,10 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
             {message ? (
               <p className="sc-writer-message" role="status">
                 <span>{message}</span>
-                {!aboutMode ? <a href="/admin/posts">文章管理</a> : null}
               </p>
             ) : null}
             <p className="sc-writer-note">
-              草稿保存在后台文章管理中；公开发布后会显示在文章列表。
+              临时纸页只保存在当前浏览器；收录后会进入博客公开内容。
             </p>
           </div>
         </div>
