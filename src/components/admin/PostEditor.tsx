@@ -29,7 +29,7 @@ type PostFormState = {
   status: Exclude<PostStatus, 'deleted'>;
 };
 
-type SubmitAction = 'publish' | 'unpublish' | 'delete';
+type SubmitAction = 'publish' | 'delete';
 type SaveFeedback = 'idle' | 'success' | 'error';
 
 type FormSnapshot = {
@@ -561,41 +561,6 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     }
   }
 
-  async function unpublish() {
-    if (!postId) {
-      setError('Save the post before unpublishing.');
-      return;
-    }
-
-    setError(null);
-    setMessage(null);
-    setSaveFeedback('idle');
-    setSubmitAction('unpublish');
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch(`/api/admin/posts/${postId}/unpublish`, {
-        method: 'POST',
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        setError(await readError(response, 'Unable to unpublish post.'));
-        setSaveFeedback('error');
-        return;
-      }
-
-      const payload = (await response.json()) as { ok: true; data: { post: PostRow & { tags?: Array<{ name: string }> } } };
-      const nextForm = postToState(payload.data.post);
-      setForm(nextForm);
-      setSavedSnapshot(createSnapshot(nextForm));
-      setMessage('已下架');
-      setSaveFeedback('success');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   async function deletePost() {
     if (!postId) {
       setError('Save the post before deleting.');
@@ -813,17 +778,6 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
               >
                 {primaryButtonText()}
               </button>
-
-            {isCollected ? (
-              <button
-                className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
-                disabled={isSubmitting || !isExisting}
-                onClick={unpublish}
-                type="button"
-              >
-                {submitAction === 'unpublish' && isSubmitting ? '下架中...' : '下架'}
-              </button>
-            ) : null}
             </div>
 
             {error ? <p className="sc-field-error sc-writer-error">{error}</p> : null}
