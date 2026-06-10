@@ -6,8 +6,8 @@ import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 
 const ASSET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,64}$/;
-const CALLOUT_TYPES = new Set(['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']);
-const CALLOUT_MARKER_PATTERN = /^\s*\[!([A-Z]+)\](?:[ \t]*(?:\r?\n)?[ \t]*)?/;
+const CALLOUT_TYPES = new Set(['note', 'tip', 'important', 'warning', 'caution', 'quote']);
+const CALLOUT_MARKER_PATTERN = /^\s*\[!([A-Za-z]+)\](?:[ \t]*(?:\r?\n)?[ \t]*)?/;
 
 export interface MarkdownHeading {
   depth: 2 | 3;
@@ -224,7 +224,7 @@ function takeCalloutType(paragraph: any): string | null {
       return null;
     }
 
-    const calloutType = marker[1];
+    const calloutType = marker[1].toLowerCase();
 
     if (!CALLOUT_TYPES.has(calloutType)) {
       return null;
@@ -237,7 +237,7 @@ function takeCalloutType(paragraph: any): string | null {
       paragraph.children.shift();
     }
 
-    return calloutType.toLowerCase();
+    return calloutType;
   }
 
   return null;
@@ -396,7 +396,8 @@ const sanitizeSchema = {
         'sc-callout-tip',
         'sc-callout-important',
         'sc-callout-warning',
-        'sc-callout-caution'
+        'sc-callout-caution',
+        'sc-callout-quote'
       ]
     ],
     h2: [...(defaultSchema.attributes?.h2 ?? []), 'id'],
