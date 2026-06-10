@@ -25,33 +25,6 @@
   --shadow-soft: 0 10px 32px rgba(102, 66, 82, 0.06);
   --shadow-card: 0 8px 24px rgba(102, 66, 82, 0.05);
   --shadow-float: 0 12px 34px rgba(102, 66, 82, 0.07);
-  --paper-border-soft: rgba(240, 227, 231, 0.62);
-  --paper-border: rgba(240, 227, 231, 0.76);
-  --paper-border-strong: rgba(231, 207, 216, 0.84);
-  --paper-bg-flat:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 250, 252, 0.72)),
-    rgba(255, 255, 255, 0.78);
-  --paper-bg-raised:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 252, 0.82)),
-    rgba(255, 255, 255, 0.88);
-  --paper-bg-floating:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 252, 0.86) 62%, rgba(255, 246, 249, 0.76)),
-    rgba(255, 255, 255, 0.9);
-  --paper-shadow-flat:
-    0 1px 0 rgba(255, 255, 255, 0.78) inset,
-    0 7px 20px rgba(102, 66, 82, 0.034);
-  --paper-shadow-raised:
-    0 1px 0 rgba(255, 255, 255, 0.86) inset,
-    0 15px 36px rgba(102, 66, 82, 0.048),
-    0 3px 10px rgba(102, 66, 82, 0.026);
-  --paper-shadow-floating:
-    0 1px 0 rgba(255, 255, 255, 0.92) inset,
-    0 20px 48px rgba(102, 66, 82, 0.056),
-    0 4px 14px rgba(102, 66, 82, 0.032);
-  --paper-divider: rgba(240, 227, 231, 0.82);
-  --paper-radius-flat: 16px;
-  --paper-radius-raised: 22px;
-  --paper-radius-floating: 26px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -136,10 +109,10 @@ summary {
 .sc-card,
 .sc-panel,
 .sc-card-polished {
-  border: 1px solid var(--paper-border);
-  border-radius: var(--paper-radius-raised);
-  background: var(--paper-bg-flat);
-  box-shadow: var(--paper-shadow-flat);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .sc-button {
@@ -182,8 +155,8 @@ summary {
 }
 
 .sc-button-secondary {
-  border-color: var(--paper-border);
-  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--color-border);
+  background: var(--color-surface-strong);
   color: var(--color-text);
 }
 
@@ -208,9 +181,9 @@ summary {
 .sc-textarea,
 .sc-select {
   width: 100%;
-  border: 1px solid var(--paper-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   color: var(--color-text);
   transition:
     border-color 140ms ease,
@@ -537,10 +510,6 @@ summary {
   padding-block: clamp(2rem, 5vw, 4rem);
 }
 
-.sc-home-shell {
-  padding-block: clamp(1.65rem, 4.4vw, 3.45rem);
-}
-
 .sc-list-shell {
   max-width: 860px;
 }
@@ -550,8 +519,8 @@ summary {
 }
 
 .sc-home-intro {
-  isolation: isolate;
-  max-width: 39rem;
+  max-width: 42rem;
+  padding-block: clamp(1.25rem, 4vw, 3rem);
 }
 
 .sc-home-intro h1,
@@ -564,18 +533,11 @@ summary {
   line-height: 1.16;
 }
 
-.sc-home-intro h1 {
-  max-width: 12ch;
-  font-size: clamp(1.78rem, 4.9vw, 2.55rem);
-  font-weight: 810;
-  line-height: 1.13;
-}
-
 .sc-home-signature {
-  margin: 0.84rem 0 0;
+  margin: 1rem 0 0;
   color: var(--color-text);
-  font-size: clamp(1.02rem, 2.1vw, 1.16rem);
-  line-height: 1.68;
+  font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+  line-height: 1.75;
 }
 
 .sc-home-description,
@@ -585,13 +547,6 @@ summary {
   color: var(--color-muted);
   font-size: 1rem;
   line-height: 1.8;
-}
-
-.sc-home-description {
-  max-width: 32rem;
-  margin-top: 0.62rem;
-  font-size: 0.96rem;
-  line-height: 1.74;
 }
 
 .sc-section {
@@ -1410,9 +1365,8 @@ summary {
 .sc-settings-page {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 18% 0%, rgba(217, 111, 145, 0.045), transparent 24rem),
-    linear-gradient(180deg, rgba(255, 250, 252, 0.72), rgba(255, 255, 255, 0.58) 42%, rgba(255, 250, 252, 0.46)),
-    var(--color-bg);
+    radial-gradient(circle at 20% 0%, rgba(217, 111, 145, 0.05), transparent 24rem),
+    #f6f6f7;
 }
 
 .sc-settings-shell {
@@ -1441,15 +1395,15 @@ summary {
 }
 
 .sc-settings-container {
-  border: 1px solid var(--paper-border);
-  border-radius: var(--paper-radius-floating);
-  background: var(--paper-bg-raised);
-  box-shadow: var(--paper-shadow-raised);
+  border: 1px solid rgba(228, 228, 231, 0.86);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 46px rgba(47, 41, 44, 0.055);
   overflow: hidden;
 }
 
 .sc-settings-rows-container {
-  box-shadow: var(--paper-shadow-flat);
+  box-shadow: 0 16px 42px rgba(47, 41, 44, 0.048);
 }
 
 .sc-settings-group {
@@ -1457,7 +1411,7 @@ summary {
 }
 
 .sc-settings-group + .sc-settings-group {
-  border-top: 1px solid var(--paper-divider);
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
 }
 
 .sc-settings-group h2 {
@@ -1476,7 +1430,7 @@ summary {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 1rem;
-  border-top: 1px solid var(--paper-divider);
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
   padding-block: 0.92rem;
 }
 
@@ -1503,9 +1457,9 @@ summary {
 .sc-settings-status {
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--paper-border);
+  border: 1px solid rgba(240, 227, 231, 0.9);
   border-radius: 999px;
-  background: rgba(255, 250, 252, 0.86);
+  background: rgba(255, 250, 252, 0.82);
   padding: 0.34rem 0.62rem;
   color: var(--color-muted);
   font-size: 0.78rem;
@@ -1535,7 +1489,7 @@ summary {
 .sc-settings-subform {
   display: grid;
   gap: 0.8rem;
-  border-top: 1px solid var(--paper-divider);
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
   padding-block: 0.9rem 1rem;
 }
 
@@ -1571,7 +1525,7 @@ summary {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.8rem;
-  border-top: 1px solid var(--paper-divider);
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
   padding-top: 1rem;
 }
 
@@ -1607,9 +1561,8 @@ summary {
 
 .sc-settings-link {
   flex: 0 0 auto;
-  border: 1px solid var(--paper-border);
   border-radius: 999px;
-  background: rgba(255, 250, 252, 0.86);
+  background: var(--color-primary-soft);
   padding: 0.45rem 0.8rem;
   color: var(--color-primary);
   font-size: 0.82rem;
@@ -1635,7 +1588,7 @@ summary {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-top: 1px solid var(--paper-divider);
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
   padding-block: 1rem;
 }
 
@@ -1668,9 +1621,9 @@ summary {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  border: 1px solid var(--paper-border);
+  border: 1px solid rgba(240, 227, 231, 0.85);
   border-radius: 999px;
-  background: rgba(255, 250, 252, 0.78);
+  background: rgba(255, 250, 252, 0.72);
   padding: 0.42rem 0.68rem;
   color: var(--color-text);
   font-size: 0.86rem;
@@ -1692,7 +1645,7 @@ summary {
 }
 
 .sc-settings-row + .sc-settings-row {
-  border-top: 1px solid var(--paper-divider);
+  border-top: 1px solid rgba(238, 238, 241, 0.95);
 }
 
 .sc-settings-copy h3 {
@@ -1745,13 +1698,9 @@ summary {
   display: inline-flex;
   width: 2.75rem;
   height: 1.55rem;
-  border: 1px solid var(--paper-border);
   border-radius: 999px;
-  background: rgba(255, 250, 252, 0.82);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.86) inset;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease;
+  background: #e8e8eb;
+  transition: background-color 140ms ease;
 }
 
 .sc-switch span::after {
@@ -1763,12 +1712,11 @@ summary {
   height: 1.15rem;
   border-radius: 999px;
   background: white;
-  box-shadow: 0 2px 8px rgba(102, 66, 82, 0.1);
+  box-shadow: 0 2px 8px rgba(47, 41, 44, 0.12);
   transition: transform 140ms ease;
 }
 
 .sc-switch input:checked + span {
-  border-color: rgba(217, 111, 145, 0.2);
   background: var(--color-primary);
 }
 
@@ -1783,9 +1731,9 @@ summary {
 
 .sc-settings-button {
   min-height: 2.05rem;
-  border: 1px solid var(--paper-border);
+  border: 0;
   border-radius: 999px;
-  background: rgba(255, 250, 252, 0.9);
+  background: var(--color-primary-soft);
   padding: 0.38rem 0.82rem;
   color: var(--color-primary);
   font-size: 0.82rem;
@@ -1793,8 +1741,7 @@ summary {
 }
 
 .sc-settings-button-danger {
-  border-color: rgba(184, 91, 106, 0.16);
-  background: rgba(248, 223, 227, 0.74);
+  background: var(--color-danger-soft);
   color: var(--color-danger);
 }
 
@@ -2168,8 +2115,8 @@ summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.42fr);
   align-items: start;
-  gap: clamp(1.1rem, 3.4vw, 2.35rem);
-  margin-bottom: clamp(1.25rem, 3.2vw, 2.15rem);
+  gap: clamp(1.2rem, 4vw, 2.6rem);
+  margin-bottom: clamp(1.5rem, 4vw, 2.5rem);
 }
 
 .sc-paper-piece,
@@ -2182,28 +2129,11 @@ summary {
 }
 
 .sc-paper-piece {
-  overflow: hidden;
-  border: 1px solid var(--paper-border-strong);
-  border-radius: var(--paper-radius-floating);
-  background: var(--paper-bg-floating);
-  box-shadow: var(--paper-shadow-floating);
-  padding: clamp(1.35rem, 3.5vw, 2.25rem);
-}
-
-.sc-home-intro.sc-paper-piece::after {
-  content: "";
-  position: absolute;
-  right: -1px;
-  bottom: -1px;
-  width: clamp(3.2rem, 8vw, 5.2rem);
-  height: clamp(3.2rem, 8vw, 5.2rem);
-  border-top: 1px solid rgba(240, 227, 231, 0.58);
-  border-left: 1px solid rgba(240, 227, 231, 0.45);
-  border-radius: 18px 0 var(--paper-radius-floating) 0;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(253, 229, 236, 0.18)),
-    rgba(255, 250, 252, 0.34);
-  pointer-events: none;
+  border: 1px solid rgba(240, 227, 231, 0.78);
+  border-radius: 26px 22px 28px 20px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 46px rgba(102, 66, 82, 0.045);
+  padding: clamp(1.5rem, 4vw, 2.6rem);
 }
 
 .sc-paper-kicker {
@@ -2216,13 +2146,13 @@ summary {
 }
 
 .sc-calendar-note {
-  align-self: start;
-  border: 1px solid var(--paper-border);
-  border-radius: var(--paper-radius-raised);
-  background: var(--paper-bg-raised);
-  box-shadow: var(--paper-shadow-raised);
-  padding: 0.95rem;
-  transform: translateY(0.35rem) rotate(0.7deg);
+  border: 1px solid rgba(240, 227, 231, 0.8);
+  border-radius: 22px 18px 24px 20px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 250, 0.82));
+  box-shadow: 0 14px 36px rgba(102, 66, 82, 0.05);
+  padding: 1rem;
+  transform: rotate(1.2deg);
 }
 
 .sc-calendar-note-head {
@@ -2282,7 +2212,7 @@ summary {
   justify-content: space-between;
   gap: 0.35rem 0.8rem;
   margin-top: 0.9rem;
-  border-top: 1px dashed var(--paper-divider);
+  border-top: 1px dashed rgba(240, 227, 231, 0.95);
   padding-top: 0.72rem;
 }
 
@@ -2316,10 +2246,10 @@ summary {
 
 .sc-featured-paper {
   overflow: hidden;
-  border: 1px solid var(--paper-border-strong);
-  border-radius: var(--paper-radius-floating);
-  background: var(--paper-bg-raised);
-  box-shadow: var(--paper-shadow-raised);
+  border: 1px solid rgba(240, 227, 231, 0.82);
+  border-radius: 26px 20px 24px 22px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 18px 44px rgba(102, 66, 82, 0.05);
   padding: clamp(1.25rem, 3vw, 1.8rem);
 }
 
@@ -2382,16 +2312,15 @@ summary {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 1rem;
-  border: 1px solid var(--paper-border);
-  border-radius: var(--paper-radius-flat);
-  background: var(--paper-bg-flat);
-  box-shadow: var(--paper-shadow-flat);
+  border: 1px solid rgba(240, 227, 231, 0.7);
+  border-radius: 18px 16px 20px 15px;
+  background: rgba(255, 255, 255, 0.66);
   padding: 0.9rem 1rem;
 }
 
 .sc-paper-strip:nth-child(2n) {
-  --sc-card-rest-transform: translateX(0.18rem);
-  transform: translateX(0.18rem);
+  --sc-card-rest-transform: translateX(0.25rem);
+  transform: translateX(0.25rem);
 }
 
 .sc-paper-strip h3 {
@@ -2420,7 +2349,7 @@ summary {
   align-items: center;
   gap: 0.85rem;
   margin-top: 1.5rem;
-  border-top: 1px dashed var(--paper-divider);
+  border-top: 1px dashed rgba(240, 227, 231, 0.95);
   padding-top: 1rem;
 }
 
@@ -2431,10 +2360,10 @@ summary {
 }
 
 .sc-paper-public-shell {
-  border: 1px solid var(--paper-border);
-  border-radius: var(--paper-radius-floating);
-  background: var(--paper-bg-flat);
-  box-shadow: var(--paper-shadow-flat);
+  border: 1px solid rgba(240, 227, 231, 0.74);
+  border-radius: 24px 20px 26px 22px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 16px 40px rgba(102, 66, 82, 0.038);
   padding-inline: clamp(1rem, 4vw, 2.5rem);
 }
 
@@ -2442,7 +2371,7 @@ summary {
   position: relative;
   margin-inline: -0.35rem;
   border-bottom-style: dashed;
-  border-bottom-color: var(--paper-divider);
+  border-bottom-color: rgba(240, 227, 231, 0.86);
   padding-inline: 0.35rem;
   transition:
     background-color 140ms ease,
@@ -2462,10 +2391,9 @@ summary {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   gap: clamp(1rem, 3vw, 1.35rem);
-  border: 1px solid var(--paper-border);
-  border-radius: var(--paper-radius-raised);
-  background: var(--paper-bg-flat);
-  box-shadow: var(--paper-shadow-flat);
+  border: 1px solid rgba(240, 227, 231, 0.72);
+  border-radius: 22px 18px 24px 18px;
+  background: rgba(255, 255, 255, 0.68);
   padding: clamp(1rem, 3vw, 1.25rem);
 }
 
@@ -2947,20 +2875,6 @@ summary {
   .sc-home-desk,
   .sc-home-posts {
     grid-template-columns: 1fr;
-  }
-
-  .sc-home-shell {
-    padding-block: 1.35rem 2rem;
-  }
-
-  .sc-paper-piece {
-    padding: 1.2rem;
-  }
-
-  .sc-home-intro.sc-paper-piece::after {
-    width: 3rem;
-    height: 3rem;
-    opacity: 0.58;
   }
 
   .sc-calendar-note {
