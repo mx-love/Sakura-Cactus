@@ -553,8 +553,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       setMessage(wasCollected ? '修订已保存。' : '已收录到博客。');
       setSaveFeedback('success');
 
-      if (!postId && !aboutMode) {
-        window.history.replaceState(null, '', `/write?post=${savedPost.id}`);
+      if (!aboutMode && !wasCollected) {
+        window.location.assign(`/posts/${encodeURIComponent(savedPost.slug)}`);
       }
     } finally {
       setIsSubmitting(false);
