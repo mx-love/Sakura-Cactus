@@ -482,19 +482,19 @@ function formatDate(date: Date | null) {
           </script>
         ) : null}
         <script>
-          import { scheduleEnhanceCodeBlocks } from '@/lib/prose-controls';
+          import { bindCodeCopyControls } from '@/lib/prose-controls';
 
-          function enhanceArticleCodeBlocks() {
-            scheduleEnhanceCodeBlocks(document.querySelector('.sc-article-prose, .prose-content'));
+          function bindArticleCodeCopyControls() {
+            bindCodeCopyControls(document.querySelector('.sc-article-prose, .prose-content') ?? document);
           }
 
           if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', enhanceArticleCodeBlocks, { once: true });
+            document.addEventListener('DOMContentLoaded', bindArticleCodeCopyControls, { once: true });
           } else {
-            window.requestAnimationFrame(enhanceArticleCodeBlocks);
+            bindArticleCodeCopyControls();
           }
 
-          window.addEventListener('pageshow', enhanceArticleCodeBlocks);
+          window.addEventListener('pageshow', bindArticleCodeCopyControls);
         </script>
       </div>
     </div>

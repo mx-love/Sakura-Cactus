@@ -14,6 +14,7 @@ const CALLOUT_LABELS = {
   CAUTION: 'Caution'
 } as const;
 const CALLOUT_MARKER_PATTERN = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:[ \t]*(?:\r?\n)?[ \t]*)?/;
+const CODE_COPY_BUTTON_HTML = '<button type="button" class="sc-code-copy" aria-label="复制代码" data-code-copy><span class="sc-code-copy-icon" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="10" height="10" rx="2"></rect><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></span></button>';
 
 export interface MarkdownHeading {
   depth: 2 | 3;
@@ -398,6 +399,101 @@ function rehypeWrapTables() {
   };
 }
 
+function createCodeCopyButtonNode() {
+  return {
+    type: 'element',
+    tagName: 'button',
+    properties: {
+      type: 'button',
+      className: ['sc-code-copy'],
+      ariaLabel: '复制代码',
+      dataCodeCopy: true
+    },
+    children: [
+      {
+        type: 'element',
+        tagName: 'span',
+        properties: {
+          className: ['sc-code-copy-icon'],
+          ariaHidden: 'true'
+        },
+        children: [
+          {
+            type: 'element',
+            tagName: 'svg',
+            properties: {
+              ariaHidden: 'true',
+              viewBox: '0 0 24 24',
+              fill: 'none'
+            },
+            children: [
+              {
+                type: 'element',
+                tagName: 'rect',
+                properties: {
+                  x: '8',
+                  y: '8',
+                  width: '10',
+                  height: '10',
+                  rx: '2'
+                },
+                children: []
+              },
+              {
+                type: 'element',
+                tagName: 'path',
+                properties: {
+                  d: 'M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'
+                },
+                children: []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function isCodeBlockPre(node: any): boolean {
+  return node?.type === 'element' &&
+    node.tagName === 'pre' &&
+    Array.isArray(node.children) &&
+    node.children.some((child: any) => child?.type === 'element' && child.tagName === 'code');
+}
+
+function hasClassName(node: any, className: string): boolean {
+  const current = node?.properties?.className;
+  const classes = Array.isArray(current) ? current : typeof current === 'string' ? current.split(/\s+/) : [];
+  return classes.includes(className);
+}
+
+function rehypeAddCodeCopyControls() {
+  return (tree: any) => {
+    visitTree(tree, (node) => {
+      if (!Array.isArray(node.children) || hasClassName(node, 'sc-code-block')) {
+        return;
+      }
+
+      node.children = node.children.map((child: any) => {
+        if (!isCodeBlockPre(child)) {
+          return child;
+        }
+
+        return {
+          type: 'element',
+          tagName: 'div',
+          properties: {
+            className: ['sc-code-block'],
+            dataCopyEnhanced: 'true'
+          },
+          children: [child, createCodeCopyButtonNode()]
+        };
+      });
+    });
+  };
+}
+
 function rehypeAddHeadingIds(headings: MarkdownHeading[]) {
   return (tree: any) => {
     const slugger = createSlugger();
@@ -487,6 +583,7 @@ function createMarkdownProcessor(headings: MarkdownHeading[]) {
     .use(rehypeRewriteAssetImages)
     .use(rehypeAddHeadingIds, headings)
     .use(rehypeSanitize, sanitizeSchema)
+    .use(rehypeAddCodeCopyControls)
     .use(rehypeNormalizeInternalHashLinks)
     .use(rehypeHardenLinksAndImages)
     .use(rehypeMarkImageCaptions)
@@ -561,6 +658,22 @@ function wrapTablesInHtml(html: string): string {
   });
 }
 
+function wrapCodeBlocksInHtml(html: string): string {
+  return html.replace(/<pre\b[^>]*>\s*<code\b[\s\S]*?<\/code>\s*<\/pre>/gi, (match, offset: number, source: string) => {
+    if (/\bsc-code-copy\b/i.test(match)) {
+      return match;
+    }
+
+    const before = source.slice(Math.max(0, offset - 160), offset);
+
+    if (/class=(["'])[^"']*\bsc-code-block\b/i.test(before)) {
+      return match;
+    }
+
+    return `<div class="sc-code-block" data-copy-enhanced="true">${match}${CODE_COPY_BUTTON_HTML}</div>`;
+  });
+}
+
 export function addHeadingIdsToHtml(html: string): { html: string; headings: MarkdownHeading[] } {
   const headings: MarkdownHeading[] = [];
   const slugger = createSlugger();
@@ -583,7 +696,7 @@ export function addHeadingIdsToHtml(html: string): { html: string; headings: Mar
     return `<h${depth}${attrs} id="${escapeHtmlAttribute(slug)}">${body}</h${depth}>`;
   });
 
-  return { html: wrapTablesInHtml(nextHtml), headings };
+  return { html: wrapTablesInHtml(wrapCodeBlocksInHtml(nextHtml)), headings };
 }
 
 export function extractFirstImageUrl(markdown: string): string | null {
