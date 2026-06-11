@@ -303,7 +303,7 @@
 .prose-content .sc-code-block::before {
   content: "";
   display: block;
-  height: 2.35rem;
+  height: 2.05rem;
   border-bottom: 1px solid rgba(15, 23, 42, 0.055);
   background: rgba(255, 255, 255, 0.32);
   pointer-events: none;
@@ -316,12 +316,12 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 0.95rem 1rem 1rem;
+  padding: 0.8rem 1rem 0.9rem;
 }
 
 .sc-code-copy {
   position: absolute;
-  top: 0.42rem;
+  top: 0.28rem;
   right: 0.62rem;
   z-index: 2;
   display: inline-flex;
@@ -441,16 +441,16 @@
 
   .sc-prose .sc-code-block pre,
   .prose-content .sc-code-block pre {
-    padding: 0.85rem 0.9rem 0.95rem;
+    padding: 0.72rem 0.9rem 0.85rem;
   }
 
   .sc-prose .sc-code-block::before,
   .prose-content .sc-code-block::before {
-    height: 2.25rem;
+    height: 2rem;
   }
 
   .sc-code-copy {
-    top: 0.38rem;
+    top: 0.24rem;
     right: 0.5rem;
     width: 1.65rem;
     height: 1.65rem;
