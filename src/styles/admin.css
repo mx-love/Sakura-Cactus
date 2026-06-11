@@ -361,10 +361,6 @@
   background: white;
 }
 
-.sc-writer-summary {
-  min-height: 6.5rem;
-}
-
 .sc-writer-publish-actions {
   display: grid;
   gap: 0.55rem;
