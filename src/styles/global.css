@@ -2740,8 +2740,7 @@ summary {
   .sc-featured-paper,
   .sc-paper-strip,
   .sc-paper-public-shell,
-  .sc-about-paper-shell,
-  .sc-friend-card {
+  .sc-about-paper-shell {
     animation: sc-paper-fade-up 420ms ease both;
   }
 
