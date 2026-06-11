@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { AssetRow } from '@/features/assets/asset.types';
-import { renderMarkdown } from '@/features/posts/post.renderer';
+import { extractAssetTokens, renderMarkdown } from '@/features/posts/post.renderer';
 import type { PostRow, PostStatus } from '@/features/posts/post.types';
 import { bindCodeCopyControls } from '@/lib/prose-controls';
 
@@ -195,18 +195,6 @@ function isImageUrl(value: string): boolean {
   } catch {
     return false;
   }
-}
-
-function extractAssetTokens(markdown: string): string[] {
-  const tokens = new Set<string>();
-  const pattern = /!\[[^\]]*]\(\s*(?:asset:|\/i\/)([A-Za-z0-9_-]{24,64})\s*\)/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(markdown)) !== null) {
-    tokens.add(match[1]);
-  }
-
-  return [...tokens];
 }
 
 export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
