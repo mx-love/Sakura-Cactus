@@ -1833,13 +1833,12 @@ summary {
   transition:
     background-color 140ms ease,
     border-color 140ms ease,
-    transform 140ms ease;
+    box-shadow 140ms ease;
 }
 
 .sc-friend-card:hover {
   border-color: rgba(217, 111, 145, 0.3);
   background: rgba(255, 248, 250, 0.96);
-  transform: translateY(-1px);
 }
 
 .sc-friend-card-hidden {
@@ -2520,14 +2519,6 @@ summary {
 .sc-friends-paper-shell .sc-friend-card {
   border-radius: 24px 18px 22px 20px;
   background: rgba(255, 255, 255, 0.72);
-}
-
-.sc-friends-paper-shell .sc-friend-card:nth-child(3n + 2) {
-  transform: translateY(0.28rem);
-}
-
-.sc-friends-paper-shell .sc-friend-card:hover {
-  transform: translateY(-1px) rotate(-0.2deg);
 }
 
 .sc-article-shell {
