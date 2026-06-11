@@ -482,14 +482,10 @@ function formatDate(date: Date | null) {
           </script>
         ) : null}
         <script>
-          import { enhanceCodeBlocks } from '@/lib/prose-controls';
+          import { scheduleEnhanceCodeBlocks } from '@/lib/prose-controls';
 
           function enhanceArticleCodeBlocks() {
-            const prose = document.querySelector('.sc-article-prose');
-
-            if (prose) {
-              enhanceCodeBlocks(prose);
-            }
+            scheduleEnhanceCodeBlocks(document.querySelector('.sc-article-prose, .prose-content'));
           }
 
           if (document.readyState === 'loading') {

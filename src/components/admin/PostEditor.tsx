@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { AssetRow } from '@/features/assets/asset.types';
 import { renderMarkdown } from '@/features/posts/post.renderer';
 import type { PostRow, PostStatus } from '@/features/posts/post.types';
-import { enhanceCodeBlocks } from '@/lib/prose-controls';
+import { scheduleEnhanceCodeBlocks } from '@/lib/prose-controls';
 
 const TEMPORARY_PAPER_KEY = 'sakura-cactus:temporary-paper';
 const TEMPORARY_PAPER_TTL_MS = 24 * 60 * 60 * 1000;
@@ -258,15 +258,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   }, []);
 
   useEffect(() => {
-    window.requestAnimationFrame(() => {
-      if (previewRef.current) {
-        enhanceCodeBlocks(previewRef.current);
-      }
-
-      if (splitPreviewRef.current) {
-        enhanceCodeBlocks(splitPreviewRef.current);
-      }
-    });
+    scheduleEnhanceCodeBlocks(previewRef.current);
+    scheduleEnhanceCodeBlocks(splitPreviewRef.current);
   }, [previewHtml, editorMode]);
 
   useEffect(() => {

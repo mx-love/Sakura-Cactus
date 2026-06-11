@@ -79,6 +79,30 @@ function setTemporarySuccess(button: HTMLButtonElement) {
   }, 1400);
 }
 
+function createCopyButton(code: Element): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'sc-code-copy';
+  button.setAttribute('aria-label', '复制代码');
+
+  const icon = document.createElement('span');
+  icon.className = 'sc-code-copy-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.append(createCopyIcon());
+  button.append(icon);
+
+  button.addEventListener('click', async () => {
+    try {
+      await copyText(code.textContent ?? '');
+      setTemporarySuccess(button);
+    } catch {
+      setButtonState(button, 'idle');
+    }
+  });
+
+  return button;
+}
+
 export function enhanceCodeBlocks(root: ParentNode = document): void {
   const codeBlocks = Array.from(root.querySelectorAll('pre > code'));
 
@@ -92,6 +116,9 @@ export function enhanceCodeBlocks(root: ParentNode = document): void {
     const existingWrapper = pre.parentElement;
 
     if (existingWrapper instanceof HTMLElement && existingWrapper.dataset.copyEnhanced === 'true') {
+      if (!existingWrapper.querySelector('.sc-code-copy')) {
+        existingWrapper.append(createCopyButton(code));
+      }
       continue;
     }
 
@@ -99,27 +126,20 @@ export function enhanceCodeBlocks(root: ParentNode = document): void {
     wrapper.className = 'sc-code-block';
     wrapper.dataset.copyEnhanced = 'true';
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'sc-code-copy';
-    button.setAttribute('aria-label', '复制代码');
-
-    const icon = document.createElement('span');
-    icon.className = 'sc-code-copy-icon';
-    icon.setAttribute('aria-hidden', 'true');
-    icon.append(createCopyIcon());
-    button.append(icon);
-
-    button.addEventListener('click', async () => {
-      try {
-        await copyText(code.textContent ?? '');
-        setTemporarySuccess(button);
-      } catch {
-        setButtonState(button, 'idle');
-      }
-    });
-
     pre.before(wrapper);
-    wrapper.append(pre, button);
+    wrapper.append(pre, createCopyButton(code));
   }
+}
+
+export function scheduleEnhanceCodeBlocks(root: ParentNode | null | undefined): void {
+  if (!root) {
+    return;
+  }
+
+  enhanceCodeBlocks(root);
+
+  window.requestAnimationFrame(() => {
+    enhanceCodeBlocks(root);
+    window.requestAnimationFrame(() => enhanceCodeBlocks(root));
+  });
 }
