@@ -80,8 +80,8 @@ function isActive(href: string) {
           <span class="sc-account-default" data-account-default>
             {avatarUrl ? (
               <>
-                <img class="sc-account-avatar" src={avatarUrl} alt="" loading="lazy" decoding="async" data-account-avatar />
-                <span class="sc-account-fallback" hidden data-account-fallback>
+                <img class="sc-account-avatar" src={avatarUrl} alt="" width="32" height="32" loading="eager" decoding="async" data-account-avatar />
+                <span class="sc-account-fallback" data-account-fallback>
                   <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 21a8 8 0 0 0-16 0" />
                     <circle cx="12" cy="7" r="4" />
@@ -496,10 +496,28 @@ function isActive(href: string) {
         }
 
         if (avatar instanceof HTMLImageElement && fallback instanceof HTMLElement) {
-          avatar.addEventListener('error', () => {
+          function showAvatar() {
+            button.classList.add('sc-account-avatar-ready');
+          }
+
+          function showFallback() {
             avatar.hidden = true;
             fallback.hidden = false;
-          });
+            button.classList.remove('sc-account-avatar-ready');
+          }
+
+          if (avatar.complete) {
+            if (avatar.naturalWidth > 0) {
+              showAvatar();
+            } else {
+              showFallback();
+            }
+          }
+
+          avatar.addEventListener('load', showAvatar, { once: true });
+          avatar.addEventListener('error', () => {
+            showFallback();
+          }, { once: true });
         }
 
         button.addEventListener('click', async () => {
