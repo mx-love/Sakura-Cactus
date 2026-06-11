@@ -93,6 +93,73 @@
   text-underline-offset: 0.22em;
 }
 
+.sc-prose .sr-only,
+.prose-content .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.sc-prose sup a[data-footnote-ref],
+.prose-content sup a[data-footnote-ref] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15em;
+  height: 1.15em;
+  border-radius: 999px;
+  background: rgba(217, 111, 145, 0.1);
+  color: var(--color-primary);
+  font-size: 0.72em;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  vertical-align: super;
+}
+
+.sc-prose section[data-footnotes],
+.prose-content section[data-footnotes] {
+  margin-top: 2.2rem;
+  border-top: 1px solid rgba(40, 30, 35, 0.1);
+  padding-top: 1rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.72;
+}
+
+.sc-prose section[data-footnotes] ol,
+.prose-content section[data-footnotes] ol {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.sc-prose section[data-footnotes] li,
+.prose-content section[data-footnotes] li {
+  padding-left: 0.2rem;
+}
+
+.sc-prose section[data-footnotes] li + li,
+.prose-content section[data-footnotes] li + li {
+  margin-top: 0.45rem;
+}
+
+.sc-prose section[data-footnotes] p,
+.prose-content section[data-footnotes] p {
+  margin: 0;
+}
+
+.sc-prose a[data-footnote-backref],
+.prose-content a[data-footnote-backref],
+.sc-prose .data-footnote-backref,
+.prose-content .data-footnote-backref {
+  margin-left: 0.35rem;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
 .sc-prose blockquote,
 .prose-content blockquote {
   border-left: 3px solid var(--color-primary-muted);

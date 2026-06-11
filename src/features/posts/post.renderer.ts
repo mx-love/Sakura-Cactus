@@ -23,7 +23,7 @@ export interface MarkdownHeading {
 
 function isSafeAnchorUrl(url: string): boolean {
   const trimmed = url.trim().toLowerCase();
-  return trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('mailto:');
+  return trimmed.startsWith('#') || trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('mailto:');
 }
 
 function isSafeImageUrl(url: string): boolean {
@@ -158,6 +158,48 @@ function rehypeHardenLinksAndImages() {
         }
 
         node.properties.loading = 'lazy';
+      }
+    });
+  };
+}
+
+function rehypeNormalizeInternalHashLinks() {
+  return (tree: any) => {
+    const ids = new Set<string>();
+
+    visitTree(tree, (node) => {
+      if (node.type !== 'element') {
+        return;
+      }
+
+      const id = typeof node.properties?.id === 'string' ? node.properties.id : '';
+
+      if (id) {
+        ids.add(id);
+      }
+    });
+
+    visitTree(tree, (node) => {
+      if (node.type !== 'element' || node.tagName !== 'a') {
+        return;
+      }
+
+      const href = typeof node.properties?.href === 'string' ? node.properties.href : '';
+
+      if (!href.startsWith('#')) {
+        return;
+      }
+
+      const target = href.slice(1);
+
+      if (!target || ids.has(target)) {
+        return;
+      }
+
+      const sanitizedTarget = `user-content-${target}`;
+
+      if (ids.has(sanitizedTarget)) {
+        node.properties.href = `#${sanitizedTarget}`;
       }
     });
   };
@@ -445,6 +487,7 @@ function createMarkdownProcessor(headings: MarkdownHeading[]) {
     .use(rehypeRewriteAssetImages)
     .use(rehypeAddHeadingIds, headings)
     .use(rehypeSanitize, sanitizeSchema)
+    .use(rehypeNormalizeInternalHashLinks)
     .use(rehypeHardenLinksAndImages)
     .use(rehypeMarkImageCaptions)
     .use(rehypeWrapTables)

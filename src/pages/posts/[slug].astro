@@ -484,7 +484,21 @@ function formatDate(date: Date | null) {
         <script>
           import { enhanceCodeBlocks } from '@/lib/prose-controls';
 
-          enhanceCodeBlocks(document);
+          function enhanceArticleCodeBlocks() {
+            const prose = document.querySelector('.sc-article-prose');
+
+            if (prose) {
+              enhanceCodeBlocks(prose);
+            }
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', enhanceArticleCodeBlocks, { once: true });
+          } else {
+            window.requestAnimationFrame(enhanceArticleCodeBlocks);
+          }
+
+          window.addEventListener('pageshow', enhanceArticleCodeBlocks);
         </script>
       </div>
     </div>
