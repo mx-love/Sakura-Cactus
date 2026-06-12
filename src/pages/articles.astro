@@ -10,6 +10,7 @@ const currentPage = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1;
 const { posts: pagePosts, totalCount } = await getPublicPostsPage(currentPage, pageSize);
 const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 const isOutOfRange = totalCount > 0 && currentPage > totalPages;
+const canonicalUrl = currentPage > 1 ? `https://fymi.link/articles?page=${currentPage}` : 'https://fymi.link/articles';
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -22,7 +23,7 @@ function formatDate(value: string | null) {
 }
 ---
 
-<SiteLayout title="文章 | Sakura Cactus" description="我收录的文章。">
+<SiteLayout title="文章 | Sakura Cactus" description="我收录的文章。" canonicalUrl={canonicalUrl}>
   <section class="sc-page">
     <div class="sc-public-shell sc-list-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">

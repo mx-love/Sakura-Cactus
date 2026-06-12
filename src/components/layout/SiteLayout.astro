@@ -8,6 +8,7 @@ interface Props {
   title?: string;
   description?: string;
   canonicalUrl?: string;
+  robots?: string;
   ogImage?: string;
   preconnectOrigins?: string[];
   showHeader?: boolean;
@@ -18,6 +19,7 @@ const {
   title = env.SITE_NAME?.trim() || 'Sakura Cactus',
   description = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。',
   canonicalUrl,
+  robots,
   ogImage,
   preconnectOrigins = [],
   showHeader = true,
@@ -63,6 +65,7 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
+    {robots ? <meta name="robots" content={robots} /> : null}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}

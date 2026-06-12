@@ -3,6 +3,7 @@ import { getPublicSitemapPosts } from '@/features/posts/post.service';
 import { getPublicTags } from '@/features/tags/tag.service';
 
 export const prerender = false;
+const SITE_ORIGIN = 'https://fymi.link';
 
 function absoluteUrl(path: string, siteUrl: string): string {
   return new URL(path, siteUrl).toString();
@@ -37,8 +38,8 @@ function sitemapUrl(path: string, siteUrl: string, options: { lastmod?: string; 
   </url>`;
 }
 
-export const GET: APIRoute = async ({ request }) => {
-  const siteUrl = new URL(request.url).origin;
+export const GET: APIRoute = async () => {
+  const siteUrl = SITE_ORIGIN;
   const now = new Date().toISOString();
   const posts = await getPublicSitemapPosts();
   const tags = (await getPublicTags()).filter((tag) => tag.post_count > 0);
@@ -49,8 +50,7 @@ export const GET: APIRoute = async ({ request }) => {
     sitemapUrl('/timeline', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '0.7' }),
     sitemapUrl('/tags', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '0.7' }),
     sitemapUrl('/friends', siteUrl, { lastmod: now, changefreq: 'monthly', priority: '0.5' }),
-    sitemapUrl('/about', siteUrl, { lastmod: now, changefreq: 'monthly', priority: '0.6' }),
-    sitemapUrl('/search', siteUrl, { lastmod: now, changefreq: 'monthly', priority: '0.4' })
+    sitemapUrl('/about', siteUrl, { lastmod: now, changefreq: 'monthly', priority: '0.6' })
   ];
 
   const postUrls = posts.map((post) =>

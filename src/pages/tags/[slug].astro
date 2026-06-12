@@ -17,6 +17,8 @@ if (!slug || !tag) {
   return new Response('Not found', { status: 404 });
 }
 
+const canonicalUrl = `https://fymi.link/tags/${tag.slug}`;
+
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
   month: '2-digit',
@@ -28,7 +30,7 @@ function formatDate(value: string | null) {
 }
 ---
 
-<SiteLayout title={`${tag.name} | Sakura Cactus`} description={`${tag.name} 标签下的公开文章。`}>
+<SiteLayout title={`${tag.name} | Sakura Cactus`} description={`${tag.name} 标签下的公开文章。`} canonicalUrl={canonicalUrl}>
   <section class="sc-page">
     <div class="sc-public-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">

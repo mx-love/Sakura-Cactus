@@ -43,6 +43,7 @@ const adminStatusNote = getAdminStatusNote();
 <SiteLayout
   title={aboutPost ? `${aboutPost.title} | Sakura Cactus` : '关于 | Sakura Cactus'}
   description={aboutPost?.excerpt ?? '关于 Sakura Cactus。'}
+  canonicalUrl="https://fymi.link/about"
   ogImage={aboutPost?.coverImageUrl ?? undefined}
 >
   <section class="sc-page">
