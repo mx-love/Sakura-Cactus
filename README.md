@@ -1,108 +1,45 @@
 # Sakura Cactus
 
-Sakura Cactus 是一个基于 Astro + Cloudflare Workers 的个人博客系统，包含公开博客、Markdown 写作后台、图片上传、友人帐和站点设置。
+Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统，适合用于文章、笔记、随笔和长期归档。项目使用 Cloudflare D1 保存内容与设置，使用 Cloudflare R2 保存图片和媒体文件。
 
-## 项目目的
+## 核心功能
 
-Sakura Cactus 不是传统静态博客，也不是大型 CMS。
-
-它的目标是做一个轻量、安静、适合个人长期写作的博客：
-
-- 文章写作和收录在自己的后台完成
-- Markdown 为核心
-- 图片存到 Cloudflare R2
-- 数据存到 Cloudflare D1
-- 部署在 Cloudflare Workers
-- 尽量少依赖外部服务
-- 适合个人博客、笔记、随笔和长期归档
+- Markdown 写作后台，支持编辑、预览、发布、修订、置顶和删除
+- 公开博客页面，包含首页、文章列表、文章详情、标签、时间轴、搜索、关于页和友人帐
+- Cloudflare D1 存储文章、标签、设置、友链和会话数据
+- Cloudflare R2 管理图片和媒体文件，支持上传、粘贴、拖拽和复用
+- 站点设置、友链申请、友链健康检查、访问量开关和 favicon 外链
+- [Waline](https://waline.js.org/) 评论入口，评论数据由外部 Waline 服务保存
+- 支持 RSS、sitemap、robots、canonical、Open Graph 和结构化数据。
+- 适配 Cloudflare Workers SSR 部署
 
 ## 技术栈
 
 | 类型 | 技术 |
 | --- | --- |
-| 前端框架 | Astro |
-| UI 交互 | React / TypeScript |
-| 部署运行 | Cloudflare Workers |
+| Web 框架 | Astro |
+| 交互组件 | React |
+| 语言 | TypeScript |
+| 运行环境 | Cloudflare Workers |
 | 数据库 | Cloudflare D1 |
-| 图片存储 | Cloudflare R2 |
-| Markdown | unified / remark / rehype sanitize |
-| 样式 | 原生 CSS |
+| 媒体存储 | Cloudflare R2 |
+| 静态资源 | Cloudflare Workers Assets |
+| Markdown | unified / remark / rehype |
+| 样式 | Tailwind CSS / CSS |
 | 包管理 | pnpm |
-| 版本管理 | GitHub |
 
-Sakura Cactus 不是 Cloudflare Pages 静态站，而是 Cloudflare Workers SSR 应用。
+## 快速部署
 
-## 已实现功能
+1. Fork 项目。
+2. 创建 D1 数据库，名称固定为 `sakura_blog_prod`。
+3. 创建 R2 Bucket，名称固定为 `sakura-blog-media-prod`。
+4. 在 Cloudflare Workers 中连接 GitHub。
+5. 填写构建命令、部署命令和 Build variables。
+6. 首次部署后添加后台账号密码和站点变量。
+7. 配置 `SITE_URL`，按需绑定自定义域名。
+8. 重新部署并访问 `/admin/login`。
 
-公开博客：
-
-- 首页
-- 文章列表
-- 时间轴
-- 标签
-- 文章详情
-- 文章目录 TOC
-- RSS
-- sitemap
-- robots
-- 搜索
-- 关于页
-- 友人帐
-
-写作后台：
-
-- 管理员登录
-- Markdown 编辑
-- 实时预览 / 分屏
-- 临时纸页：暂存到当前浏览器，24 小时后失效
-- 收录 / 保存修订
-- 置顶
-- 删除
-- 图片上传 / 粘贴 / 拖拽
-- R2 图片生命周期管理
-
-站点功能：
-
-- 友链管理
-- 友链申请开关
-- 友链健康监测
-- 外部评论接入：Waline
-- 访问量开关
-- favicon 外链设置
-- 站点维护清理
-
-部署体验：
-
-- Cloudflare Dashboard 可视化部署
-- D1 schema 自动初始化
-- 不需要手动执行 migrations 才能首次使用
-- RSS / sitemap / robots 自动使用当前访问域名
-- 不需要 `SITE_URL`
-
-## Cloudflare 快速部署
-
-1. Fork 或上传项目到 GitHub。
-2. 在 Cloudflare Workers 中连接 GitHub 仓库。
-3. 创建 D1 数据库。
-4. 创建 R2 Bucket。
-5. 在 Cloudflare Variables 中填写：
-   - `SAKURA_D1_DATABASE_ID`
-   - `SAKURA_D1_DATABASE_NAME` 可选
-   - `SAKURA_R2_BUCKET_NAME` 可选
-6. 添加 Secrets：
-   - `ADMIN_USERNAME`
-   - `ADMIN_PASSWORD`
-7. 可选添加 Variables：
-   - `SITE_NAME`
-   - `SITE_TAGLINE`
-   - `SITE_DESCRIPTION`
-   - `SITE_AVATAR_URL`
-   - `PUBLIC_COMMENTS_SERVER_URL` 可选，仅在已部署 Waline 评论服务时填写
-8. 部署 Worker。
-9. 绑定自定义域名。
-10. 打开 `/admin/login` 登录后台。
-
-Cloudflare 构建命令：
+Build command：
 
 ```bash
 pnpm install --frozen-lockfile && node scripts/prepare-cloudflare-config.mjs && pnpm build
@@ -114,140 +51,62 @@ Deploy command：
 npx wrangler deploy
 ```
 
-部署注意：
+Build variables：
 
-- R2 Bucket 保持私有。
-- 图片通过 `/i/:token` 由 Worker 代理访问。
-- 不需要 R2 自定义域名。
-- 不需要 `SITE_URL`。
-- D1 首次访问会自动建表。
-- 构建脚本会把 Cloudflare Variables 转成 Wrangler 的 `DB` / `MEDIA_BUCKET` bindings。
-- `wrangler.jsonc` 里的 `keep_vars: true` 会保留 Cloudflare Dashboard 中配置的 Variables 和 Secrets。
+```env
+SAKURA_D1_DATABASE_ID=你的 D1 Database ID
+SAKURA_R2_BUCKET_NAME=sakura-blog-media-prod
+```
+
+两项都选择“文本”。
+
+构建脚本会自动生成 D1 和 R2 bindings，不需要在运行时变量中手动添加 `DB` 或 `MEDIA_BUCKET`。D1 首次运行会自动初始化；R2 Bucket 应保持私有，图片通过 `/i/:token` 代理访问，不需要为 R2 配置公开自定义域名。
 
 ## 环境变量
 
-| 名称 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `ADMIN_USERNAME` | Secret | 是 | 后台用户名 |
-| `ADMIN_PASSWORD` | Secret | 是 | 后台密码 |
-| `SAKURA_D1_DATABASE_ID` | Variable | 是 | D1 Database ID，用于生成 Wrangler binding |
-| `SAKURA_D1_DATABASE_NAME` | Variable | 否 | D1 名称，默认 sakura_blog_prod |
-| `SAKURA_R2_BUCKET_NAME` | Variable | 否 | R2 Bucket 名称，默认 sakura-blog-media-prod |
-| `SITE_NAME` | Variable | 否 | 站点名称，默认 Sakura Cactus |
-| `SITE_TAGLINE` | Variable | 否 | 首页标语 |
-| `SITE_DESCRIPTION` | Variable | 否 | 首页描述 / RSS 描述 |
-| `SITE_AVATAR_URL` | Variable | 否 | Header 头像 URL |
-| `PUBLIC_COMMENTS_SERVER_URL` | Variable | 否 | 外部 Waline 服务地址，例如 `https://your-waline.example.com` |
+Cloudflare 中的变量值都会以字符串形式提供给 Worker。普通配置选择“文本（Text）”，密码等敏感内容选择“密钥（Secret）”。
 
-高级说明：`ADMIN_PASSWORD_HASH` 仍可作为高级方式替代 `ADMIN_PASSWORD`。如果同时配置 `ADMIN_PASSWORD_HASH` 和 `ADMIN_PASSWORD`，系统会优先使用 `ADMIN_PASSWORD_HASH`。
-
-不要把这些值提交到 GitHub。`.dev.vars`、真实密码、Cloudflare Token、R2 密钥都应该只保存在本地或 Cloudflare Secrets 中。
-
-## Worker Bindings
-
-| Binding | 类型 | 说明 |
-| --- | --- | --- |
-| `DB` | D1 Database | 存储文章、标签、设置、友链等数据 |
-| `MEDIA_BUCKET` | R2 Bucket | 存储文章图片 |
-| `ASSETS` | Assets | Cloudflare 构建产物绑定，保留默认即可 |
-
-Binding 名称不要改。项目代码默认读取 `DB` 和 `MEDIA_BUCKET`。
-
-Cloudflare Git 自动部署会运行 Wrangler，并以构建后的 Wrangler 配置为准。`scripts/prepare-cloudflare-config.mjs` 会在构建时读取 `SAKURA_D1_DATABASE_ID` / `SAKURA_R2_BUCKET_NAME`，生成 `DB` 和 `MEDIA_BUCKET` bindings，避免 Dashboard 手动绑定被 deploy 覆盖。
+| 名称 | 填写位置 | 必填 | 保存方式 | 说明 |
+| --- | --- | --- | --- | --- |
+| `SAKURA_D1_DATABASE_ID` | Git 构建设置中的 Build variables | 是 | 文本（Text） | D1 Database ID，用于构建时生成绑定 |
+| `SAKURA_R2_BUCKET_NAME` | Git 构建设置中的 Build variables | 是 | 文本（Text） | R2 Bucket 名称，固定填写 `sakura-blog-media-prod` |
+| `ADMIN_USERNAME` | Worker → 设置 → 变量和密钥 | 是 | 文本（Text） | 后台登录用户名 |
+| `ADMIN_PASSWORD` | Worker → 设置 → 变量和密钥 | 是 | 密钥（Secret） | 后台登录密码 |
+| `SITE_URL` | Worker → 设置 → 变量和密钥 | 生产建议填写 | 文本（Text） | 站点地址，包含协议，例如 `https://blog.example.com`，末尾不加 `/`；使用自定义域名时填写自定义域名，只使用 `workers.dev` 时填写自己的 Worker 地址 |
+| `SITE_NAME` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点名称 |
+| `SITE_TAGLINE` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 首页标语 |
+| `SITE_DESCRIPTION` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点描述 |
+| `SITE_AVATAR_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 登录后 Header 头像地址 |
+| `PUBLIC_COMMENTS_SERVER_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 自己部署的 Waline 服务端地址 |
 
 ## 本地开发
 
 ```bash
 pnpm install
 pnpm dev
-```
-
-Windows PowerShell 如果拦截 `pnpm`，使用：
-
-```powershell
-pnpm.cmd dev
-```
-
-本地开发可以创建 `.dev.vars`：
-
-```txt
-ADMIN_USERNAME=sakura
-ADMIN_PASSWORD=change-me
-```
-
-可选站点文案：
-
-```txt
-SITE_NAME=Sakura Cactus
-SITE_TAGLINE=温柔地写，安静地收录。
-SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
-SITE_AVATAR_URL=https://example.com/avatar.png
-```
-
-可选评论服务：
-
-```txt
-PUBLIC_COMMENTS_SERVER_URL=https://your-waline.example.com
-```
-
-## 外部评论
-
-Sakura Cactus 不自建评论系统，不新增评论表，也不提供评论 API。评论内容由外部 Waline 服务保存。
-
-如果要启用评论，先部署自己的 Waline 服务，然后在 Cloudflare Workers Variables 中添加：
-
-```txt
-PUBLIC_COMMENTS_SERVER_URL=https://your-waline.example.com
-```
-
-是否显示评论由后台 `/settings` 中已有的“评论”开关控制。不需要配置 `PUBLIC_COMMENTS_ENABLED`，不需要配置 `PUBLIC_COMMENTS_PROVIDER`，也不需要新增 D1 或 R2。真实 Waline 服务地址只填写到部署平台环境变量中，不要提交到 GitHub。
-
-构建检查：
-
-```bash
 pnpm build
 ```
 
-Windows：
+Windows PowerShell：
 
-```powershell
+```bash
+pnpm.cmd dev
 pnpm.cmd build
 ```
 
-## 数据库说明
+## 安全说明
 
-Sakura Cactus 会在首次运行时自动初始化 D1 schema。
+- 不提交 `.env` 和 `.dev.vars`
+- 不提交密码、Token 或密钥
+- 后台密码使用 Cloudflare“密钥”
+- R2 Bucket 保持私有
 
-`migrations/*.sql` 仍然保留，方便开发者本地开发或手动维护数据库。
+## 致谢
 
-开发者本地迁移命令：
+感谢 Astro、Cloudflare Workers、Cloudflare D1、Cloudflare R2、React、unified 生态和 Waline 等项目与平台。
 
-```powershell
-pnpm.cmd db:migration:apply:local
-```
+Sakura Cactus 是独立开发的开源项目，与 Astro、Cloudflare 及上述项目不存在官方隶属、合作或背书关系。
 
-## 登录后台
+## License
 
-部署完成后访问：
-
-```txt
-/admin/login
-```
-
-登录后可以进入：
-
-- `/write` 写文章
-- `/about` 编辑关于页面
-- `/settings` 设置
-- `/friends` 管理友人帐
-
-## 安全提示
-
-- 不要提交 `.dev.vars`
-- 不要提交 `.env`
-- 不要提交真实密码
-- 不要提交 Cloudflare API Token
-- 不要公开 R2 Bucket
-- 生产环境中 D1 和 R2 必须通过 Worker bindings 绑定
-
-图片访问由 Sakura Cactus 的 `/i/:token` 代理完成，不需要公开 R2。
+本项目基于 [MIT License](./LICENSE) 开源。
