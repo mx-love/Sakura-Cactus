@@ -1,6 +1,7 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getPublicPosts } from '@/features/posts/post.service';
+import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
 
 export const prerender = false;
@@ -10,6 +11,15 @@ const latestPosts = posts.slice(0, 5);
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地收录。';
 const siteDescription = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。';
+const homeCanonicalUrl = absoluteSiteUrl('/');
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: siteName,
+  description: siteDescription,
+  url: homeCanonicalUrl,
+  inLanguage: 'zh-CN'
+};
 const leadPost = latestPosts[0] ?? null;
 const notePosts = latestPosts.slice(1);
 const leadCoverOrigin = getExternalOrigin(leadPost?.coverImageUrl);
@@ -89,7 +99,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
 
 ---
 
-<SiteLayout canonicalUrl="https://fymi.link/" preconnectOrigins={preconnectOrigins}>
+<SiteLayout canonicalUrl={homeCanonicalUrl} robots={ROBOTS_INDEX_FOLLOW} jsonLd={websiteJsonLd} preconnectOrigins={preconnectOrigins}>
   <section class="sc-page">
     <div class="sc-public-shell">
       <div class="sc-home-desk">

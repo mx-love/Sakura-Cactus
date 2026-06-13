@@ -3,6 +3,7 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminFriendLinks, getApprovedFriendLinks } from '@/features/friends/friend.service';
 import { getSiteSettings } from '@/features/settings/settings.service';
+import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
 
@@ -12,6 +13,7 @@ const isAdmin = Boolean(adminUser);
 const canApply = settings.friendApplyEnabled && !isAdmin;
 const friends = isAdmin ? await getAdminFriendLinks() : await getApprovedFriendLinks();
 const friendsJson = JSON.stringify(friends).replaceAll('<', '\\u003c');
+const canonicalUrl = absoluteSiteUrl('/friends');
 
 function getInitial(name: string): string {
   return name.trim().slice(0, 1).toUpperCase() || '友';
@@ -54,7 +56,7 @@ function formatCheckedAt(value: string | null): string {
 }
 ---
 
-<SiteLayout title="友人帐 | Sakura Cactus" description="枯叶落处各异，百花各自争鸣。" canonicalUrl="https://fymi.link/friends">
+<SiteLayout title="友人帐 | Sakura Cactus" description="枯叶落处各异，百花各自争鸣。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-shell sc-friends-shell sc-friends-paper-shell">
       <nav class="sc-breadcrumb" aria-label="Breadcrumb">

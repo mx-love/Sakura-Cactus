@@ -2,6 +2,7 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getSiteSettings } from '@/features/settings/settings.service';
+import { ROBOTS_NOINDEX_NOFOLLOW } from '@/lib/seo';
 
 export const prerender = false;
 
@@ -15,7 +16,7 @@ const settings = await getSiteSettings();
 const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
 ---
 
-<SiteLayout title="设置 | Sakura Cactus" description="Sakura Cactus 设置">
+<SiteLayout title="设置 | Sakura Cactus" description="Sakura Cactus 设置" robots={ROBOTS_NOINDEX_NOFOLLOW}>
   <section class="sc-settings-page">
     <div class="sc-settings-shell">
       <header class="sc-settings-header">

@@ -6,6 +6,7 @@ import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdjacentPublicPosts, getAdminPostBySlug, getPublicPostBySlug } from '@/features/posts/post.service';
 import { addHeadingIdsToHtml } from '@/features/posts/post.renderer';
 import { getPostViewCount, getSiteSettings } from '@/features/settings/settings.service';
+import { ROBOTS_INDEX_FOLLOW, ROBOTS_NOINDEX_NOFOLLOW, absoluteSiteUrl, summarizeHtml } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
 
 export const prerender = false;
@@ -25,13 +26,15 @@ if (!post) {
 }
 
 const siteSettings = await getSiteSettings();
+const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const viewCount = siteSettings.viewCountEnabled ? await getPostViewCount(post.id) : null;
 const title = post.seoTitle ?? post.title;
-const description = post.seoDescription ?? post.excerpt ?? 'Sakura Cactus post.';
-const canonicalUrl = new URL(`/posts/${post.slug}`, Astro.url.origin).href;
+const description = post.seoDescription ?? post.excerpt ?? summarizeHtml(post.contentHtml, post.title);
+const canonicalUrl = absoluteSiteUrl(`/posts/${post.slug}`);
 const ogImage = post.coverImageUrl?.startsWith('/')
-  ? new URL(post.coverImageUrl, Astro.url.origin).href
+  ? absoluteSiteUrl(post.coverImageUrl)
   : post.coverImageUrl;
+const robots = publicPost ? ROBOTS_INDEX_FOLLOW : ROBOTS_NOINDEX_NOFOLLOW;
 const publishedAt = post.publishedAt ? new Date(post.publishedAt) : null;
 const updatedAt = new Date(post.updatedAt);
 const shouldShowUpdatedAt = publishedAt ? updatedAt.getTime() - publishedAt.getTime() > 60_000 : false;
@@ -42,6 +45,28 @@ const renderedContent = addHeadingIdsToHtml(post.contentHtml);
 const tocHeadings = renderedContent.headings.filter((heading) => heading.depth === 2);
 const showToc = tocHeadings.length >= 2;
 const commentsServerURL = env.PUBLIC_COMMENTS_SERVER_URL?.trim() || '';
+const blogPostingJsonLd = publicPost && post.publishedAt
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: post.title,
+      description,
+      url: canonicalUrl,
+      mainEntityOfPage: {
+        '@type': 'WebPage',
+        '@id': canonicalUrl
+      },
+      datePublished: post.publishedAt,
+      dateModified: post.updatedAt,
+      author: {
+        '@type': 'Person',
+        name: siteName,
+        url: absoluteSiteUrl('/about')
+      },
+      inLanguage: 'zh-CN',
+      ...(ogImage ? { image: ogImage } : {})
+    }
+  : undefined;
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -55,7 +80,7 @@ function formatDate(date: Date | null) {
 
 ---
 
-<SiteLayout title={`${title} | Sakura Cactus`} description={description} canonicalUrl={canonicalUrl} ogImage={ogImage ?? undefined}>
+<SiteLayout title={`${title} | Sakura Cactus`} description={description} canonicalUrl={canonicalUrl} robots={robots} ogImage={ogImage ?? undefined} jsonLd={blogPostingJsonLd}>
   <article class="sc-page">
     <div class="sc-reading-progress" aria-hidden="true">
       <span class="sc-reading-progress-bar" data-reading-progress></span>

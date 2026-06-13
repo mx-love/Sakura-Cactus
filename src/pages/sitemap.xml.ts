@@ -1,13 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getPublicSitemapPosts } from '@/features/posts/post.service';
-import { getPublicTags } from '@/features/tags/tag.service';
+import { absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
-const SITE_ORIGIN = 'https://fymi.link';
-
-function absoluteUrl(path: string, siteUrl: string): string {
-  return new URL(path, siteUrl).toString();
-}
 
 function escapeXml(value: string | null | undefined): string {
   return String(value ?? '')
@@ -28,49 +23,36 @@ function toLastMod(value: string | null | undefined): string | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
-function sitemapUrl(path: string, siteUrl: string, options: { lastmod?: string; changefreq?: string; priority?: string } = {}): string {
+function sitemapUrl(path: string, options: { lastmod?: string; changefreq?: string; priority?: string } = {}): string {
   const lastmod = options.lastmod ? `\n    <lastmod>${escapeXml(options.lastmod)}</lastmod>` : '';
   const changefreq = options.changefreq ? `\n    <changefreq>${escapeXml(options.changefreq)}</changefreq>` : '';
   const priority = options.priority ? `\n    <priority>${escapeXml(options.priority)}</priority>` : '';
 
   return `  <url>
-    <loc>${escapeXml(absoluteUrl(path, siteUrl))}</loc>${lastmod}${changefreq}${priority}
+    <loc>${escapeXml(absoluteSiteUrl(path))}</loc>${lastmod}${changefreq}${priority}
   </url>`;
 }
 
 export const GET: APIRoute = async () => {
-  const siteUrl = SITE_ORIGIN;
-  const now = new Date().toISOString();
   const posts = await getPublicSitemapPosts();
-  const tags = (await getPublicTags()).filter((tag) => tag.post_count > 0);
 
   const staticUrls = [
-    sitemapUrl('/', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '1.0' }),
-    sitemapUrl('/articles', siteUrl, { lastmod: now, changefreq: 'daily', priority: '0.9' }),
-    sitemapUrl('/timeline', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '0.7' }),
-    sitemapUrl('/tags', siteUrl, { lastmod: now, changefreq: 'weekly', priority: '0.7' }),
-    sitemapUrl('/friends', siteUrl, { lastmod: now, changefreq: 'monthly', priority: '0.5' }),
-    sitemapUrl('/about', siteUrl, { lastmod: now, changefreq: 'monthly', priority: '0.6' })
+    sitemapUrl('/', { changefreq: 'weekly', priority: '1.0' }),
+    sitemapUrl('/articles', { changefreq: 'daily', priority: '0.9' }),
+    sitemapUrl('/about', { changefreq: 'monthly', priority: '0.6' })
   ];
 
   const postUrls = posts.map((post) =>
-    sitemapUrl(`/posts/${post.slug}`, siteUrl, {
+    sitemapUrl(`/posts/${post.slug}`, {
       lastmod: toLastMod(post.updated_at || post.published_at),
       changefreq: 'monthly',
       priority: '0.8'
     })
   );
 
-  const tagUrls = tags.map((tag) =>
-    sitemapUrl(`/tags/${tag.slug}`, siteUrl, {
-      changefreq: 'weekly',
-      priority: '0.6'
-    })
-  );
-
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${[...staticUrls, ...postUrls, ...tagUrls].join('\n')}
+${[...staticUrls, ...postUrls].join('\n')}
 </urlset>`;
 
   return new Response(xml, {

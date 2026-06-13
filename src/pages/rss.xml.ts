@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { getPublicFeedPosts } from '@/features/posts/post.service';
 import { decodeHtmlEntities } from '@/features/posts/post.renderer';
+import { getSiteOrigin } from '@/lib/seo';
 
 export const prerender = false;
 
@@ -37,8 +38,8 @@ function toRssDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? '' : date.toUTCString();
 }
 
-export const GET: APIRoute = async ({ request }) => {
-  const siteUrl = new URL(request.url).origin;
+export const GET: APIRoute = async () => {
+  const siteUrl = getSiteOrigin();
   const siteIdentity = readSiteIdentity();
   const posts = await getPublicFeedPosts(50);
 

@@ -1,6 +1,7 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getPublicPosts } from '@/features/posts/post.service';
+import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
 
@@ -35,9 +36,10 @@ const archive = posts.reduce<Record<string, Record<string, typeof posts>>>((acc,
 }, {});
 
 const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
+const canonicalUrl = absoluteSiteUrl('/timeline');
 ---
 
-<SiteLayout title="时间轴 | Sakura Cactus" description="公开文章按收录时间归档。" canonicalUrl="https://fymi.link/timeline">
+<SiteLayout title="时间轴 | Sakura Cactus" description="公开文章按收录时间归档。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-public-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">

@@ -1,16 +1,12 @@
 import type { APIRoute } from 'astro';
+import { absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
 
-const SITE_ORIGIN = 'https://fymi.link';
-
 export const GET: APIRoute = async () => {
-  const sitemapUrl = new URL('/sitemap.xml', SITE_ORIGIN).toString();
+  const sitemapUrl = absoluteSiteUrl('/sitemap.xml');
   const text = `User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /write
-Disallow: /settings
 Disallow: /api/
 Disallow: /i/
 

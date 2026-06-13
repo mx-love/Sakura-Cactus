@@ -2,6 +2,7 @@
 import SiteLayout from './SiteLayout.astro';
 import { SignOutButton } from '@/components/admin/SignOutButton';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { ROBOTS_NOINDEX_NOFOLLOW } from '@/lib/seo';
 
 interface Props {
   title?: string;
@@ -28,7 +29,7 @@ if (!user) {
 const pathname = Astro.url.pathname;
 ---
 
-<SiteLayout title={title} showHeader={false}>
+<SiteLayout title={title} robots={ROBOTS_NOINDEX_NOFOLLOW} showHeader={false}>
   <section class="sc-admin-page">
     {
       !bare ? (

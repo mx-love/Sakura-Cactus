@@ -1,10 +1,12 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
+const canonicalUrl = absoluteSiteUrl('/search');
 ---
 
-<SiteLayout title="搜索 | Sakura Cactus" description="搜索公开文章。" robots="noindex,follow">
+<SiteLayout title="搜索 | Sakura Cactus" description="搜索公开文章。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">

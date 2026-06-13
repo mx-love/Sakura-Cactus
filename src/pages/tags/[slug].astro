@@ -2,6 +2,7 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getPublicPosts } from '@/features/posts/post.service';
 import { getPublicTags } from '@/features/tags/tag.service';
+import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
 
@@ -17,7 +18,7 @@ if (!slug || !tag) {
   return new Response('Not found', { status: 404 });
 }
 
-const canonicalUrl = `https://fymi.link/tags/${tag.slug}`;
+const canonicalUrl = absoluteSiteUrl(`/tags/${tag.slug}`);
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
@@ -30,7 +31,7 @@ function formatDate(value: string | null) {
 }
 ---
 
-<SiteLayout title={`${tag.name} | Sakura Cactus`} description={`${tag.name} 标签下的公开文章。`} canonicalUrl={canonicalUrl}>
+<SiteLayout title={`${tag.name} | Sakura Cactus`} description={`${tag.name} 标签下的公开文章。`} canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-public-shell sc-paper-public-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">

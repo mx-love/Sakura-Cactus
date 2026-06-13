@@ -1,11 +1,12 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { LoginForm } from '@/components/admin/LoginForm';
+import { ROBOTS_NOINDEX_NOFOLLOW } from '@/lib/seo';
 
 const next = Astro.url.searchParams.get('next') ?? '/write';
 ---
 
-<SiteLayout title="登录 | Sakura Cactus" showHeader={false}>
+<SiteLayout title="登录 | Sakura Cactus" robots={ROBOTS_NOINDEX_NOFOLLOW} showHeader={false}>
   <section class="sc-page flex min-h-screen items-center px-4 py-12 text-[var(--color-text)]">
     <div class="mx-auto w-full max-w-sm">
       <a class="mb-10 block text-center text-lg font-extrabold tracking-tight" href="/">Sakura Cactus</a>

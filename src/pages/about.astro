@@ -3,6 +3,7 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminAboutPost, getPublicAboutPost } from '@/features/posts/post.service';
+import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
 
@@ -38,12 +39,14 @@ function getAdminStatusNote() {
 }
 
 const adminStatusNote = getAdminStatusNote();
+const canonicalUrl = absoluteSiteUrl('/about');
 ---
 
 <SiteLayout
   title={aboutPost ? `${aboutPost.title} | Sakura Cactus` : '关于 | Sakura Cactus'}
   description={aboutPost?.excerpt ?? '关于 Sakura Cactus。'}
-  canonicalUrl="https://fymi.link/about"
+  canonicalUrl={canonicalUrl}
+  robots={ROBOTS_INDEX_FOLLOW}
   ogImage={aboutPost?.coverImageUrl ?? undefined}
 >
   <section class="sc-page">

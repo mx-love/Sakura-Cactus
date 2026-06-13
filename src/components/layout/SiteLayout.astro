@@ -2,6 +2,7 @@
 import '@/styles/global.css';
 import SiteHeader from './SiteHeader.astro';
 import { getSiteSettings } from '@/features/settings/settings.service';
+import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl, createJsonLd } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
   canonicalUrl?: string;
   robots?: string;
   ogImage?: string;
+  jsonLd?: unknown | unknown[];
   preconnectOrigins?: string[];
   showHeader?: boolean;
   showFooter?: boolean;
@@ -19,8 +21,9 @@ const {
   title = env.SITE_NAME?.trim() || 'Sakura Cactus',
   description = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。',
   canonicalUrl,
-  robots,
+  robots = ROBOTS_INDEX_FOLLOW,
   ogImage,
+  jsonLd,
   preconnectOrigins = [],
   showHeader = true,
   showFooter = showHeader
@@ -46,6 +49,8 @@ const footerLinks = [
 const siteSettings = await getSiteSettings();
 const faviconHref = siteSettings.faviconUrl || '/favicon.svg';
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
+const rssUrl = absoluteSiteUrl('/rss.xml');
+const jsonLdItems = (Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : []).map(createJsonLd);
 const safePreconnectOrigins = [...new Set(preconnectOrigins)]
   .filter((origin) => {
     try {
@@ -71,8 +76,9 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
     {ogImage ? <meta property="og:image" content={ogImage} /> : null}
     {safePreconnectOrigins.map((origin) => <link rel="preconnect" href={origin} />)}
-    <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href={rssUrl} />
     {siteSettings.faviconUrl ? <link rel="icon" href={faviconHref} /> : <link rel="icon" type="image/svg+xml" href={faviconHref} />}
+    {jsonLdItems.map((item) => <script type="application/ld+json" set:html={item} />)}
     <title>{title}</title>
   </head>
   <body>
