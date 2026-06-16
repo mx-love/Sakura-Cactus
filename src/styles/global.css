@@ -545,17 +545,22 @@ summary {
 }
 
 .sc-home-intro {
-  max-width: 42rem;
-  padding-block: clamp(1.25rem, 4vw, 3rem);
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  max-width: none;
+  padding-block: 0;
 }
 
 .sc-home-intro h1 {
   margin: 0;
   color: var(--color-text);
-  font-size: clamp(1.85rem, 4.6vw, 2.55rem);
-  font-weight: 850;
-  letter-spacing: 0;
-  line-height: 1.18;
+  font-family: Georgia, "Times New Roman", "Songti SC", "STSong", serif;
+  font-size: clamp(2rem, 4.8vw, 2.85rem);
+  font-weight: 580;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  text-wrap: balance;
 }
 
 .sc-page-header h1 {
@@ -568,19 +573,33 @@ summary {
 }
 
 .sc-home-signature {
-  margin: 0.85rem 0 0;
+  position: relative;
+  max-width: 17em;
+  margin: 1.05rem 0 0;
+  padding-bottom: 1rem;
   color: var(--color-text);
-  font-size: clamp(1.08rem, 2.15vw, 1.22rem);
-  font-weight: 520;
-  line-height: 1.78;
+  font-size: clamp(1.08rem, 1.95vw, 1.18rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.76;
+}
+
+.sc-home-signature::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2rem;
+  height: 1px;
+  background: rgba(217, 111, 145, 0.42);
 }
 
 .sc-home-description {
-  max-width: 40rem;
-  margin: 0.68rem 0 0;
+  max-width: 22em;
+  margin: 1rem 0 0;
   color: var(--color-muted);
-  font-size: 1rem;
-  line-height: 1.8;
+  font-size: 0.98rem;
+  line-height: 1.92;
 }
 
 .sc-page-header p {
@@ -2135,18 +2154,20 @@ summary {
   padding-top: 1.5rem;
 }
 
+.sc-home-editorial {
+  margin-bottom: clamp(2.25rem, 6vw, 4.5rem);
+}
+
 .sc-home-desk {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.42fr);
+  grid-template-columns: 1fr;
   align-items: start;
-  gap: clamp(1.2rem, 4vw, 2.6rem);
-  margin-bottom: clamp(1.5rem, 4vw, 2.5rem);
+  gap: 1rem;
 }
 
 .sc-paper-piece,
 .sc-calendar-note,
 .sc-featured-paper,
-.sc-home-tags,
 .sc-paper-public-shell,
 .sc-about-paper-shell {
   position: relative;
@@ -2154,47 +2175,54 @@ summary {
 
 .sc-paper-piece {
   border: 1px solid rgba(240, 227, 231, 0.78);
-  border-radius: 26px 22px 28px 20px;
+  border-radius: 22px;
   background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 18px 46px rgba(102, 66, 82, 0.045);
-  padding: clamp(1.5rem, 4vw, 2.6rem);
+  box-shadow: 0 14px 36px rgba(102, 66, 82, 0.04);
+  padding: clamp(1.45rem, 4vw, 2.25rem);
 }
 
 .sc-paper-kicker {
   display: inline-flex;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.85rem;
   color: var(--color-primary);
   font-size: 0.78rem;
-  font-weight: 850;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
 }
 
 .sc-calendar-note {
   border: 1px solid rgba(240, 227, 231, 0.8);
-  border-radius: 22px 18px 24px 20px;
+  border-radius: 22px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 250, 0.82));
-  box-shadow: 0 14px 36px rgba(102, 66, 82, 0.05);
-  padding: 1rem;
-  transform: rotate(1.2deg);
+  box-shadow: 0 12px 30px rgba(102, 66, 82, 0.045);
+  padding: 1.1rem 1rem 1rem;
+  transform: rotate(0.65deg);
 }
 
 .sc-calendar-note-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.85rem;
+  padding-bottom: 0.72rem;
+  border-bottom: 1px solid rgba(240, 227, 231, 0.72);
 }
 
 .sc-calendar-note span {
   color: var(--color-muted);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: 0.76rem;
+  font-weight: 760;
+}
+
+.sc-calendar-note-head > span {
+  color: var(--color-primary);
 }
 
 .sc-calendar-note strong {
-  color: var(--color-text);
-  font-size: 1rem;
+  color: var(--color-primary);
+  font-size: 0.96rem;
+  font-weight: 760;
   line-height: 1.45;
   text-align: right;
 }
@@ -2209,24 +2237,24 @@ summary {
 .sc-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.28rem;
-  margin-top: 0.35rem;
+  gap: 0.22rem;
+  margin-top: 0.5rem;
 }
 
 .sc-calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.28rem;
-  margin-top: 0.85rem;
+  gap: 0.22rem;
+  margin-top: 0.8rem;
 }
 
 .sc-calendar-weekdays span {
   display: grid;
-  min-height: 1.15rem;
+  min-height: 1rem;
   place-items: center;
   color: var(--color-subtle);
-  font-size: 0.68rem;
-  font-weight: 820;
+  font-size: 0.66rem;
+  font-weight: 780;
 }
 
 .sc-calendar-note-foot {
@@ -2235,46 +2263,75 @@ summary {
   align-items: center;
   justify-content: space-between;
   gap: 0.35rem 0.8rem;
-  margin-top: 0.9rem;
-  border-top: 1px dashed rgba(240, 227, 231, 0.95);
+  margin-top: 0.95rem;
+  border-top: 1px solid rgba(240, 227, 231, 0.78);
   padding-top: 0.72rem;
 }
 
 .sc-calendar-note-foot span {
   color: var(--color-muted);
-  font-size: 0.76rem;
-  font-weight: 820;
+  font-size: 0.74rem;
+  font-weight: 760;
 }
 
 .sc-calendar-day,
 .sc-calendar-empty {
   display: grid;
-  min-height: 1.65rem;
+  width: 1.72rem;
+  height: 1.72rem;
+  min-height: 1.72rem;
   place-items: center;
+  justify-self: center;
   border-radius: 999px;
+  border: 1px solid transparent;
   color: var(--color-muted);
   font-size: 0.72rem;
-  font-weight: 760;
+  font-weight: 720;
+}
+
+.sc-calendar-empty {
+  visibility: hidden;
 }
 
 .sc-calendar-today {
-  background: var(--color-primary-soft);
+  border-color: rgba(217, 111, 145, 0.42);
+  background: rgba(253, 233, 239, 0.45);
   color: var(--color-primary);
+}
+
+.sc-home-articles {
+  padding-top: 0;
+}
+
+.sc-home-articles .sc-section-heading {
+  margin-bottom: 1.3rem;
+  padding-top: 1.9rem;
+  border-top: 1px solid rgba(240, 227, 231, 0.72);
+}
+
+.sc-home-articles .sc-section-heading h2 {
+  font-size: 1.15rem;
+  font-weight: 780;
+}
+
+.sc-home-articles .sc-section-heading a {
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .sc-home-posts {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: clamp(1rem, 3vw, 1.6rem);
+  grid-template-columns: 1fr;
+  gap: 1rem;
 }
 
 .sc-featured-paper {
   overflow: hidden;
   border: 1px solid rgba(240, 227, 231, 0.82);
-  border-radius: 26px 20px 24px 22px;
+  border-radius: 22px;
   background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 44px rgba(102, 66, 82, 0.05);
-  padding: clamp(1.25rem, 3vw, 1.8rem);
+  box-shadow: 0 14px 36px rgba(102, 66, 82, 0.045);
+  padding: clamp(1.2rem, 3vw, 1.6rem);
 }
 
 .sc-featured-paper-with-cover {
@@ -2282,13 +2339,13 @@ summary {
 }
 
 .sc-featured-paper-body {
-  padding: clamp(1.25rem, 3vw, 1.8rem);
+  padding: clamp(1.2rem, 3vw, 1.6rem);
 }
 
 .sc-featured-cover {
   display: block;
   overflow: hidden;
-  border-radius: 24px 18px 20px 18px;
+  border-radius: 18px;
   margin: 0.55rem 0.55rem 0;
   background: rgba(255, 244, 247, 0.8);
 }
@@ -2303,8 +2360,8 @@ summary {
 .sc-featured-paper h3 {
   margin: 0;
   color: var(--color-text);
-  font-size: clamp(1.45rem, 3.2vw, 2rem);
-  line-height: 1.25;
+  font-size: clamp(1.5rem, 3.4vw, 2.05rem);
+  line-height: 1.2;
 }
 
 .sc-featured-paper h3 a:hover,
@@ -2314,21 +2371,21 @@ summary {
 
 .sc-featured-paper time {
   display: inline-flex;
-  margin-top: 0.9rem;
+  margin-top: 0.8rem;
   color: var(--color-muted);
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 760;
 }
 
 .sc-featured-paper p {
-  margin: 0.85rem 0 0;
+  margin: 0.8rem 0 0;
   color: var(--color-muted);
-  line-height: 1.78;
+  line-height: 1.82;
 }
 
 .sc-paper-strip-list {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .sc-paper-strip {
@@ -2337,19 +2394,18 @@ summary {
   align-items: start;
   gap: 1rem;
   border: 1px solid rgba(240, 227, 231, 0.7);
-  border-radius: 18px 16px 20px 15px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.66);
-  padding: 0.9rem 1rem;
+  padding: 0.95rem 1rem;
 }
 
 .sc-paper-strip:nth-child(2n) {
-  --sc-card-rest-transform: translateX(0.25rem);
-  transform: translateX(0.25rem);
+  transform: none;
 }
 
 .sc-paper-strip h3 {
   margin: 0;
-  font-size: 1.02rem;
+  font-size: 1rem;
   line-height: 1.45;
 }
 
@@ -2357,30 +2413,85 @@ summary {
   margin: 0.38rem 0 0;
   color: var(--color-muted);
   font-size: 0.9rem;
-  line-height: 1.65;
+  line-height: 1.68;
 }
 
 .sc-paper-strip time {
   color: var(--color-subtle);
-  font-size: 0.78rem;
-  font-weight: 780;
+  font-size: 0.76rem;
+  font-weight: 760;
   white-space: nowrap;
 }
 
-.sc-home-tags {
-  display: flex;
-  flex-wrap: wrap;
+.sc-home-quote {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.85rem;
-  margin-top: 1.5rem;
-  border-top: 1px dashed rgba(240, 227, 231, 0.95);
-  padding-top: 1rem;
+  gap: 0.65rem;
+  min-height: 3rem;
+  margin-top: clamp(1.5rem, 4vw, 2.4rem);
+  border-top: 1px solid rgba(240, 227, 231, 0.72);
+  padding-top: 0.8rem;
+  background: transparent;
 }
 
-.sc-home-tags > span {
-  color: var(--color-muted);
-  font-size: 0.82rem;
-  font-weight: 820;
+.sc-home-quote-label {
+  min-width: 4.8rem;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sc-home-quote-separator {
+  color: rgba(160, 148, 153, 0.9);
+  font-size: 0.92rem;
+}
+
+.sc-home-quote-body {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sc-home-quote-content {
+  display: block;
+  overflow: hidden;
+  color: rgba(47, 41, 44, 0.92);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 1;
+  transition: opacity 220ms ease;
+}
+
+.sc-home-quote-text,
+.sc-home-quote-meta {
+  white-space: nowrap;
+}
+
+.sc-home-quote-meta {
+  color: var(--color-subtle);
+  font-size: 0.92em;
+  font-weight: 500;
+}
+
+.sc-home-quote[data-animate="true"] .sc-home-quote-content {
+  display: inline-block;
+  min-width: max-content;
+  overflow: visible;
+  padding-right: 1.75rem;
+  text-overflow: clip;
+  will-change: transform;
+  animation: sc-home-quote-scroll var(--sc-quote-duration, 18s) linear both;
+}
+
+.sc-home-quote.is-paused .sc-home-quote-content {
+  animation-play-state: paused;
+}
+
+.sc-home-quote.is-fading .sc-home-quote-content {
+  opacity: 0;
 }
 
 .sc-paper-public-shell {
@@ -2754,26 +2865,34 @@ summary {
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .sc-featured-paper:hover,
-  .sc-paper-strip:hover,
   .sc-paper-index-list .sc-post-entry:hover,
   .sc-archive-entry:hover,
   .sc-tag-topic:hover {
     transform: translateY(-2px) var(--sc-card-rest-transform, translateY(0));
   }
 
-  .sc-featured-paper:hover,
   .sc-article-list-card:hover {
     border-color: rgba(217, 111, 145, 0.22);
     box-shadow: 0 20px 48px rgba(102, 66, 82, 0.075);
   }
 
-  .sc-paper-strip:hover,
   .sc-paper-index-list .sc-post-entry:hover,
   .sc-archive-entry:hover,
   .sc-tag-topic:hover {
     border-color: rgba(217, 111, 145, 0.18);
     box-shadow: 0 12px 28px rgba(102, 66, 82, 0.055);
+  }
+}
+
+@keyframes sc-home-quote-scroll {
+  0%,
+  16% {
+    transform: translateX(0);
+  }
+
+  84%,
+  100% {
+    transform: translateX(var(--sc-quote-shift, 0px));
   }
 }
 
@@ -2786,6 +2905,139 @@ summary {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (min-width: 900px) {
+  .sc-home-desk {
+    grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .sc-home-intro.sc-paper-piece {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 34px 50px 38px 0;
+  }
+
+  .sc-home-intro .sc-paper-kicker {
+    margin-left: 0;
+    margin-bottom: 0.95rem;
+  }
+
+  .sc-home-intro h1 {
+    font-size: clamp(2.28rem, 3.55vw, 3rem);
+    line-height: 1.02;
+    max-width: 12ch;
+  }
+
+  .sc-home-intro .sc-home-signature {
+    max-width: 16.5em;
+    margin-top: 1.15rem;
+    font-size: clamp(1.12rem, 1.45vw, 1.2rem);
+  }
+
+  .sc-home-intro .sc-home-description {
+    max-width: 21em;
+    margin-top: 1.05rem;
+  }
+
+  .sc-calendar-note {
+    align-self: stretch;
+    border: 0;
+    border-left: 1px solid rgba(231, 207, 216, 0.8);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 24px 26px 22px 30px;
+    transform: none;
+  }
+
+  .sc-calendar-note strong {
+    font-size: 0.92rem;
+  }
+
+  .sc-calendar-weekdays {
+    margin-top: 0.9rem;
+  }
+
+  .sc-home-articles .sc-section-heading {
+    margin-bottom: 1.75rem;
+    padding-top: 2.3rem;
+  }
+
+  .sc-home-posts {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: clamp(1.8rem, 4vw, 2.4rem);
+    align-items: start;
+  }
+
+  .sc-featured-paper,
+  .sc-featured-paper-with-cover {
+    overflow: visible;
+    border: 0;
+    border-right: 1px solid rgba(240, 227, 231, 0.82);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0 2rem 0 0;
+  }
+
+  .sc-featured-paper-body {
+    padding: 1rem 0 0;
+  }
+
+  .sc-featured-paper:not(.sc-featured-paper-with-cover) .sc-featured-paper-body {
+    padding-top: 0;
+  }
+
+  .sc-featured-cover {
+    margin: 0 0 1rem;
+    border-radius: 6px;
+  }
+
+  .sc-featured-paper h3 {
+    font-size: clamp(1.68rem, 2.6vw, 2.25rem);
+    line-height: 1.16;
+  }
+
+  .sc-featured-paper p {
+    max-width: 34rem;
+    font-size: 0.98rem;
+  }
+
+  .sc-paper-strip-list {
+    gap: 0;
+  }
+
+  .sc-paper-strip,
+  .sc-paper-strip:nth-child(2n) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 1rem;
+    border: 0;
+    border-bottom: 1px solid rgba(240, 227, 231, 0.8);
+    border-radius: 0;
+    background: transparent;
+    padding: 0.95rem 0;
+    transform: none;
+  }
+
+  .sc-paper-strip:first-child {
+    padding-top: 0.1rem;
+  }
+
+  .sc-paper-strip p {
+    font-size: 0.92rem;
+    line-height: 1.72;
+  }
+
+  .sc-home-quote {
+    margin-top: clamp(1.9rem, 4vw, 3rem);
+    padding-top: 1rem;
   }
 }
 
@@ -2904,6 +3156,24 @@ summary {
 
   .sc-featured-cover img {
     height: clamp(10rem, 48vw, 14rem);
+  }
+
+  .sc-home-quote {
+    gap: 0.5rem;
+    min-height: 2.75rem;
+  }
+
+  .sc-home-quote-label {
+    min-width: 4.35rem;
+    font-size: 0.86rem;
+  }
+
+  .sc-home-quote-content {
+    font-size: 0.9rem;
+  }
+
+  .sc-home-quote-meta {
+    font-size: 0.94em;
   }
 
   .sc-article-list-card,
