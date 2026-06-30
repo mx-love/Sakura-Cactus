@@ -3,9 +3,21 @@ import type { AssetRow } from '@/features/assets/asset.types';
 import { extractAssetTokens, renderMarkdown } from '@/features/posts/post.renderer';
 import type { PostRow, PostStatus } from '@/features/posts/post.types';
 import { bindCodeCopyControls } from '@/lib/prose-controls';
+import {
+  TEMPORARY_PAPER_KEY,
+  buildWriterAutosaveSnapshot,
+  clearWriterAutosaveSnapshot,
+  createWriterAutosaveComparable,
+  formatWriterAutosaveTime,
+  getWriterAutosaveKey,
+  hasMeaningfulWriterContent,
+  readWriterAutosaveSnapshot,
+  writeWriterAutosaveSnapshot,
+  type WriterAutosaveSnapshot
+} from './postEditorAutosave';
 
-const TEMPORARY_PAPER_KEY = 'sakura-cactus:temporary-paper';
-const TEMPORARY_PAPER_TTL_MS = 24 * 60 * 60 * 1000;
+const AUTOSAVE_DEBOUNCE_MS = 5_000;
+const AUTOSAVE_CHECKPOINT_MS = 90_000;
 
 interface ApiErrorResponse {
   ok: false;
@@ -38,18 +50,6 @@ type FormSnapshot = {
   contentMarkdown: string;
   publishedAt: string;
   tags: string[];
-};
-
-type TemporaryPaper = {
-  postId?: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  contentMarkdown: string;
-  tags: string;
-  coverImage: string;
-  updatedAt: string;
-  expiresAt: string;
 };
 
 function toDateTimeLocal(value: string | null | undefined): string {
@@ -117,71 +117,6 @@ function snapshotsEqual(saved: FormSnapshot | null, current: FormSnapshot): bool
   );
 }
 
-function isTemporaryPaper(value: unknown): value is TemporaryPaper {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const paper = value as Record<string, unknown>;
-  return (
-    (typeof paper.postId === 'string' || typeof paper.postId === 'undefined') &&
-    typeof paper.title === 'string' &&
-    typeof paper.slug === 'string' &&
-    typeof paper.excerpt === 'string' &&
-    typeof paper.contentMarkdown === 'string' &&
-    typeof paper.tags === 'string' &&
-    typeof paper.coverImage === 'string' &&
-    typeof paper.updatedAt === 'string' &&
-    typeof paper.expiresAt === 'string'
-  );
-}
-
-function clearStoredTemporaryPaper() {
-  try {
-    window.localStorage.removeItem(TEMPORARY_PAPER_KEY);
-  } catch {
-    // localStorage may be unavailable in hardened browser contexts.
-  }
-}
-
-function readStoredTemporaryPaper(): TemporaryPaper | null {
-  try {
-    const raw = window.localStorage.getItem(TEMPORARY_PAPER_KEY);
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-
-    if (!isTemporaryPaper(parsed)) {
-      clearStoredTemporaryPaper();
-      return null;
-    }
-
-    const expiresAt = new Date(parsed.expiresAt).getTime();
-
-    if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
-      clearStoredTemporaryPaper();
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    clearStoredTemporaryPaper();
-    return null;
-  }
-}
-
-function writeStoredTemporaryPaper(paper: TemporaryPaper): boolean {
-  try {
-    window.localStorage.setItem(TEMPORARY_PAPER_KEY, JSON.stringify(paper));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function isImageUrl(value: string): boolean {
   const trimmed = value.trim();
 
@@ -198,10 +133,20 @@ function isImageUrl(value: string): boolean {
 }
 
 export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const excerptInputRef = useRef<HTMLInputElement | null>(null);
+  const tagInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const splitPreviewRef = useRef<HTMLDivElement | null>(null);
   const sessionUploadedTokensRef = useRef<Set<string>>(new Set());
+  const latestFormRef = useRef<PostFormState>(postToState(post));
+  const latestPostIdRef = useRef<string | null>(post?.id ?? null);
+  const latestSlugRef = useRef(post?.slug ?? '');
+  const isRestorePromptOpenRef = useRef(false);
+  const autosaveDebounceTimerRef = useRef<number | null>(null);
+  const autosaveCheckpointTimerRef = useRef<number | null>(null);
+  const lastAutosaveComparableRef = useRef<string | null>(null);
   const [form, setForm] = useState<PostFormState>(() => postToState(post));
   const [savedSnapshot, setSavedSnapshot] = useState<FormSnapshot | null>(() => (post ? createSnapshot(postToState(post)) : null));
   const [postId, setPostId] = useState(post?.id ?? null);
@@ -213,9 +158,14 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const [showPreviewTop, setShowPreviewTop] = useState(false);
-  const [temporaryPaper, setTemporaryPaper] = useState<TemporaryPaper | null>(null);
+  const [temporaryPaper, setTemporaryPaper] = useState<WriterAutosaveSnapshot | null>(null);
+  const [pendingLocalRevision, setPendingLocalRevision] = useState<WriterAutosaveSnapshot | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [autosaveState, setAutosaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
+  const [autosaveSavedAt, setAutosaveSavedAt] = useState<number | null>(null);
+  const [autosaveRecoveryNotice, setAutosaveRecoveryNotice] = useState<string | null>(null);
   const isExisting = useMemo(() => Boolean(postId), [postId]);
+  const isRecoveryPending = Boolean(temporaryPaper || pendingLocalRevision);
   const currentSnapshot = useMemo(() => createSnapshot(form), [form]);
   const isDirty = useMemo(() => !snapshotsEqual(savedSnapshot, currentSnapshot), [savedSnapshot, currentSnapshot]);
   const previewHtml = useMemo(() => renderMarkdown(form.contentMarkdown), [form.contentMarkdown]);
@@ -223,18 +173,128 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const isCollected = form.status === 'published';
   const isCleanExistingPost = isExisting && isCollected && !isDirty && saveFeedback !== 'error';
   const mainActionLabel = isCollected ? '保存修订' : '收录';
-
-  useEffect(() => {
-    if (aboutMode) {
-      return;
+  const storageHintText = isExisting
+    ? '本地修改只保存在当前浏览器；点击“保存修订”后才会同步到公开文章。'
+    : '临时纸页只保存在当前浏览器；收录后会进入博客公开内容。';
+  const autosaveStatusText = useMemo(() => {
+    if (autosaveState === 'dirty') {
+      return '有未暂存的更改';
     }
 
-    setTemporaryPaper(readStoredTemporaryPaper());
-  }, [aboutMode]);
+    if (autosaveState === 'saving') {
+      return '正在自动暂存...';
+    }
+
+    if (autosaveState === 'saved' && autosaveSavedAt) {
+      return `已自动暂存 ${formatWriterAutosaveTime(autosaveSavedAt)}`;
+    }
+
+    if (autosaveState === 'error') {
+      return '自动暂存失败';
+    }
+
+    return null;
+  }, [autosaveSavedAt, autosaveState]);
 
   useEffect(() => {
     setIsEditorReady(true);
   }, []);
+
+  useEffect(() => {
+    latestFormRef.current = form;
+  }, [form]);
+
+  useEffect(() => {
+    latestPostIdRef.current = postId;
+  }, [postId]);
+
+  useEffect(() => {
+    latestSlugRef.current = post?.slug ?? '';
+  }, [post?.slug]);
+
+  useEffect(() => {
+    isRestorePromptOpenRef.current = Boolean(temporaryPaper || pendingLocalRevision);
+  }, [pendingLocalRevision, temporaryPaper]);
+
+  useEffect(() => {
+    isRestorePromptOpenRef.current = false;
+    setAutosaveRecoveryNotice(null);
+    setTemporaryPaper(null);
+    setPendingLocalRevision(null);
+    setAutosaveState('idle');
+    setAutosaveSavedAt(null);
+
+    if (!isEditorReady) {
+      return;
+    }
+
+    if (postId) {
+      const storageKey = getWriterAutosaveKey(postId);
+      const result = readWriterAutosaveSnapshot(storageKey);
+      const serverUpdatedAt = post?.updated_at ? new Date(post.updated_at).getTime() : Number.NaN;
+      const serverComparable = createWriterAutosaveComparable(
+        buildWriterAutosaveSnapshot({
+          postId,
+          slug: post?.slug ?? '',
+          title: post?.title ?? '',
+          excerpt: post?.excerpt ?? '',
+          contentMarkdown: post?.content_markdown ?? '',
+          tagInput: post?.tags?.map((tag) => tag.name).join(', ') ?? '',
+          coverImage: ''
+        })
+      );
+
+      lastAutosaveComparableRef.current = serverComparable;
+
+      if (result.error) {
+        setAutosaveRecoveryNotice('发现一份无法恢复的本地暂存，已跳过恢复。');
+        return;
+      }
+
+      if (!result.snapshot) {
+        return;
+      }
+
+      const localComparable = createWriterAutosaveComparable(result.snapshot);
+      if (localComparable === serverComparable) {
+        clearWriterAutosaveSnapshot(storageKey);
+        return;
+      }
+
+      const shouldPrompt = Number.isNaN(serverUpdatedAt) || result.snapshot.updatedAt > serverUpdatedAt;
+
+      if (shouldPrompt) {
+        isRestorePromptOpenRef.current = true;
+        setPendingLocalRevision(result.snapshot);
+        lastAutosaveComparableRef.current = localComparable;
+        setAutosaveSavedAt(result.snapshot.updatedAt);
+      }
+
+      return;
+    }
+
+    if (aboutMode) {
+      lastAutosaveComparableRef.current = null;
+      return;
+    }
+
+    const result = readWriterAutosaveSnapshot(TEMPORARY_PAPER_KEY);
+
+    if (result.error) {
+      setAutosaveRecoveryNotice('发现一份无法恢复的本地暂存，已跳过恢复。');
+      lastAutosaveComparableRef.current = null;
+      return;
+    }
+
+    if (!result.snapshot) {
+      lastAutosaveComparableRef.current = null;
+      return;
+    }
+
+    setTemporaryPaper(result.snapshot);
+    lastAutosaveComparableRef.current = createWriterAutosaveComparable(result.snapshot);
+    setAutosaveSavedAt(result.snapshot.updatedAt);
+  }, [aboutMode, isEditorReady, post, postId]);
 
   useEffect(() => {
     const handlePageExit = () => {
@@ -280,11 +340,203 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     };
   }, [editorMode, previewHtml]);
 
+  useEffect(() => {
+    if (!isEditorReady || isRestorePromptOpenRef.current) {
+      clearAutosaveTimers();
+      return;
+    }
+
+    const snapshot = buildCurrentAutosaveSnapshot();
+
+    if (!snapshot) {
+      clearAutosaveTimers();
+      setAutosaveState('idle');
+      return;
+    }
+
+    const comparable = createWriterAutosaveComparable(snapshot);
+
+    if (comparable === lastAutosaveComparableRef.current) {
+      clearAutosaveTimers();
+      return;
+    }
+
+    setAutosaveState((current) => (current === 'saving' ? current : 'dirty'));
+    scheduleAutosave();
+  }, [form.contentMarkdown, form.excerpt, form.tagInput, form.title, isEditorReady, pendingLocalRevision, postId, temporaryPaper]);
+
+  useEffect(() => {
+    if (!isEditorReady) {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        writeAutosaveSnapshot();
+      }
+    };
+    const handlePageHide = () => {
+      writeAutosaveSnapshot();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [isEditorReady]);
+
+  useEffect(() => {
+    return () => {
+      clearAutosaveTimers();
+    };
+  }, []);
+
   function updateField<K extends keyof PostFormState>(field: K, value: PostFormState[K]) {
     setSaveFeedback('idle');
     setSubmitAction(null);
     setError(null);
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function clearAutosaveTimers() {
+    if (autosaveDebounceTimerRef.current !== null) {
+      window.clearTimeout(autosaveDebounceTimerRef.current);
+      autosaveDebounceTimerRef.current = null;
+    }
+
+    if (autosaveCheckpointTimerRef.current !== null) {
+      window.clearTimeout(autosaveCheckpointTimerRef.current);
+      autosaveCheckpointTimerRef.current = null;
+    }
+  }
+
+  function readLiveFormState(): PostFormState {
+    const current = latestFormRef.current;
+
+    return {
+      ...current,
+      title: titleInputRef.current?.value ?? current.title,
+      excerpt: excerptInputRef.current?.value ?? current.excerpt,
+      tagInput: tagInputRef.current?.value ?? current.tagInput,
+      contentMarkdown: textareaRef.current?.value ?? current.contentMarkdown
+    };
+  }
+
+  function syncFormFromInputs() {
+    const next = readLiveFormState();
+    const current = latestFormRef.current;
+
+    if (
+      next.title !== current.title ||
+      next.excerpt !== current.excerpt ||
+      next.tagInput !== current.tagInput ||
+      next.contentMarkdown !== current.contentMarkdown
+    ) {
+      setSaveFeedback('idle');
+      setSubmitAction(null);
+      setError(null);
+      latestFormRef.current = next;
+      setForm((formState) =>
+        formState.title === next.title &&
+        formState.excerpt === next.excerpt &&
+        formState.tagInput === next.tagInput &&
+        formState.contentMarkdown === next.contentMarkdown
+          ? formState
+          : {
+              ...formState,
+              title: next.title,
+              excerpt: next.excerpt,
+              tagInput: next.tagInput,
+              contentMarkdown: next.contentMarkdown
+            }
+      );
+    }
+
+    return next;
+  }
+
+  function buildCurrentAutosaveSnapshot(updatedAt = Date.now()): WriterAutosaveSnapshot | null {
+    const liveForm = readLiveFormState();
+    const snapshot = buildWriterAutosaveSnapshot({
+      postId: latestPostIdRef.current,
+      slug: latestSlugRef.current,
+      title: liveForm.title,
+      excerpt: liveForm.excerpt,
+      contentMarkdown: liveForm.contentMarkdown,
+      tagInput: liveForm.tagInput,
+      coverImage: '',
+      updatedAt
+    });
+
+    return hasMeaningfulWriterContent(snapshot) ? snapshot : null;
+  }
+
+  function createCurrentComparableFromLiveForm() {
+    const liveForm = readLiveFormState();
+
+    return createWriterAutosaveComparable({
+      postId: latestPostIdRef.current,
+      slug: latestSlugRef.current,
+      title: liveForm.title,
+      excerpt: liveForm.excerpt,
+      contentMarkdown: liveForm.contentMarkdown,
+      tagInput: liveForm.tagInput,
+      coverImage: ''
+    });
+  }
+
+  function updateAutosaveSavedState(snapshot: WriterAutosaveSnapshot) {
+    lastAutosaveComparableRef.current = createWriterAutosaveComparable(snapshot);
+    setAutosaveSavedAt(snapshot.updatedAt);
+    setAutosaveRecoveryNotice(null);
+    setAutosaveState('saved');
+  }
+
+  function writeAutosaveSnapshot(options: { force?: boolean } = {}) {
+    if (!isEditorReady || isRestorePromptOpenRef.current) {
+      return false;
+    }
+
+    const snapshot = buildCurrentAutosaveSnapshot();
+
+    if (!snapshot) {
+      clearAutosaveTimers();
+      setAutosaveState('idle');
+      return false;
+    }
+
+    const comparable = createWriterAutosaveComparable(snapshot);
+
+    if (!options.force && comparable === lastAutosaveComparableRef.current) {
+      clearAutosaveTimers();
+      return false;
+    }
+
+    setAutosaveState('saving');
+    const saved = writeWriterAutosaveSnapshot(snapshot.draftKey, snapshot);
+
+    if (!saved) {
+      clearAutosaveTimers();
+      setAutosaveState('error');
+      return false;
+    }
+
+    clearAutosaveTimers();
+    updateAutosaveSavedState(snapshot);
+    return true;
+  }
+
+  function scheduleAutosave() {
+    clearAutosaveTimers();
+    autosaveDebounceTimerRef.current = window.setTimeout(() => {
+      writeAutosaveSnapshot();
+    }, AUTOSAVE_DEBOUNCE_MS);
+    autosaveCheckpointTimerRef.current = window.setTimeout(() => {
+      writeAutosaveSnapshot();
+    }, AUTOSAVE_CHECKPOINT_MS);
   }
 
   function focusContentEditor() {
@@ -295,18 +547,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
   // Read once from the live textarea before saving so we never submit a known-stale body.
   function syncContentFromTextarea() {
-    const currentValue = textareaRef.current?.value ?? form.contentMarkdown;
-
-    if (currentValue !== form.contentMarkdown) {
-      setSaveFeedback('idle');
-      setSubmitAction(null);
-      setError(null);
-      setForm((current) =>
-        current.contentMarkdown === currentValue ? current : { ...current, contentMarkdown: currentValue }
-      );
-    }
-
-    return currentValue;
+    return syncFormFromInputs().contentMarkdown;
   }
 
   function validatePublishedContent(contentMarkdown: string) {
@@ -479,25 +720,32 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     }).catch(() => undefined);
   }
 
-  function restoreTemporaryPaper() {
-    const paper = readStoredTemporaryPaper();
+  function applyAutosaveSnapshot(snapshot: WriterAutosaveSnapshot) {
+    const nextForm = {
+      ...latestFormRef.current,
+      title: snapshot.title,
+      excerpt: snapshot.excerpt,
+      tagInput: snapshot.tagInput,
+      contentMarkdown: snapshot.contentMarkdown
+    };
 
-    if (!paper) {
-      setTemporaryPaper(null);
+    latestFormRef.current = nextForm;
+    setForm(nextForm);
+    updateAutosaveSavedState(snapshot);
+    setAutosaveRecoveryNotice(null);
+    setMessage(null);
+    setError(null);
+  }
+
+  function restoreTemporaryPaper() {
+    if (!temporaryPaper) {
       setMessage(null);
       return;
     }
 
-    setForm((current) => ({
-      ...current,
-      title: paper.title,
-      excerpt: paper.excerpt,
-      tagInput: paper.tags,
-      contentMarkdown: paper.contentMarkdown
-    }));
-    setTemporaryPaper(paper);
-    setMessage(null);
-    setError(null);
+    isRestorePromptOpenRef.current = false;
+    applyAutosaveSnapshot(temporaryPaper);
+    setTemporaryPaper(null);
 
     window.requestAnimationFrame(() => {
       textareaRef.current?.focus();
@@ -505,14 +753,49 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   }
 
   function clearTemporaryPaper() {
-    clearStoredTemporaryPaper();
+    isRestorePromptOpenRef.current = false;
+    clearWriterAutosaveSnapshot(TEMPORARY_PAPER_KEY);
+    clearAutosaveTimers();
+    lastAutosaveComparableRef.current = createCurrentComparableFromLiveForm();
     setTemporaryPaper(null);
+    setAutosaveState('idle');
+    setAutosaveSavedAt(null);
+    setAutosaveRecoveryNotice(null);
     setMessage(null);
     setError(null);
   }
 
+  function restoreLocalRevision() {
+    if (!pendingLocalRevision) {
+      return;
+    }
+
+    isRestorePromptOpenRef.current = false;
+    applyAutosaveSnapshot(pendingLocalRevision);
+    setPendingLocalRevision(null);
+
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }
+
+  function ignoreLocalRevision() {
+    if (!pendingLocalRevision) {
+      return;
+    }
+
+    isRestorePromptOpenRef.current = false;
+    clearWriterAutosaveSnapshot(getWriterAutosaveKey(pendingLocalRevision.postId));
+    clearAutosaveTimers();
+    lastAutosaveComparableRef.current = createCurrentComparableFromLiveForm();
+    setPendingLocalRevision(null);
+    setAutosaveState('idle');
+    setAutosaveSavedAt(null);
+    setAutosaveRecoveryNotice(null);
+  }
+
   function saveTemporaryPaper() {
-    if (aboutMode) {
+    if (aboutMode || isExisting || isRecoveryPending) {
       return;
     }
 
@@ -522,31 +805,36 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       return;
     }
 
-    const contentMarkdown = syncContentFromTextarea();
-    const now = new Date();
-    const paper: TemporaryPaper = {
-      postId: postId ?? undefined,
-      title: form.title,
-      slug: post?.slug ?? '',
-      excerpt: form.excerpt,
-      contentMarkdown,
-      tags: form.tagInput,
-      coverImage: '',
-      updatedAt: now.toISOString(),
-      expiresAt: new Date(now.getTime() + TEMPORARY_PAPER_TTL_MS).toISOString()
-    };
+    const liveForm = syncFormFromInputs();
+    const snapshot = buildWriterAutosaveSnapshot({
+      postId: null,
+      slug: latestSlugRef.current,
+      title: liveForm.title,
+      excerpt: liveForm.excerpt,
+      contentMarkdown: liveForm.contentMarkdown,
+      tagInput: liveForm.tagInput,
+      coverImage: ''
+    });
 
     setError(null);
     setSaveFeedback('idle');
     setSubmitAction(null);
 
-    if (!writeStoredTemporaryPaper(paper)) {
+    if (!hasMeaningfulWriterContent(snapshot)) {
       setMessage(null);
-      setError('当前浏览器无法暂存临时纸页。');
+      setError('当前没有可暂存的内容。');
       return;
     }
 
-    setTemporaryPaper(paper);
+    if (!writeWriterAutosaveSnapshot(TEMPORARY_PAPER_KEY, snapshot)) {
+      setMessage(null);
+      setError('当前浏览器无法暂存临时纸页。');
+      setAutosaveState('error');
+      return;
+    }
+
+    clearAutosaveTimers();
+    updateAutosaveSavedState(snapshot);
     setMessage('已暂存为临时纸页，24 小时内可继续写。');
   }
 
@@ -557,14 +845,16 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       return;
     }
 
-    const contentMarkdown = syncContentFromTextarea();
+    const liveForm = syncFormFromInputs();
+    const contentMarkdown = liveForm.contentMarkdown;
 
     if (!validatePublishedContent(contentMarkdown)) {
       return;
     }
 
     const wasCollected = isCollected;
-    const publishedAt = postId ? toIsoDateTime(form.publishedAt) : null;
+    const publishedAt = postId ? toIsoDateTime(liveForm.publishedAt) : null;
+    const autosaveKey = getWriterAutosaveKey(postId);
     setError(null);
     setMessage(null);
     setSaveFeedback('idle');
@@ -580,13 +870,13 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
         },
         credentials: 'same-origin',
         body: JSON.stringify({
-          title: form.title,
-          excerpt: form.excerpt,
+          title: liveForm.title,
+          excerpt: liveForm.excerpt,
           contentMarkdown,
           status: 'published',
           visibility: 'public',
           publishedAt,
-          tags: form.tagInput
+          tags: liveForm.tagInput
         })
       });
 
@@ -599,12 +889,28 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       const payload = (await response.json()) as { ok: true; data: { post: PostRow & { tags?: Array<{ name: string }> } } };
       const savedPost = payload.data.post;
       const nextForm = postToState(payload.data.post);
+      clearWriterAutosaveSnapshot(autosaveKey);
+      clearAutosaveTimers();
+      lastAutosaveComparableRef.current = createWriterAutosaveComparable(
+        buildWriterAutosaveSnapshot({
+          postId: savedPost.id,
+          slug: savedPost.slug,
+          title: nextForm.title,
+          excerpt: nextForm.excerpt,
+          contentMarkdown: nextForm.contentMarkdown,
+          tagInput: nextForm.tagInput,
+          coverImage: '',
+          updatedAt: Date.now()
+        })
+      );
       setPostId(savedPost.id);
       setForm(nextForm);
       setSavedSnapshot(createSnapshot(nextForm));
       markSavedAssetTokens(savedPost.content_markdown);
-      clearStoredTemporaryPaper();
       setTemporaryPaper(null);
+      setPendingLocalRevision(null);
+      setAutosaveState('idle');
+      setAutosaveSavedAt(null);
       setMessage(wasCollected ? '修订已保存。' : '已收录到博客。');
       setSaveFeedback('success');
 
@@ -643,6 +949,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       }
 
       cleanupUnsavedSessionUploads();
+      clearWriterAutosaveSnapshot(getWriterAutosaveKey(postId));
       window.location.assign(aboutMode ? '/about?fresh=1' : '/articles');
     } finally {
       setIsSubmitting(false);
@@ -711,12 +1018,28 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
       {!aboutMode && temporaryPaper ? (
         <div className="sc-temporary-paper" role="status">
-          <span>有一页临时纸页 · 24 小时内可继续写</span>
+          <span>发现一张尚未完成的临时纸页</span>
           <div className="sc-temporary-paper-actions">
             <button type="button" onClick={restoreTemporaryPaper}>继续写</button>
-            <button type="button" onClick={clearTemporaryPaper}>清空</button>
+            <button type="button" onClick={clearTemporaryPaper}>舍弃暂存</button>
           </div>
         </div>
+      ) : null}
+
+      {pendingLocalRevision ? (
+        <div className="sc-temporary-paper" role="status">
+          <span>发现未提交的本地修改</span>
+          <div className="sc-temporary-paper-actions">
+            <button type="button" onClick={restoreLocalRevision}>恢复本地修改</button>
+            <button type="button" onClick={ignoreLocalRevision}>舍弃本地修改</button>
+          </div>
+        </div>
+      ) : null}
+
+      {autosaveRecoveryNotice ? (
+        <p className="sc-writer-message" role="status">
+          <span>{autosaveRecoveryNotice}</span>
+        </p>
       ) : null}
 
       <div className="sc-writer-grid">
@@ -754,15 +1077,15 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
           {editorMode === 'edit' || editorMode === 'split' ? (
             <div className={editorMode === 'split' ? 'sc-writer-split' : 'sc-writer-editor-wrap'}>
-            <textarea
-              ref={textareaRef}
-              className="sc-writer-textarea"
-              placeholder="Write Markdown here. Paste or drop images to upload."
-              value={form.contentMarkdown}
-              disabled={!isEditorReady}
-              onInput={(event) => updateField('contentMarkdown', event.currentTarget.value)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={handleDrop}
+              <textarea
+                ref={textareaRef}
+                className="sc-writer-textarea"
+                placeholder="Write Markdown here. Paste or drop images to upload."
+                value={form.contentMarkdown}
+                disabled={!isEditorReady || isRecoveryPending}
+                onInput={(event) => updateField('contentMarkdown', event.currentTarget.value)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleDrop}
               onPaste={handlePaste}
               required
             />
@@ -783,10 +1106,12 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
           <div className="sc-writer-fields">
             <label className="sc-writer-field sc-writer-field-plain">
               <input
+                ref={titleInputRef}
                 aria-label="Post title"
                 className="sc-input sc-writer-control"
                 placeholder="标题"
                 value={form.title}
+                disabled={isRecoveryPending}
                 onChange={(event) => updateField('title', event.target.value)}
                 required
               />
@@ -794,19 +1119,23 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
             <label className="sc-writer-field sc-writer-field-plain">
               <input
+                ref={excerptInputRef}
                 aria-label="Post excerpt"
                 className="sc-input sc-writer-control"
                 placeholder="简介"
                 value={form.excerpt}
+                disabled={isRecoveryPending}
                 onChange={(event) => updateField('excerpt', event.target.value)}
               />
             </label>
 
             <label className="sc-writer-field sc-writer-field-plain">
               <input
+                ref={tagInputRef}
                 className="sc-input sc-writer-control"
                 placeholder="标签"
                 value={form.tagInput}
+                disabled={isRecoveryPending}
                 onChange={(event) => updateField('tagInput', event.target.value)}
               />
             </label>
@@ -817,10 +1146,10 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
           <h2 className="sc-writer-card-title">收录</h2>
           <div className="sc-writer-fields">
             <div className="sc-writer-publish-actions">
-              {!aboutMode ? (
+              {!aboutMode && !isExisting ? (
                 <button
                   className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
-                  disabled={isBusy || !isEditorReady}
+                  disabled={isBusy || !isEditorReady || isRecoveryPending}
                   onClick={saveTemporaryPaper}
                   type="button"
                 >
@@ -829,7 +1158,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
               ) : null}
               <button
                 className="sc-button sc-button-primary sc-writer-primary-action disabled:opacity-60"
-                disabled={!isEditorReady || isBusy || isCleanExistingPost}
+                disabled={!isEditorReady || isBusy || isCleanExistingPost || isRecoveryPending}
                 onClick={collectPost}
                 type="button"
               >
@@ -843,8 +1172,9 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
                 <span>{message}</span>
               </p>
             ) : null}
+            {!isRecoveryPending && autosaveStatusText ? <p className="sc-writer-note">{autosaveStatusText}</p> : null}
             <p className="sc-writer-note">
-              临时纸页只保存在当前浏览器；收录后会进入博客公开内容。
+              {storageHintText}
             </p>
           </div>
         </div>
