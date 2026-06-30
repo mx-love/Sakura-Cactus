@@ -214,6 +214,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const [showPreviewTop, setShowPreviewTop] = useState(false);
   const [temporaryPaper, setTemporaryPaper] = useState<TemporaryPaper | null>(null);
+  const [isEditorReady, setIsEditorReady] = useState(false);
   const isExisting = useMemo(() => Boolean(postId), [postId]);
   const currentSnapshot = useMemo(() => createSnapshot(form), [form]);
   const isDirty = useMemo(() => !snapshotsEqual(savedSnapshot, currentSnapshot), [savedSnapshot, currentSnapshot]);
@@ -230,6 +231,10 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
     setTemporaryPaper(readStoredTemporaryPaper());
   }, [aboutMode]);
+
+  useEffect(() => {
+    setIsEditorReady(true);
+  }, []);
 
   useEffect(() => {
     const handlePageExit = () => {
@@ -282,6 +287,41 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function focusContentEditor() {
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }
+
+  // Read once from the live textarea before saving so we never submit a known-stale body.
+  function syncContentFromTextarea() {
+    const currentValue = textareaRef.current?.value ?? form.contentMarkdown;
+
+    if (currentValue !== form.contentMarkdown) {
+      setSaveFeedback('idle');
+      setSubmitAction(null);
+      setError(null);
+      setForm((current) =>
+        current.contentMarkdown === currentValue ? current : { ...current, contentMarkdown: currentValue }
+      );
+    }
+
+    return currentValue;
+  }
+
+  function validatePublishedContent(contentMarkdown: string) {
+    if (contentMarkdown.trim().length > 0) {
+      return true;
+    }
+
+    setMessage(null);
+    setSaveFeedback('error');
+    setSubmitAction(null);
+    setError('正文不能为空，请先填写内容。');
+    focusContentEditor();
+    return false;
+  }
+
   async function readError(response: Response, fallback: string): Promise<string> {
     const payload = (await response.json().catch(() => null)) as ApiErrorResponse | null;
     return payload?.error.message ?? fallback;
@@ -289,10 +329,11 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
   function insertMarkdown(markdown: string) {
     const textarea = textareaRef.current;
-    const selectionStart = textarea?.selectionStart ?? form.contentMarkdown.length;
-    const selectionEnd = textarea?.selectionEnd ?? form.contentMarkdown.length;
-    const prefix = form.contentMarkdown.slice(0, selectionStart);
-    const suffix = form.contentMarkdown.slice(selectionEnd);
+    const currentContent = syncContentFromTextarea();
+    const selectionStart = textarea?.selectionStart ?? currentContent.length;
+    const selectionEnd = textarea?.selectionEnd ?? currentContent.length;
+    const prefix = currentContent.slice(0, selectionStart);
+    const suffix = currentContent.slice(selectionEnd);
     const spacerBefore = prefix.length > 0 && !prefix.endsWith('\n') ? '\n\n' : '';
     const spacerAfter = suffix.length > 0 && !suffix.startsWith('\n') ? '\n\n' : '';
     const insertion = `${spacerBefore}${markdown}${spacerAfter}`;
@@ -366,14 +407,23 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
       .map((item) => item.getAsFile())
       .filter((file): file is File => Boolean(file));
+    const text = event.clipboardData.getData('text/plain');
+    const html = event.clipboardData.getData('text/html');
+    const hasTextContent = text.trim().length > 0 || html.trim().length > 0;
 
     if (files.length > 0) {
+      if (hasTextContent) {
+        setError(null);
+        setSaveFeedback('idle');
+        setSubmitAction(null);
+        setMessage('检测到文字和图片，已优先保留文字；图片未自动插入，请单独粘贴图片。');
+        return;
+      }
+
       event.preventDefault();
       await uploadAndInsertImages(files);
       return;
     }
-
-    const text = event.clipboardData.getData('text/plain');
 
     if (isImageUrl(text)) {
       event.preventDefault();
@@ -466,13 +516,20 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       return;
     }
 
+    if (!isEditorReady) {
+      setMessage(null);
+      setError('编辑器准备中，请稍候。');
+      return;
+    }
+
+    const contentMarkdown = syncContentFromTextarea();
     const now = new Date();
     const paper: TemporaryPaper = {
       postId: postId ?? undefined,
       title: form.title,
       slug: post?.slug ?? '',
       excerpt: form.excerpt,
-      contentMarkdown: form.contentMarkdown,
+      contentMarkdown,
       tags: form.tagInput,
       coverImage: '',
       updatedAt: now.toISOString(),
@@ -494,6 +551,18 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   }
 
   async function collectPost() {
+    if (!isEditorReady) {
+      setMessage(null);
+      setError('编辑器准备中，请稍候。');
+      return;
+    }
+
+    const contentMarkdown = syncContentFromTextarea();
+
+    if (!validatePublishedContent(contentMarkdown)) {
+      return;
+    }
+
     const wasCollected = isCollected;
     const publishedAt = postId ? toIsoDateTime(form.publishedAt) : null;
     setError(null);
@@ -513,7 +582,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
         body: JSON.stringify({
           title: form.title,
           excerpt: form.excerpt,
-          contentMarkdown: form.contentMarkdown,
+          contentMarkdown,
           status: 'published',
           visibility: 'public',
           publishedAt,
@@ -678,7 +747,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
               </button>
             </div>
             <div className="sc-writer-upload-state">
-              {isUploadingImage ? <span className="sc-badge">上传中</span> : null}
+              {!isEditorReady ? <span className="sc-badge">编辑器准备中</span> : null}
+              {isEditorReady && isUploadingImage ? <span className="sc-badge">上传中</span> : null}
             </div>
           </div>
 
@@ -689,7 +759,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
               className="sc-writer-textarea"
               placeholder="Write Markdown here. Paste or drop images to upload."
               value={form.contentMarkdown}
-              onChange={(event) => updateField('contentMarkdown', event.target.value)}
+              disabled={!isEditorReady}
+              onInput={(event) => updateField('contentMarkdown', event.currentTarget.value)}
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}
               onPaste={handlePaste}
@@ -749,7 +820,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
               {!aboutMode ? (
                 <button
                   className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
-                  disabled={isBusy}
+                  disabled={isBusy || !isEditorReady}
                   onClick={saveTemporaryPaper}
                   type="button"
                 >
@@ -758,7 +829,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
               ) : null}
               <button
                 className="sc-button sc-button-primary sc-writer-primary-action disabled:opacity-60"
-                disabled={isBusy || isCleanExistingPost}
+                disabled={!isEditorReady || isBusy || isCleanExistingPost}
                 onClick={collectPost}
                 type="button"
               >

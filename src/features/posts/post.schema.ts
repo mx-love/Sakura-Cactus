@@ -99,10 +99,16 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
     throw new PostValidationError('INVALID_VISIBILITY', 'Invalid post visibility.');
   }
 
+  const contentMarkdown = body.contentMarkdown.slice(0, 200_000);
+
+  if (status === 'published' && contentMarkdown.trim().length === 0) {
+    throw new PostValidationError('CONTENT_REQUIRED', 'Content is required to publish.');
+  }
+
   return {
     title,
     excerpt,
-    contentMarkdown: body.contentMarkdown.slice(0, 200_000),
+    contentMarkdown,
     status,
     visibility,
     publishedAt: normalizePublishedAt(body.publishedAt ?? body.published_at),
