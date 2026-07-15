@@ -1,5 +1,6 @@
 import { nowIso } from './db';
 
+const CURRENT_SCHEMA_VERSION = 8;
 let schemaPromise: Promise<void> | null = null;
 
 async function run(db: D1Database, sql: string): Promise<void> {
@@ -197,6 +198,28 @@ async function ensureTables(db: D1Database): Promise<void> {
       FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
     )`
   );
+
+  await run(
+    db,
+    `CREATE TABLE IF NOT EXISTS rate_limits (
+      scope TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      window_start TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0),
+      expires_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (scope, key_hash, window_start)
+    )`
+  );
+
+  await run(
+    db,
+    `CREATE TABLE IF NOT EXISTS sakura_schema_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      version INTEGER NOT NULL,
+      updated_at TEXT NOT NULL
+    )`
+  );
 }
 
 async function ensureColumns(db: D1Database): Promise<void> {
@@ -236,7 +259,8 @@ async function ensureIndexes(db: D1Database): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_friend_links_sort_order ON friend_links(sort_order)',
     'CREATE INDEX IF NOT EXISTS idx_friend_links_created_at ON friend_links(created_at)',
     'CREATE INDEX IF NOT EXISTS idx_friend_links_health_status ON friend_links(health_status)',
-    'CREATE INDEX IF NOT EXISTS idx_friend_links_last_checked_at ON friend_links(last_checked_at)'
+    'CREATE INDEX IF NOT EXISTS idx_friend_links_last_checked_at ON friend_links(last_checked_at)',
+    'CREATE INDEX IF NOT EXISTS idx_rate_limits_expires_at ON rate_limits(expires_at)'
   ];
 
   for (const sql of indexes) {
@@ -270,10 +294,33 @@ async function createSchema(db: D1Database): Promise<void> {
   await ensureColumns(db);
   await ensureIndexes(db);
   await ensureDefaultSettings(db);
+  await db
+    .prepare(
+      `INSERT INTO sakura_schema_state (id, version, updated_at)
+       VALUES (1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET version = excluded.version, updated_at = excluded.updated_at`
+    )
+    .bind(CURRENT_SCHEMA_VERSION, nowIso())
+    .run();
+}
+
+async function isSchemaCurrent(db: D1Database): Promise<boolean> {
+  try {
+    const row = await db
+      .prepare('SELECT version FROM sakura_schema_state WHERE id = 1 LIMIT 1')
+      .first<{ version: number }>();
+    return row?.version === CURRENT_SCHEMA_VERSION;
+  } catch {
+    return false;
+  }
 }
 
 export async function ensureD1Schema(db: D1Database): Promise<void> {
-  schemaPromise ??= createSchema(db).catch((error) => {
+  schemaPromise ??= (async () => {
+    if (!(await isSchemaCurrent(db))) {
+      await createSchema(db);
+    }
+  })().catch((error) => {
     schemaPromise = null;
     throw error;
   });

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getSiteSettings, isSiteSettingsValidationError, updateSiteSettings } from '@/features/settings/settings.service';
 import type { SiteSettingsInput } from '@/features/settings/settings.types';
 import { jsonError, jsonOk } from '@/lib/response';
+import { reportError } from '@/lib/logging';
 
 export const prerender = false;
 
@@ -25,7 +26,7 @@ export const PATCH: APIRoute = async ({ request }) => {
       return jsonError(error.code, error.message, { status: 400 });
     }
 
-    console.error('Settings update failed:', error);
+    reportError('Settings update failed.', error);
     return jsonError('SETTINGS_UPDATE_FAILED', 'Unable to update settings.', { status: 500 });
   }
 };

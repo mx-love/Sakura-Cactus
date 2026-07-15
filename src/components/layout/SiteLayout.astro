@@ -78,7 +78,7 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     {safePreconnectOrigins.map((origin) => <link rel="preconnect" href={origin} />)}
     <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href={rssUrl} />
     {siteSettings.faviconUrl ? <link rel="icon" href={faviconHref} /> : <link rel="icon" type="image/svg+xml" href={faviconHref} />}
-    {jsonLdItems.map((item) => <script type="application/ld+json" set:html={item} />)}
+    {jsonLdItems.map((item) => <script type="application/ld+json" set:html={item} is:inline />)}
     <title>{title}</title>
   </head>
   <body>

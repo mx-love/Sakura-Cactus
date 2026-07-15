@@ -1,4 +1,4 @@
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
@@ -522,7 +522,7 @@ function rehypeAddHeadingIds(headings: MarkdownHeading[]) {
   };
 }
 
-const sanitizeSchema = {
+const sanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   tagNames: Array.from(
     new Set([

@@ -1,6 +1,7 @@
 import { getDb, nowIso } from '@/lib/db';
-import { listSiteSettings, upsertSiteSetting, incrementPublicPostViewCount, getPostViewCount as readCount } from './settings.repo';
+import { listSiteSettings, upsertSiteSetting, upsertSiteSettings, incrementPublicPostViewCount, getPostViewCount as readCount } from './settings.repo';
 import type { CommentProvider, SiteSettings, SiteSettingsInput } from './settings.types';
+import { normalizePublicHttpUrl } from '@/lib/security/external-url';
 
 const COMMENT_PROVIDERS: CommentProvider[] = ['off', 'giscus', 'utterances', 'waline', 'artalk', 'custom'];
 
@@ -57,13 +58,7 @@ function assertOptionalHttpUrl(value: string, code: string, message: string): st
   }
 
   try {
-    const url = new URL(trimmed);
-
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      throw new Error('Invalid protocol');
-    }
-
-    return url.toString();
+    return normalizePublicHttpUrl(trimmed);
   } catch {
     throw new SiteSettingsValidationError(code, message);
   }
@@ -137,9 +132,7 @@ export async function updateSiteSettings(input: SiteSettingsInput): Promise<Site
     writes.push(['favicon_url', assertOptionalHttpUrl(input.faviconUrl, 'INVALID_FAVICON_URL', 'Favicon URL must be http or https.')]);
   }
 
-  for (const [key, value] of writes) {
-    await upsertSiteSetting(db, key, value);
-  }
+  await upsertSiteSettings(db, writes);
 
   return getSiteSettings();
 }

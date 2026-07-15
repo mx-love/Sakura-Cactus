@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { normalizeInternalRedirect } from '@/lib/security/request';
 
 interface LoginFormProps {
   next?: string;
@@ -14,21 +15,12 @@ interface ApiErrorResponse {
 
 const DEFAULT_REDIRECT = '/write';
 
-function isSafeInternalRedirect(value: string): boolean {
-  return (
-    value.startsWith('/') &&
-    !value.startsWith('//') &&
-    !value.includes('\\') &&
-    !/[\u0000-\u001F\u007F\s]/.test(value)
-  );
-}
-
 export function LoginForm({ next = '/write' }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const redirectTo = useMemo(() => (isSafeInternalRedirect(next) ? next : DEFAULT_REDIRECT), [next]);
+  const redirectTo = useMemo(() => normalizeInternalRedirect(next, DEFAULT_REDIRECT), [next]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

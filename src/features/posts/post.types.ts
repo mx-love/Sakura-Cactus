@@ -1,5 +1,5 @@
 import type { PostRow, PostStatus, PostVisibility } from '@/lib/database.types';
-import { decodeHtmlEntities, extractFirstImageUrl } from './post.renderer';
+import { decodeHtmlEntities, extractFirstImageUrl, renderMarkdown } from './post.renderer';
 
 export type { PostRow, PostStatus, PostVisibility };
 
@@ -69,7 +69,8 @@ export function toPublicPostSummary(post: PostRow, tags: PublicPostTag[] = []): 
 export function toPublicPostDetail(post: PostRow, tags: PublicPostTag[] = []): PublicPostDetail {
   return {
     ...toPublicPostSummary(post, tags),
-    contentHtml: post.content_html ?? '',
+    // Re-render from Markdown on read so legacy/stale stored HTML always uses the current sanitizer policy.
+    contentHtml: renderMarkdown(post.content_markdown),
     seoTitle: post.seo_title ? decodeHtmlEntities(post.seo_title) : null,
     seoDescription: post.seo_description ? decodeHtmlEntities(post.seo_description) : null,
     status: post.status,

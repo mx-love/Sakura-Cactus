@@ -9,32 +9,35 @@
     "build": "astro build",
     "preview": "wrangler dev",
     "deploy": "node scripts/prepare-cloudflare-config.mjs && astro build && wrangler deploy",
-    "types": "wrangler types",
+    "types": "wrangler types --include-runtime false",
     "check": "astro check",
     "db:migration:create": "wrangler d1 migrations create sakura_blog_prod",
     "db:migration:apply:local": "wrangler d1 migrations apply sakura_blog_prod --local",
     "db:migration:apply:prod": "wrangler d1 migrations apply sakura_blog_prod --remote",
-    "admin:create": "node --experimental-strip-types scripts/create-admin.ts"
+    "admin:create": "node --experimental-strip-types scripts/create-admin.ts",
+    "test:security": "node --experimental-transform-types scripts/security-checks.ts"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "latest",
-    "@astrojs/react": "latest",
-    "@tailwindcss/vite": "latest",
-    "astro": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "rehype-sanitize": "^6.0.0",
-    "rehype-stringify": "^10.0.1",
-    "remark-gfm": "^4.0.1",
-    "remark-parse": "^11.0.0",
-    "remark-rehype": "^11.1.2",
-    "tailwindcss": "latest",
-    "unified": "^11.0.5"
+    "@astrojs/cloudflare": "13.5.2",
+    "@astrojs/react": "5.0.5",
+    "@tailwindcss/vite": "4.3.0",
+    "astro": "6.4.8",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "rehype-sanitize": "6.0.0",
+    "rehype-stringify": "10.0.1",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "tailwindcss": "4.3.0",
+    "unified": "11.0.5"
   },
   "devDependencies": {
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "typescript": "latest",
-    "wrangler": "latest"
+    "@astrojs/check": "0.9.9",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.3",
+    "wrangler": "4.92.0"
   }
 }

@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 6.7: SakuraPaper minimal blog UI correction.
+Stage 7: security hardening and pre-commit review.
 
 ## Completed
 
@@ -119,10 +119,16 @@ Stage 6.7: SakuraPaper minimal blog UI correction.
 - [x] Treated the `about` tag as a system page source and hid it from normal discovery flows.
 - [x] Refined public tags, timeline, and search information architecture.
 - [x] Added lightweight local search overlay without external search dependencies.
+- [x] Completed the 2026-07-15 security audit hardening pass.
+- [x] Recorded the final audit issue count as 1 P0, 6 P1, and 5 P2.
+- [x] Added D1-backed rate limiting for login, uploads, friend applications, and view counting.
+- [x] Added SSRF guards for friend URLs and favicon URL settings.
+- [x] Hardened upload validation, private media responses, Markdown rendering paths, CSRF checks, private no-store responses, scheduled task isolation, and dependency pins.
+- [x] Added `ARCHITECTURE.md`, `SECURITY_AUDIT_REPORT.md`, and `FINAL_REVIEW.md` as audit handoff documents.
 
 ## Pending
 
-- [ ] Stage 7: add security hardening and deployment docs.
+- [ ] Await user confirmation before any commit, push, deployment, or remote database operation.
 
 ## Known Issues
 
@@ -134,17 +140,19 @@ Stage 6.7: SakuraPaper minimal blog UI correction.
 - Local migration verification depends on Wrangler accepting the placeholder D1 database configuration; production requires replacing IDs first.
 - Login now only requires `ADMIN_USERNAME` and `ADMIN_PASSWORD` for standard deployment; `ADMIN_PASSWORD_HASH` remains an advanced optional override.
 - Git-based Cloudflare deployment now runs `scripts/prepare-cloudflare-config.mjs` to generate `DB` and `MEDIA_BUCKET` bindings from Cloudflare Variables, avoiding committed personal D1 IDs.
-- `SETUP_TOKEN` is required for `/admin/setup`; it must be set in `.dev.vars` locally or Cloudflare secrets remotely.
+- The web setup flow is retired: `/admin/setup` redirects to login and the setup API returns 404. Standard deployment continues to use `ADMIN_USERNAME` and `ADMIN_PASSWORD` from Cloudflare Variables/Secrets.
 - `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migration/create-admin against that config or use `pnpm dev`.
-- `pnpm check` currently prompts to install `@astrojs/check`; it was not installed during Stage 4 to avoid changing package dependencies.
-- `pnpm exec tsc --noEmit` is blocked by TypeScript 6 reporting the existing `baseUrl` deprecation in `tsconfig.json`.
-- `pnpm exec tsc --noEmit --ignoreDeprecations 6.0` is still blocked by the existing type environment:
-  missing Node script types, missing Wrangler/Cloudflare Worker types for `D1Database`, and missing `cloudflare:workers` module declarations.
+- `@astrojs/check`, Node types, and binding-only Cloudflare declarations are installed/generated. `pnpm check` and `pnpm exec tsc --noEmit` pass after the 2026-07-15 security audit.
+- The remaining dependency audit item is one low-severity Babel source-map advisory whose declared patched Babel 7 version is not yet published. See `SECURITY_AUDIT_REPORT.md`.
 
 ## Last Verified Commands
 
 ```powershell
-$env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
+pnpm.cmd install --frozen-lockfile --offline
+pnpm.cmd exec tsc --noEmit --pretty false
+pnpm.cmd check
+pnpm.cmd test:security
+pnpm.cmd build
 ```
 
 ```powershell
@@ -175,11 +183,16 @@ Confirmed tables:
 ```txt
 assets
 audit_logs
+friend_links
 post_assets
 post_tags
+post_view_counts
 posts
+rate_limits
+sakura_schema_state
 sessions
 settings
+site_settings
 tags
 users
 ```
@@ -334,7 +347,7 @@ Build completed successfully.
 
 ## Next Step
 
-Stage 7: add security hardening and deployment docs.
+Await user confirmation before creating a commit, pushing an audit branch, deploying, or touching remote D1.
 
 Friend links V1:
 

@@ -11,10 +11,12 @@ import {
 } from './friend.repo';
 import { getSiteSettings } from '@/features/settings/settings.service';
 import type { FriendHealthStatus } from './friend.types';
+import { fetchPublicHttpStatusWithRedirects, normalizePublicHttpUrl, UnsafeExternalUrlError } from '@/lib/security/external-url';
 
 const FRIEND_STATUSES: FriendLinkStatus[] = ['approved', 'hidden', 'pending'];
 const FRIEND_HEALTH_USER_AGENT = 'Sakura-Cactus-Check/1.0';
 const FRIEND_HEALTH_TIMEOUT_MS = 8000;
+const FRIEND_HEALTH_CONCURRENCY = 4;
 
 export class FriendLinkValidationError extends Error {
   constructor(
@@ -40,13 +42,7 @@ function parseHttpUrl(value: string, field: string): string {
   }
 
   try {
-    const url = new URL(value);
-
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      throw new Error('Invalid protocol');
-    }
-
-    return url.toString();
+    return normalizePublicHttpUrl(value);
   } catch {
     throw new FriendLinkValidationError('INVALID_FRIEND_URL', `${field} must be a valid http or https URL.`);
   }
@@ -118,7 +114,7 @@ export async function deleteAdminFriendLink(id: string): Promise<FriendLinkRow |
 
 interface FriendHealthCheckResult {
   friend: FriendLinkRow;
-  healthStatus: FriendHealthStatus;
+  healthStatus: Exclude<FriendHealthStatus, 'unknown'>;
   statusCode: number | null;
   error: string | null;
 }
@@ -130,7 +126,7 @@ export interface FriendHealthCheckStats {
   down: number;
 }
 
-function classifyStatus(status: number): FriendHealthStatus {
+function classifyStatus(status: number): Exclude<FriendHealthStatus, 'unknown'> {
   if (status >= 200 && status <= 399) {
     return 'ok';
   }
@@ -142,44 +138,45 @@ function classifyStatus(status: number): FriendHealthStatus {
   return 'down';
 }
 
-async function fetchWithTimeout(url: string, method: 'HEAD' | 'GET'): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FRIEND_HEALTH_TIMEOUT_MS);
-
-  try {
-    return await fetch(url, {
-      method,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': FRIEND_HEALTH_USER_AGENT
-      },
-      signal: controller.signal
-    });
-  } finally {
-    clearTimeout(timeoutId);
-  }
+async function fetchStatusWithRedirects(initialUrl: string, method: 'HEAD' | 'GET'): Promise<number> {
+  return fetchPublicHttpStatusWithRedirects({
+    url: initialUrl,
+    method,
+    timeoutMs: FRIEND_HEALTH_TIMEOUT_MS,
+    maxRedirects: 3,
+    headers: {
+      'User-Agent': FRIEND_HEALTH_USER_AGENT,
+      ...(method === 'GET' ? { Range: 'bytes=0-0' } : {})
+    }
+  });
 }
 
 async function checkFriendLink(friend: FriendLinkRow): Promise<FriendHealthCheckResult> {
   try {
-    let response = await fetchWithTimeout(friend.url, 'HEAD');
+    let status = await fetchStatusWithRedirects(friend.url, 'HEAD');
 
-    if (response.status === 405) {
-      response = await fetchWithTimeout(friend.url, 'GET');
+    if (status === 405) {
+      status = await fetchStatusWithRedirects(friend.url, 'GET');
     }
 
     return {
       friend,
-      healthStatus: classifyStatus(response.status),
-      statusCode: response.status,
+      healthStatus: classifyStatus(status),
+      statusCode: status,
       error: null
     };
   } catch (error) {
+    const message = error instanceof UnsafeExternalUrlError
+      ? 'Unsafe target blocked.'
+      : error instanceof DOMException && error.name === 'AbortError'
+        ? 'Request timed out.'
+        : 'Network request failed.';
+
     return {
       friend,
       healthStatus: 'down',
       statusCode: null,
-      error: error instanceof Error ? error.message.slice(0, 200) : 'Network error'
+      error: message
     };
   }
 }
@@ -194,7 +191,7 @@ export async function checkApprovedFriendLinksHealth(): Promise<FriendHealthChec
     down: 0
   };
 
-  for (const friend of friends) {
+  const processFriend = async (friend: FriendLinkRow): Promise<Exclude<FriendHealthStatus, 'unknown'>> => {
     const result = await checkFriendLink(friend);
     const consecutiveFailures = result.healthStatus === 'down' ? friend.consecutive_failures + 1 : 0;
 
@@ -205,12 +202,14 @@ export async function checkApprovedFriendLinksHealth(): Promise<FriendHealthChec
       consecutiveFailures
     });
 
-    if (result.healthStatus === 'ok') {
-      stats.ok += 1;
-    } else if (result.healthStatus === 'warning') {
-      stats.warning += 1;
-    } else {
-      stats.down += 1;
+    return result.healthStatus;
+  };
+
+  for (let index = 0; index < friends.length; index += FRIEND_HEALTH_CONCURRENCY) {
+    const results = await Promise.all(friends.slice(index, index + FRIEND_HEALTH_CONCURRENCY).map(processFriend));
+
+    for (const result of results) {
+      stats[result] += 1;
     }
   }
 

@@ -20,7 +20,7 @@
 
 ## P1
 
-- [ ] Stage 7: add security hardening and deployment docs.
+- [x] Stage 7: add security hardening and deployment docs.
 - [ ] Consider reverting assets to draft when no published public posts reference them.
 - [ ] Add 30-second draft autosave in the post editor.
 - [ ] Warn before leaving the post editor with unsaved changes.

@@ -11,5 +11,7 @@ dist/
 .dev.vars
 
 *.log
+.astro-dev-audit.log
+.astro-dev-audit-error.log
 .astro-dev.*.log
 *.tsbuildinfo

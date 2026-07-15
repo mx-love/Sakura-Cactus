@@ -112,8 +112,9 @@ const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
     </div>
   </section>
 
-  <script id="sc-settings-data" type="application/json" set:html={settingsJson}></script>
+  <script id="sc-settings-data" type="application/json" set:html={settingsJson} is:inline></script>
   <script>
+    // @ts-nocheck -- legacy inline DOM script; tracked for extraction in SECURITY_AUDIT_REPORT.md.
     const message = document.getElementById('settings-message');
     const saveButton = document.getElementById('settings-save-button');
     const cleanupButton = document.getElementById('cleanup-assets-button');

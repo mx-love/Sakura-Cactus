@@ -8,6 +8,7 @@ import {
 } from '@/features/posts/post.service';
 import type { PostStatus, PostVisibility } from '@/features/posts/post.types';
 import { POST_STATUSES, POST_VISIBILITIES } from '@/features/posts/post.schema';
+import { reportError } from '@/lib/logging';
 
 export const prerender = false;
 
@@ -49,7 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
       return jsonError('SLUG_CONFLICT', error.message, { status: 409 });
     }
 
-    console.error('Create post failed:', error);
+    reportError('Create post failed.', error);
     return jsonError('POST_CREATE_FAILED', 'Unable to create post.', { status: 500 });
   }
 };

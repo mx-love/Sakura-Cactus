@@ -97,8 +97,8 @@ Options:
 `);
 }
 
-function randomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
+function randomBytes(length: number): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(new ArrayBuffer(length));
   crypto.getRandomValues(bytes);
   return bytes;
 }

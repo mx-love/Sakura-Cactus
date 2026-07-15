@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { publishAdminPost } from '@/features/posts/post.service';
+import { isPostValidationError, publishAdminPost } from '@/features/posts/post.service';
 import { jsonError, jsonOk } from '@/lib/response';
 
 export const prerender = false;
@@ -11,7 +11,17 @@ export const POST: APIRoute = async ({ params }) => {
     return jsonError('POST_NOT_FOUND', 'Post not found.', { status: 404 });
   }
 
-  const post = await publishAdminPost(id);
+  let post: Awaited<ReturnType<typeof publishAdminPost>>;
+
+  try {
+    post = await publishAdminPost(id);
+  } catch (error) {
+    if (isPostValidationError(error)) {
+      return jsonError(error.code, error.message, { status: 400 });
+    }
+
+    throw error;
+  }
 
   if (!post) {
     return jsonError('POST_NOT_FOUND', 'Post not found.', { status: 404 });

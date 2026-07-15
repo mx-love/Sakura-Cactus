@@ -50,11 +50,13 @@ export async function createTag(db: D1Database, name: string, slug: string): Pro
 }
 
 export async function replacePostTags(db: D1Database, postId: string, tagIds: string[]): Promise<void> {
-  await db.prepare('DELETE FROM post_tags WHERE post_id = ?').bind(postId).run();
+  const statements = [db.prepare('DELETE FROM post_tags WHERE post_id = ?').bind(postId)];
 
   for (const tagId of [...new Set(tagIds)]) {
-    await db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').bind(postId, tagId).run();
+    statements.push(db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').bind(postId, tagId));
   }
+
+  await db.batch(statements);
 }
 
 export async function listTagsForPost(db: D1Database, postId: string): Promise<TagRow[]> {

@@ -109,13 +109,17 @@ async function syncPostAssetReferences(db: D1Database, post: PostRow): Promise<v
   await cleanupUnreferencedAssets(db, unusedAssets);
 }
 
+function withCurrentContentHtml<T extends PostRow | null>(post: T): T {
+  return post ? ({ ...post, content_html: renderMarkdown(post.content_markdown) } as T) : post;
+}
+
 async function attachPostTags<T extends PostRow | null>(db: D1Database, post: T): Promise<T> {
   if (!post) {
     return post;
   }
 
   return {
-    ...post,
+    ...withCurrentContentHtml(post),
     tags: await getPostTags(db, post.id)
   } as T;
 }
@@ -231,26 +235,36 @@ export async function updateAdminPost(id: string, raw: unknown): Promise<PostRow
 
 export async function publishAdminPost(id: string): Promise<PostRow | null> {
   const db = getDb();
+  const current = await findPostById(db, id);
+
+  if (!current || current.deleted_at) {
+    return null;
+  }
+
+  if (!current.content_markdown.trim()) {
+    throw new PostValidationError('CONTENT_REQUIRED', 'Content is required to publish.');
+  }
+
   const post = await setPostStatus(db, id, 'published');
 
   if (post) {
     await syncPostAssetReferences(db, post);
-    return findPostById(db, post.id);
+    return withCurrentContentHtml(await findPostById(db, post.id));
   }
 
   return null;
 }
 
 export async function unpublishAdminPost(id: string): Promise<PostRow | null> {
-  return setPostStatus(getDb(), id, 'archived');
+  return withCurrentContentHtml(await setPostStatus(getDb(), id, 'archived'));
 }
 
 export async function pinAdminPost(id: string): Promise<PostRow | null> {
-  return setPostPinnedAt(getDb(), id, new Date().toISOString());
+  return withCurrentContentHtml(await setPostPinnedAt(getDb(), id, new Date().toISOString()));
 }
 
 export async function unpinAdminPost(id: string): Promise<PostRow | null> {
-  return setPostPinnedAt(getDb(), id, null);
+  return withCurrentContentHtml(await setPostPinnedAt(getDb(), id, null));
 }
 
 export async function deleteAdminPost(id: string): Promise<PostRow | null> {
@@ -262,7 +276,7 @@ export async function deleteAdminPost(id: string): Promise<PostRow | null> {
     await cleanupUnreferencedAssets(db, unusedAssets);
   }
 
-  return post;
+  return withCurrentContentHtml(post);
 }
 
 export async function getPublicPosts(options: {

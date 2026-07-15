@@ -2,10 +2,13 @@ import type { APIContext } from 'astro';
 import { env } from 'cloudflare:workers';
 import type { UserRow } from '@/lib/database.types';
 import { getDb } from '@/lib/db';
+import { clearRateLimit, consumeRateLimit } from '@/features/rate-limit/rate-limit.service';
+import { reportError } from '@/lib/logging';
+import { getClientAddress } from '@/lib/security/request';
 import { SESSION_COOKIE_NAME, SESSION_TOKEN_BYTES, SESSION_TTL_SECONDS } from './auth.constants';
 import { constantTimeEqual, createRandomToken, sha256Base64Url } from './crypto.service';
 import { verifyPassword } from './password.service';
-import { createSession, findActiveSessionRecordByTokenHash, revokeSessionByTokenHash } from './session.repo';
+import { cleanupStaleSessions, createSession, findActiveSessionRecordByTokenHash, revokeSessionByTokenHash } from './session.repo';
 import { ensureEnvironmentAdminUser, ENV_ADMIN_USER_ID, updateLastLogin } from './user.repo';
 
 const TEXT_ENCODER = new TextEncoder();
@@ -22,6 +25,13 @@ export class AuthConfigurationError extends Error {
   ) {
     super(message);
     this.name = 'AuthConfigurationError';
+  }
+}
+
+export class AuthRateLimitError extends Error {
+  constructor(public readonly retryAfterSeconds: number) {
+    super('Too many login attempts.');
+    this.name = 'AuthRateLimitError';
   }
 }
 
@@ -135,7 +145,11 @@ export function getCookieValue(request: Request, name: string): string | null {
     const [rawName, ...rawValue] = cookie.trim().split('=');
 
     if (rawName === name) {
-      return decodeURIComponent(rawValue.join('='));
+      try {
+        return decodeURIComponent(rawValue.join('='));
+      } catch {
+        return null;
+      }
     }
   }
 
@@ -169,10 +183,9 @@ export async function hashSessionToken(token: string, secret: string): Promise<s
 }
 
 export async function hashClientIp(request: Request, secret: string): Promise<string | null> {
-  const forwardedFor = request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for');
-  const ip = forwardedFor?.split(',')[0]?.trim();
+  const ip = getClientAddress(request);
 
-  if (!ip) {
+  if (ip === 'unknown') {
     return null;
   }
 
@@ -182,19 +195,51 @@ export async function hashClientIp(request: Request, secret: string): Promise<st
 export async function loginAdmin(context: APIContext, account: string, password: string): Promise<LoginResult | null> {
   const db = getDb(context);
   const expectedUsername = getEnvironmentAdminUsername();
+  const secret = getSessionSecret();
+  const clientAddress = getClientAddress(context.request);
+  const normalizedAccount = account.trim().slice(0, 256);
+  const [ipLimit, accountLimit] = await Promise.all([
+    consumeRateLimit({
+      scope: 'admin_login_ip',
+      key: clientAddress,
+      secret,
+      limit: 10,
+      windowSeconds: 15 * 60
+    }),
+    consumeRateLimit({
+      scope: 'admin_login_account',
+      key: `${clientAddress}:${normalizedAccount.toLowerCase()}`,
+      secret,
+      limit: 20,
+      windowSeconds: 15 * 60
+    })
+  ]);
 
-  if (account !== expectedUsername || !(await verifyEnvironmentAdminPassword(password))) {
+  if (!ipLimit.allowed || !accountLimit.allowed) {
+    throw new AuthRateLimitError(Math.max(ipLimit.retryAfterSeconds, accountLimit.retryAfterSeconds));
+  }
+
+  if (account.length > 256 || password.length > 1_024) {
+    return null;
+  }
+
+  const [accountMatches, passwordMatches] = await Promise.all([
+    constantTimePasswordEqual(account, expectedUsername),
+    verifyEnvironmentAdminPassword(password)
+  ]);
+
+  if (!accountMatches || !passwordMatches) {
     return null;
   }
 
   const sessionOwner = await ensureEnvironmentAdminUser(db);
 
-  const secret = getSessionSecret();
   const token = createRandomToken(SESSION_TOKEN_BYTES);
   const tokenHash = await hashSessionToken(token, secret);
   const userAgent = context.request.headers.get('user-agent');
   const ipHash = await hashClientIp(context.request, secret);
 
+  await cleanupStaleSessions(db);
   await createSession(db, {
     userId: sessionOwner.id,
     tokenHash,
@@ -202,6 +247,18 @@ export async function loginAdmin(context: APIContext, account: string, password:
     ipHash
   });
   await updateLastLogin(db, sessionOwner.id);
+  await Promise.all([
+    clearRateLimit({
+      scope: 'admin_login_ip',
+      key: clientAddress,
+      secret
+    }),
+    clearRateLimit({
+      scope: 'admin_login_account',
+      key: `${clientAddress}:${normalizedAccount.toLowerCase()}`,
+      secret
+    })
+  ]).catch((error) => reportError('Login rate-limit cleanup failed.', error));
 
   return {
     user: getEnvironmentAdminUser(),

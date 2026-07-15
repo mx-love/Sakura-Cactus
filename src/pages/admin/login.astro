@@ -2,8 +2,9 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { LoginForm } from '@/components/admin/LoginForm';
 import { ROBOTS_NOINDEX_NOFOLLOW } from '@/lib/seo';
+import { normalizeInternalRedirect } from '@/lib/security/request';
 
-const next = Astro.url.searchParams.get('next') ?? '/write';
+const next = normalizeInternalRedirect(Astro.url.searchParams.get('next'), '/write');
 ---
 
 <SiteLayout title="登录 | Sakura Cactus" robots={ROBOTS_NOINDEX_NOFOLLOW} showHeader={false}>

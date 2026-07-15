@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { jsonError, jsonOk } from '@/lib/response';
+import { reportError } from '@/lib/logging';
 import { isAssetStorageError } from '@/features/assets/asset.service';
 import {
   deleteAdminPost,
@@ -68,7 +69,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       return jsonError(error.code, error.message, { status: 502 });
     }
 
-    console.error('Update post failed:', error);
+    reportError('Update post failed.', error);
     return jsonError('POST_UPDATE_FAILED', 'Unable to update post.', { status: 500 });
   }
 };
@@ -93,7 +94,7 @@ export const DELETE: APIRoute = async ({ params }) => {
       return jsonError(error.code, error.message, { status: 502 });
     }
 
-    console.error('Delete post failed:', error);
+    reportError('Delete post failed.', error);
     return jsonError('POST_DELETE_FAILED', 'Unable to delete post.', { status: 500 });
   }
 };

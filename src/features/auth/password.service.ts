@@ -8,7 +8,7 @@ import { base64UrlToBytes, bytesToBase64Url, constantTimeEqual, randomBytes } fr
 
 const TEXT_ENCODER = new TextEncoder();
 
-async function derivePasswordBytes(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+async function derivePasswordBytes(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number): Promise<Uint8Array<ArrayBuffer>> {
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     TEXT_ENCODER.encode(password),
