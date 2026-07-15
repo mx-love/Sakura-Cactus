@@ -142,3 +142,17 @@ export async function revokeSessionByTokenHash(db: D1Database, tokenHash: string
     .bind(nowIso(), tokenHash)
     .run();
 }
+
+export async function cleanupStaleSessions(db: D1Database, now = nowIso()): Promise<number> {
+  const revokedCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1_000).toISOString();
+  const result = await db
+    .prepare(
+      `DELETE FROM sessions
+       WHERE expires_at <= ?
+          OR (revoked_at IS NOT NULL AND revoked_at <= ?)`
+    )
+    .bind(now, revokedCutoff)
+    .run();
+
+  return result.meta.changes ?? 0;
+}

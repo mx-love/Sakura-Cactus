@@ -8,6 +8,7 @@ import {
 } from '@/features/assets/asset.service';
 import type { AssetVisibility } from '@/features/assets/asset.types';
 import { jsonError, jsonOk } from '@/lib/response';
+import { reportError } from '@/lib/logging';
 
 export const prerender = false;
 
@@ -67,7 +68,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       return jsonError(error.code, error.message, { status: 400 });
     }
 
-    console.error('Asset update failed:', error);
+    reportError('Asset update failed.', error);
     return jsonError('ASSET_UPDATE_FAILED', 'Unable to update asset.', { status: 500 });
   }
 };
@@ -96,7 +97,7 @@ export const DELETE: APIRoute = async ({ params }) => {
       return jsonError(error.code, error.message, { status: 502 });
     }
 
-    console.error('Asset delete failed:', error);
+    reportError('Asset delete failed.', error);
     return jsonError('ASSET_DELETE_FAILED', 'Unable to delete asset.', { status: 500 });
   }
 };

@@ -5,6 +5,7 @@ import {
   isFriendLinkValidationError,
   updateAdminFriendLink
 } from '@/features/friends/friend.service';
+import { reportError } from '@/lib/logging';
 
 export const prerender = false;
 
@@ -41,7 +42,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       return jsonError(error.code, error.message, { status: 400 });
     }
 
-    console.error('Update friend link failed:', error);
+    reportError('Update friend link failed.', error);
     return jsonError('FRIEND_UPDATE_FAILED', 'Unable to update friend link.', { status: 500 });
   }
 };

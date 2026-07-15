@@ -35,7 +35,12 @@ function normalizeOptionalText(value: unknown, maxLength: number): string | null
   }
 
   const normalized = value.trim();
-  return normalized.length > 0 ? normalized.slice(0, maxLength) : null;
+
+  if (normalized.length > maxLength) {
+    throw new PostValidationError('FIELD_TOO_LONG', 'Post field is too long.');
+  }
+
+  return normalized.length > 0 ? normalized : null;
 }
 
 function normalizePublishedAt(value: unknown): string | null {
@@ -82,11 +87,15 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
     throw new PostValidationError('TITLE_REQUIRED', 'Title is required.');
   }
 
+  if (body.title.trim().length > 200) {
+    throw new PostValidationError('TITLE_TOO_LONG', 'Title must be 200 characters or fewer.');
+  }
+
   if (typeof body.contentMarkdown !== 'string') {
     throw new PostValidationError('CONTENT_REQUIRED', 'Markdown content is required.');
   }
 
-  const title = body.title.trim().slice(0, 200);
+  const title = body.title.trim();
   const excerpt = normalizeOptionalText(body.excerpt, 500);
   const status = typeof body.status === 'string' ? (body.status as PostStatus) : defaultStatus;
   const visibility = typeof body.visibility === 'string' ? (body.visibility as PostVisibility) : 'public';
@@ -99,7 +108,11 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
     throw new PostValidationError('INVALID_VISIBILITY', 'Invalid post visibility.');
   }
 
-  const contentMarkdown = body.contentMarkdown.slice(0, 200_000);
+  if (body.contentMarkdown.length > 200_000) {
+    throw new PostValidationError('CONTENT_TOO_LONG', 'Markdown content must be 200,000 characters or fewer.');
+  }
+
+  const contentMarkdown = body.contentMarkdown;
 
   if (status === 'published' && contentMarkdown.trim().length === 0) {
     throw new PostValidationError('CONTENT_REQUIRED', 'Content is required to publish.');

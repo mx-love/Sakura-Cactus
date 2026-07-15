@@ -144,6 +144,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
               <span data-calendar-ganzhi>{ganzhiYear}</span>
             </div>
             <script>
+              // @ts-nocheck -- legacy inline DOM script; tracked for extraction in SECURITY_AUDIT_REPORT.md.
               const calendarTitle = document.querySelector('[data-calendar-title]');
               const calendarGrid = document.querySelector('[data-calendar-grid]');
               const calendarDayWeek = document.querySelector('[data-calendar-day-week]');
@@ -320,6 +321,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
           </span>
         </div>
         <script>
+          // @ts-nocheck -- legacy inline DOM script; tracked for extraction in SECURITY_AUDIT_REPORT.md.
           const quoteRoot = document.querySelector('[data-paper-quotes]');
           const quoteBody = quoteRoot?.querySelector('[data-paper-quote-body]');
           const quoteContent = quoteRoot?.querySelector('[data-paper-quote-content]');

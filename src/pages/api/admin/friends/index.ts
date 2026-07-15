@@ -5,6 +5,7 @@ import {
   getAdminFriendLinks,
   isFriendLinkValidationError
 } from '@/features/friends/friend.service';
+import { reportError } from '@/lib/logging';
 
 export const prerender = false;
 
@@ -30,7 +31,7 @@ export const POST: APIRoute = async ({ request }) => {
       return jsonError(error.code, error.message, { status: 400 });
     }
 
-    console.error('Create friend link failed:', error);
+    reportError('Create friend link failed.', error);
     return jsonError('FRIEND_CREATE_FAILED', 'Unable to create friend link.', { status: 500 });
   }
 };

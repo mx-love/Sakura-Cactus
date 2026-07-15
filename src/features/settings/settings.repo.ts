@@ -19,6 +19,25 @@ export async function upsertSiteSetting(db: D1Database, key: string, value: stri
     .run();
 }
 
+export async function upsertSiteSettings(db: D1Database, entries: Array<[string, string]>): Promise<void> {
+  if (entries.length === 0) {
+    return;
+  }
+
+  const now = nowIso();
+  const statements = entries.map(([key, value]) =>
+    db
+      .prepare(
+        `INSERT INTO site_settings (key, value, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+      )
+      .bind(key, value, now)
+  );
+
+  await db.batch(statements);
+}
+
 export async function incrementPostViewCount(db: D1Database, postId: string): Promise<number> {
   const now = nowIso();
 

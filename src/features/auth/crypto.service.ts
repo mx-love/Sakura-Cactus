@@ -1,7 +1,7 @@
 const TEXT_ENCODER = new TextEncoder();
 
-export function randomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
+export function randomBytes(length: number): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(new ArrayBuffer(length));
   crypto.getRandomValues(bytes);
   return bytes;
 }
@@ -17,10 +17,10 @@ export function bytesToBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 }
 
-export function base64UrlToBytes(value: string): Uint8Array {
+export function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
   const padded = value.replaceAll('-', '+').replaceAll('_', '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
   const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
 
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i);

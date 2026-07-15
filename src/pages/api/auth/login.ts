@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { jsonError, jsonOk } from '@/lib/response';
-import { AuthConfigurationError, loginAdmin } from '@/features/auth/auth.service';
+import { AuthConfigurationError, AuthRateLimitError, loginAdmin } from '@/features/auth/auth.service';
+import { reportError } from '@/lib/logging';
 
 export const prerender = false;
 
@@ -45,11 +46,22 @@ export const POST: APIRoute = async (context) => {
       }
     );
   } catch (error) {
-    if (error instanceof AuthConfigurationError) {
-      return jsonError(error.code, error.message, { status: 500 });
+    if (error instanceof AuthRateLimitError) {
+      return jsonError('RATE_LIMITED', 'Too many login attempts. Try again later.', {
+        status: 429,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Retry-After': String(error.retryAfterSeconds)
+        }
+      });
     }
 
-    console.error('Admin login failed:', error);
+    if (error instanceof AuthConfigurationError) {
+      reportError('Admin login configuration error.', error);
+      return jsonError('AUTH_UNAVAILABLE', 'Administrator login is not configured.', { status: 503 });
+    }
+
+    reportError('Admin login failed.', error);
     return jsonError('LOGIN_FAILED', 'Unable to sign in right now.', { status: 500 });
   }
 };

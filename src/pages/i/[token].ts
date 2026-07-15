@@ -33,6 +33,9 @@ export const GET: APIRoute = async (context) => {
     result.isPublic ? 'public, max-age=31536000, immutable' : 'private, no-store'
   );
   headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Content-Disposition', 'inline');
+  headers.set('Content-Length', String(result.object.size));
+  headers.set('ETag', result.object.httpEtag);
 
   return new Response(result.object.body, {
     status: 200,

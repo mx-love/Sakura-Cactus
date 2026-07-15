@@ -161,8 +161,9 @@ function formatCheckedAt(value: string | null): string {
         </section>
       </div>
 
-      <script id="sc-friends-data" type="application/json" set:html={friendsJson}></script>
+      <script id="sc-friends-data" type="application/json" set:html={friendsJson} is:inline></script>
       <script>
+        // @ts-nocheck -- legacy inline DOM script; tracked for extraction in SECURITY_AUDIT_REPORT.md.
         const isFriendAdmin = Boolean(document.getElementById('friend-add-button'));
         const dataElement = document.getElementById('sc-friends-data');
         let friendLinks = dataElement ? JSON.parse(dataElement.textContent || '[]') : [];

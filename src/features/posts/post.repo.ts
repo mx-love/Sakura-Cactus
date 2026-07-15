@@ -3,7 +3,7 @@ import type { AssetRow, PostRow } from '@/lib/database.types';
 import { nowIso } from '@/lib/db';
 import { createRandomId } from '@/features/auth/crypto.service';
 import type { NormalizedPostInput } from './post.schema';
-import type { PostListFilters, PostStatus, PostVisibility } from './post.types';
+import type { PostListFilters, PostStatus } from './post.types';
 
 export interface PersistedPostInput extends NormalizedPostInput {
   contentHtml: string;
@@ -499,17 +499,20 @@ export async function replacePostAssets(db: D1Database, postId: string, assetIds
     affectedAssetIds.add(assetId);
   }
 
-  await db.prepare('DELETE FROM post_assets WHERE post_id = ?').bind(postId).run();
+  const statements = [db.prepare('DELETE FROM post_assets WHERE post_id = ?').bind(postId)];
 
   for (const assetId of uniqueAssetIds) {
-    await db
-      .prepare(
-        `INSERT INTO post_assets (post_id, asset_id, role, created_at)
-         VALUES (?, ?, 'inline', ?)`
-      )
-      .bind(postId, assetId, now)
-      .run();
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO post_assets (post_id, asset_id, role, created_at)
+           VALUES (?, ?, 'inline', ?)`
+        )
+        .bind(postId, assetId, now)
+    );
   }
+
+  await db.batch(statements);
 
   return refreshAssetUsageCounts(db, [...affectedAssetIds]);
 }

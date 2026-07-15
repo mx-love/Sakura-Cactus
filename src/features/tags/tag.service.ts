@@ -86,5 +86,5 @@ export async function getPublicTags() {
 
 export async function getPublicPostsByTagSlug(slug: string): Promise<PublicPostSummary[]> {
   const posts = await listPublicPostsByTagSlug(getDb(), slug, nowIso());
-  return posts.map(toPublicPostSummary);
+  return posts.map((post) => toPublicPostSummary(post));
 }

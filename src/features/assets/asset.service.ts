@@ -2,7 +2,14 @@ import { env } from 'cloudflare:workers';
 import { bytesToBase64Url, createRandomToken } from '@/features/auth/crypto.service';
 import type { PublicAdminUser } from '@/features/auth/auth.service';
 import { getDb } from '@/lib/db';
-import { assertValidImageFile, extensionForMimeType, isValidAssetToken, AssetValidationError } from './asset.security';
+import {
+  assertValidImageBytes,
+  assertValidImageFile,
+  extensionForMimeType,
+  isValidAssetToken,
+  sanitizeOriginalFilename,
+  AssetValidationError
+} from './asset.security';
 import {
   createAssetRecord,
   findAssetById,
@@ -17,6 +24,7 @@ import {
   updateAssetVisibility
 } from './asset.repo';
 import type { AssetRow, AssetVisibility } from './asset.types';
+import { reportError } from '@/lib/logging';
 
 const TOKEN_BYTES = 24;
 const DEFAULT_ORPHAN_ASSET_TTL_HOURS = 24;
@@ -90,6 +98,7 @@ export async function uploadAdminAsset(file: File, user: PublicAdminUser): Promi
   const db = getDb();
   const bucket = getMediaBucket();
   const buffer = await file.arrayBuffer();
+  assertValidImageBytes(new Uint8Array(buffer), file.type);
   const sha256 = await sha256ArrayBuffer(buffer);
   const reusableAsset = await findReusableAssetBySha256(db, sha256, file.type, file.size);
 
@@ -107,21 +116,30 @@ export async function uploadAdminAsset(file: File, user: PublicAdminUser): Promi
   await bucket.put(r2Key, buffer, {
     httpMetadata: {
       contentType: file.type
-    },
-    customMetadata: {
-      originalFilename: file.name
     }
   });
 
-  const asset = await createAssetRecord(db, {
-    token,
-    r2Key,
-    originalFilename: file.name || null,
-    mimeType: file.type,
-    sizeBytes: file.size,
-    sha256,
-    createdBy: user.id
-  });
+  let asset: AssetRow;
+
+  try {
+    asset = await createAssetRecord(db, {
+      token,
+      r2Key,
+      originalFilename: sanitizeOriginalFilename(file.name),
+      mimeType: file.type,
+      sizeBytes: file.size,
+      sha256,
+      createdBy: user.id
+    });
+  } catch (error) {
+    try {
+      await bucket.delete(r2Key);
+    } catch (deleteError) {
+      reportError('R2 asset rollback delete failed.', deleteError);
+    }
+
+    throw error;
+  }
 
   return {
     asset,
@@ -162,7 +180,7 @@ export async function deleteAssetObjectAndSoftDelete(db: D1Database, asset: Asse
   try {
     await getMediaBucket().delete(asset.r2_key);
   } catch (error) {
-    console.error('R2 asset delete failed:', error);
+    reportError('R2 asset delete failed.', error);
     throw new AssetStorageError('R2_DELETE_FAILED', 'Unable to delete image object from storage.');
   }
 
