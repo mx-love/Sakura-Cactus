@@ -520,7 +520,7 @@ summary {
   height: 1.08rem;
 }
 
-.sc-public-shell {
+.sc-page-shell {
   width: min(100% - 2rem, 860px);
   margin-inline: auto;
   padding-block: clamp(2rem, 5vw, 4rem);
@@ -771,12 +771,6 @@ summary {
 
 .sc-tag-link-static:hover {
   text-decoration: none;
-}
-
-.sc-public-content-shell {
-  width: min(100% - 2rem, 920px);
-  margin-inline: auto;
-  padding-block: clamp(1.5rem, 4vw, 3rem);
 }
 
 .sc-article-paper {
@@ -1414,12 +1408,6 @@ summary {
   background:
     radial-gradient(circle at 20% 0%, rgba(217, 111, 145, 0.05), transparent 24rem),
     #f6f6f7;
-}
-
-.sc-settings-shell {
-  width: min(100% - 2rem, 980px);
-  margin-inline: auto;
-  padding-block: clamp(2rem, 5vw, 4rem);
 }
 
 .sc-settings-content {
@@ -3304,7 +3292,6 @@ summary {
   }
 
   .sc-paper-public-shell {
-    width: min(100% - 1rem, 860px);
     padding-inline: 1rem;
   }
 
@@ -3356,11 +3343,6 @@ summary {
     display: none;
   }
 
-  .sc-public-content-shell {
-    width: min(100% - 1rem, 920px);
-    padding-block: 1rem 2rem;
-  }
-
   .sc-article-paper {
     border-radius: 20px;
     padding: 1.5rem;
@@ -3381,11 +3363,6 @@ summary {
 
   .sc-settings-row {
     grid-template-columns: 1fr;
-  }
-
-  .sc-settings-shell {
-    width: min(100% - 1rem, 980px);
-    padding-block: 1rem 2rem;
   }
 
   .sc-data-page .sc-settings-header {
