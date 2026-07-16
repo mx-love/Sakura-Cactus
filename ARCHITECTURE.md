@@ -9,7 +9,6 @@ Cloudflare Worker fetch
        canonical redirect
        public Cache API lookup
        same-origin mutation check / request size guard
-       D1 schema version check
        admin page/API authorization
        Astro page or API route
        no-store/public cache policy + security headers
@@ -36,8 +35,7 @@ Mutating admin/auth endpoints also reject a conflicting `Origin` or `Sec-Fetch-S
 
 - `src/features/*/*.repo.ts`: prepared D1 statements and row mapping.
 - `src/features/*/*.service.ts`: validation, business rules, multi-resource coordination, and public/admin projections.
-- `src/lib/schema.ts`: backward-compatible automatic bootstrap. A schema-version marker reduces warm/cold-isolate DDL work to one read after version 8 is present.
-- `migrations/`: explicit local/managed migration history. Remote migration application remains an operator action.
+- `migrations/`: the only D1 initialization and upgrade path. Runtime requests and scheduled tasks never create, rebuild, or upgrade tables. Remote migration application remains an operator action.
 
 Published posts are the only server-side article state. Unpublished writing, including a new about page before first save, stays in browser localStorage. Association replacements for post assets, post tags, and multi-setting updates use D1 batch operations so a statement failure does not leave a partially replaced set.
 

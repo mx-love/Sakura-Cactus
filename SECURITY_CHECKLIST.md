@@ -63,7 +63,7 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[CODE]` post-asset, post-tag, and multi-setting replacements use D1 batch operations.
 - [x] `[CODE]` blog data import validates file checksum/version/sections, blocks sensitive fields, never trusts database IDs or `content_html`, and writes selected D1 rows through batch operations.
 - [x] `[TEST]` migrations 0001 through 0008 apply successfully to a fresh local D1 database.
-- [x] `[CODE]` automatic bootstrap remains backward-compatible and uses a version marker after schema version 8.
+- [x] `[CODE]` HTTP requests and scheduled tasks never initialize or upgrade D1; checked-in migrations are the only schema change path.
 - [ ] `[CONSOLE]` confirm production migration history before manually applying 0008; do not run remote migration blindly on an auto-bootstrapped database.
 - [ ] `[CONSOLE]` enable/verify D1 backups or point-in-time recovery appropriate to the account plan.
 

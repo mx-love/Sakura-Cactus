@@ -39,7 +39,7 @@ Scope: local uncommitted security hardening changes only. No commit, push, deplo
 ## Migration Risk
 
 - `migrations/0008_security_hardening.sql` only adds `rate_limits`, `idx_rate_limits_expires_at`, and `sakura_schema_state`; it does not delete or rename production data.
-- `src/lib/schema.ts` schema version is consistent with migration version 8.
+- D1 initialization and upgrades are explicit migrations; runtime request and scheduled-task paths do not execute schema DDL.
 - Fresh local D1 path verified: official local migration apply ran 0001 through 0008 successfully.
 - Upgrade local D1 path verified: executed 0001 through 0007 into a separate local database, then executed 0008 successfully.
 - Runtime bootstrap remains idempotent with `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS`; repeated deployment should not conflict with already-created objects.

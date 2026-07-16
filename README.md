@@ -64,7 +64,7 @@ SAKURA_R2_BUCKET_NAME=sakura-blog-media-prod
 
 两项都选择“文本”。
 
-构建脚本会自动生成 D1 和 R2 bindings，不需要在运行时变量中手动添加 `DB` 或 `MEDIA_BUCKET`。D1 首次运行会自动初始化；R2 Bucket 应保持私有，图片通过 `/i/:token` 代理访问，不需要为 R2 配置公开自定义域名。
+构建脚本会自动生成 D1 和 R2 bindings，不需要在运行时变量中手动添加 `DB` 或 `MEDIA_BUCKET`。D1 初始化和升级必须显式执行 `migrations/`；R2 Bucket 应保持私有，图片通过 `/i/:token` 代理访问，不需要为 R2 配置公开自定义域名。
 
 ## 环境变量
 

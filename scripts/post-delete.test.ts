@@ -908,6 +908,12 @@ function testSimplifyPostStatusMigration(): void {
   assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-draft-about'), 0);
   assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-archived'), 0);
   assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-private'), 0);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_tags WHERE post_id = ?', 'p-live'), 1);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_tags WHERE post_id = ?', 'p-about'), 1);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_assets WHERE post_id = ?', 'p-live'), 2);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_assets WHERE post_id = ?', 'p-about'), 1);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_view_counts WHERE post_id = ?', 'p-live'), 1);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_view_counts WHERE post_id = ?', 'p-about'), 1);
   assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_tags WHERE post_id IN (?, ?, ?, ?)', 'p-draft', 'p-draft-about', 'p-archived', 'p-private'), 0);
   assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_assets WHERE post_id IN (?, ?, ?, ?)', 'p-draft', 'p-draft-about', 'p-archived', 'p-private'), 0);
   assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_view_counts WHERE post_id IN (?, ?, ?, ?)', 'p-draft', 'p-draft-about', 'p-archived', 'p-private'), 0);
@@ -986,6 +992,9 @@ function testPostLifecycleUiAndRoutes(): void {
   const writeSource = readFileSync(path.join(root, 'src/pages/write.astro'), 'utf8');
   const editorSource = readFileSync(path.join(root, 'src/components/admin/PostEditor.tsx'), 'utf8');
   const autosaveSource = readFileSync(path.join(root, 'src/components/admin/postEditorAutosave.ts'), 'utf8');
+  const middlewareSource = readFileSync(path.join(root, 'src/middleware.ts'), 'utf8');
+  const workerSource = readFileSync(path.join(root, 'src/worker.ts'), 'utf8');
+  const migrationSource = readFileSync(path.join(root, 'migrations/0010_simplify_post_status.sql'), 'utf8');
 
   assert.doesNotMatch(writeSource, /ensureAdminAboutPost/);
   assert.match(writeSource, /getAdminAboutEditorPost/);
@@ -995,6 +1004,15 @@ function testPostLifecycleUiAndRoutes(): void {
   assert.doesNotMatch(editorSource, /isCollected/);
   assert.throws(() => readFileSync(path.join(root, 'src/pages/api/admin/posts/[id]/unpublish.ts'), 'utf8'));
   assert.throws(() => readFileSync(path.join(root, 'src/pages/api/admin/posts/[id]/publish.ts'), 'utf8'));
+  assert.throws(() => readFileSync(path.join(root, 'src/lib/schema.ts'), 'utf8'));
+  assert.doesNotMatch(middlewareSource, /ensureD1Schema|createSchema|ensurePublishedOnlyPostSchema/);
+  assert.doesNotMatch(workerSource, /ensureD1Schema|createSchema|ensurePublishedOnlyPostSchema/);
+  assert.doesNotMatch(migrationSource, /\bBEGIN(?:\s+TRANSACTION)?\b/i);
+  assert.doesNotMatch(migrationSource, /\bCOMMIT\b/i);
+  assert.doesNotMatch(migrationSource, /\bROLLBACK\b/i);
+  assert.doesNotMatch(migrationSource, /\bSAVEPOINT\b/i);
+  assert.doesNotMatch(migrationSource, /PRAGMA\s+foreign_keys\s*=/i);
+  assert.match(migrationSource, /PRAGMA\s+defer_foreign_keys\s*=\s*ON/i);
 }
 
 await testPostDeleteService();

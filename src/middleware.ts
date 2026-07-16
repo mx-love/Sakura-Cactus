@@ -1,9 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { matchPublicCache, maybeStorePublicCache, withNoStore, withServerTiming } from '@/lib/cache';
-import { getDb } from '@/lib/db';
 import { jsonError } from '@/lib/response';
-import { ensureD1Schema } from '@/lib/schema';
 import { ROBOTS_NOINDEX_NOFOLLOW, getCanonicalRedirectUrl } from '@/lib/seo';
 import { applySecurityHeaders, isMutatingRequest, isSameOriginBrowserRequest } from '@/lib/security/request';
 import { DATA_PORTABILITY_LIMITS } from '@/features/data-portability/data-portability.constants';
@@ -111,8 +109,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (exceedsRequestSizeLimit(context.request, pathname)) {
     return finalize(jsonError('REQUEST_TOO_LARGE', 'Request body is too large.', { status: 413 }), true);
   }
-
-  await ensureD1Schema(getDb());
 
   if (isAdminApi(pathname)) {
     const user = await getCurrentAdminUser(context);

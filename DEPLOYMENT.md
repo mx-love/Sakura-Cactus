@@ -80,11 +80,11 @@ SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
 
 ## Database Initialization
 
-Sakura Cactus automatically initializes the D1 schema on first runtime access. The bootstrap only creates missing tables, indexes, default settings, and known columns. It does not delete tables, clear data, or rebuild the database.
+Sakura Cactus does not initialize or upgrade D1 from an HTTP request or scheduled task. Apply the checked-in migrations explicitly before first use and whenever a new migration is released.
 
-The SQL files under `migrations/` are still kept for developers who want explicit local database maintenance.
+The Worker remains compatible with the immediately preceding schema while a release migration is staged, but the database must not be left behind indefinitely. A missing or genuinely incompatible schema is treated as an operational error instead of being silently rewritten at runtime.
 
-Security hardening adds migration `0008_security_hardening.sql`. It creates the D1-backed `rate_limits` table and a lightweight `sakura_schema_state` bootstrap marker; it does not delete application data. The runtime bootstrap can create these objects automatically. Before applying migration 0008 remotely, inspect the production D1 migration history and current tables first. Do not blindly run the remote command against an existing auto-bootstrapped database.
+Migration `0008_security_hardening.sql` creates the D1-backed `rate_limits` table and the `sakura_schema_state` marker. Migration `0010_simplify_post_status.sql` is an explicit, irreversible upgrade that removes historical draft, archived, and non-public posts after recording their media cleanup candidates. It must be tested and applied through Wrangler D1 migrations, never by serving a page.
 
 The rate-limit paths fail closed if D1 is unavailable: login, uploads, friend applications, and view counting do not silently bypass the shared limit when the table cannot be read or updated. Expired limit rows are deleted in bounded batches during normal consumption.
 
