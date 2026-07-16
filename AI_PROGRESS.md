@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Stage 7: security hardening and pre-commit review.
+Project maintenance: dependency verification is complete; current work is roadmap and documentation synchronization on `codex/project-maintenance`.
 
 ## Completed
 
@@ -113,10 +113,10 @@ Stage 7: security hardening and pre-commit review.
 - [x] Simplified the homepage, article list, timeline, tags, friends, about, login, article detail, and writing UI around narrow content-first layouts.
 - [x] Added `/rss.xml` for public published posts.
 - [x] Added `/sitemap.xml` for static public pages, public posts, and public tag pages.
-- [x] RSS, sitemap, and robots use the current request origin automatically.
 - [x] Added RSS discovery link in the global document head.
 - [x] Added `/robots.txt` pointing to the generated sitemap.
-- [x] Treated the `about` tag as a system page source and hid it from normal discovery flows.
+- [x] RSS, sitemap, robots, and canonical URLs use the configured `SITE_URL` origin, with the code fallback in `src/lib/seo.ts`.
+- [x] Treated the `about` slug as a system page source and hid it from normal discovery flows.
 - [x] Refined public tags, timeline, and search information architecture.
 - [x] Added lightweight local search overlay without external search dependencies.
 - [x] Completed the 2026-07-15 security audit hardening pass.
@@ -125,17 +125,23 @@ Stage 7: security hardening and pre-commit review.
 - [x] Added SSRF guards for friend URLs and favicon URL settings.
 - [x] Hardened upload validation, private media responses, Markdown rendering paths, CSRF checks, private no-store responses, scheduled task isolation, and dependency pins.
 - [x] Added `ARCHITECTURE.md`, `SECURITY_AUDIT_REPORT.md`, and `FINAL_REVIEW.md` as audit handoff documents.
+- [x] Verified dependency state on `codex/project-maintenance`: every direct dependency in `package.json` is an exact version and matches `pnpm-lock.yaml`.
+- [x] Confirmed first-stage dependency maintenance required no file changes and no commit.
+- [x] Confirmed the remaining production dependency audit item is 1 known low-severity Babel source-map advisory from the React/Vite toolchain.
+- [x] Confirmed writer local autosave/recovery and first paste content preservation from current code.
+- [x] Started second-stage documentation synchronization so TODO, README, architecture, and progress notes match implemented code.
 
 ## Pending
 
-- [ ] Await user confirmation before any commit, push, deployment, or remote database operation.
+- [ ] Await explicit user confirmation before push, deployment, merge, or remote database operation.
+- [ ] Plan the next independent feature branch for versioned blog export and validated blog import.
 
 ## Known Issues
 
 - The local shell did not have pnpm initially; it was installed globally with npm.
 - In this sandbox, Astro telemetry and Wrangler config paths need environment variables during verification:
   - `ASTRO_TELEMETRY_DISABLED=1`
-  - `XDG_CONFIG_HOME=D:\code\Sakura Cactus\.wrangler-config`
+  - `XDG_CONFIG_HOME=D:\code\Sakura-Cactus\.wrangler-config`
 - Wrangler D1/R2 IDs are placeholders and must be replaced before remote deployment.
 - Local migration verification depends on Wrangler accepting the placeholder D1 database configuration; production requires replacing IDs first.
 - Login now only requires `ADMIN_USERNAME` and `ADMIN_PASSWORD` for standard deployment; `ADMIN_PASSWORD_HASH` remains an advanced optional override.
@@ -361,7 +367,7 @@ Site settings controls:
 - Added `site_settings` D1 storage.
 - Added `post_view_counts` for optional PV counts.
 - Added friend link application toggle and pending review flow.
-- Added a comment on/off setting without external provider integration.
+- Added a comment on/off setting and Waline comment slot integration through `PUBLIC_COMMENTS_SERVER_URL`.
 - Added external favicon URL output.
 - Added settings-triggered expired unreferenced image cleanup.
 
