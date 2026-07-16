@@ -2,7 +2,7 @@
 import AdminLayout from '@/components/layout/AdminLayout.astro';
 import { PostEditor } from '@/components/admin/PostEditor';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
-import { ensureAdminAboutPost, getAdminPost } from '@/features/posts/post.service';
+import { getAdminAboutEditorPost, getAdminPost } from '@/features/posts/post.service';
 
 const adminUser = await getCurrentAdminUser(Astro);
 
@@ -12,7 +12,7 @@ if (!adminUser) {
 
 const postId = Astro.url.searchParams.get('post');
 const isAboutEditor = Astro.url.searchParams.get('type') === 'about';
-const post = isAboutEditor ? await ensureAdminAboutPost() : postId ? await getAdminPost(postId) : null;
+const post = isAboutEditor ? await getAdminAboutEditorPost() : postId ? await getAdminPost(postId) : null;
 
 if (!isAboutEditor && postId && !post) {
   return new Response('Not found', { status: 404 });

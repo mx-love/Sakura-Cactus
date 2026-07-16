@@ -10,8 +10,8 @@ export class PostValidationError extends Error {
   }
 }
 
-export const POST_STATUSES: PostStatus[] = ['draft', 'published', 'archived'];
-export const POST_VISIBILITIES: PostVisibility[] = ['public', 'private'];
+export const POST_STATUSES: PostStatus[] = ['published'];
+export const POST_VISIBILITIES: PostVisibility[] = ['public'];
 
 export interface NormalizedPostInput {
   title: string;
@@ -76,7 +76,7 @@ function parseTagNames(value: unknown): string[] {
   return [...new Set(names)].slice(0, 12);
 }
 
-export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): NormalizedPostInput {
+export function normalizePostInput(raw: unknown): NormalizedPostInput {
   if (!raw || typeof raw !== 'object') {
     throw new PostValidationError('INVALID_POST', 'Invalid post payload.');
   }
@@ -97,7 +97,7 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
 
   const title = body.title.trim();
   const excerpt = normalizeOptionalText(body.excerpt, 500);
-  const status = typeof body.status === 'string' ? (body.status as PostStatus) : defaultStatus;
+  const status = typeof body.status === 'string' ? (body.status as PostStatus) : 'published';
   const visibility = typeof body.visibility === 'string' ? (body.visibility as PostVisibility) : 'public';
 
   if (!POST_STATUSES.includes(status)) {
@@ -114,7 +114,7 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
 
   const contentMarkdown = body.contentMarkdown;
 
-  if (status === 'published' && contentMarkdown.trim().length === 0) {
+  if (contentMarkdown.trim().length === 0) {
     throw new PostValidationError('CONTENT_REQUIRED', 'Content is required to publish.');
   }
 

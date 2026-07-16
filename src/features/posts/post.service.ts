@@ -21,7 +21,6 @@ import {
   listAssetsForPost,
   replacePostAssets,
   setPostPinnedAt,
-  setPostStatus,
   slugExists,
   updatePost
 } from './post.repo';
@@ -52,8 +51,8 @@ function createRandomPostSlug(): string {
   return slug;
 }
 
-function buildPersistedInput(raw: unknown, defaultStatus: 'draft' | 'published' | 'archived') {
-  const input = normalizePostInput(raw, defaultStatus);
+function buildPersistedInput(raw: unknown) {
+  const input = normalizePostInput(raw);
   const contentHtml = renderMarkdown(input.contentMarkdown);
 
   return {
@@ -76,25 +75,6 @@ async function generateUniquePostSlug(db: D1Database): Promise<string> {
   throw new PostConflictError('Unable to generate a unique post link.');
 }
 
-function buildAboutDraftInput() {
-  const contentMarkdown = '';
-
-  return {
-    title: '关于我',
-    excerpt: null,
-    contentMarkdown,
-    contentHtml: renderMarkdown(contentMarkdown),
-    status: 'draft' as const,
-    visibility: 'public' as const,
-    publishedAt: null,
-    tagNames: [],
-    seoTitle: '关于我',
-    seoDescription: null,
-    wordCount: calculateWordCount(contentMarkdown),
-    readingTimeMinutes: calculateReadingTimeMinutes(contentMarkdown)
-  };
-}
-
 async function syncPostAssetReferences(db: D1Database, post: PostRow): Promise<void> {
   const tokens = extractAssetTokens(post.content_markdown);
   const assets = await findAssetsByTokens(db, tokens);
@@ -102,7 +82,7 @@ async function syncPostAssetReferences(db: D1Database, post: PostRow): Promise<v
 
   const unusedAssets = await replacePostAssets(db, post.id, assetIds);
 
-  if (post.status === 'published' && post.visibility === 'public') {
+  if (post.visibility === 'public') {
     await makeAssetsPublic(db, assetIds);
   }
 
@@ -186,24 +166,15 @@ export async function getAdminAboutPost(): Promise<PublicPostDetail | null> {
   return getAdminPostBySlug(ABOUT_SLUG);
 }
 
-export async function ensureAdminAboutPost(): Promise<PostRow> {
+export async function getAdminAboutEditorPost(): Promise<PostRow | null> {
   const db = getDb();
-  const existing = await findPostBySlug(db, ABOUT_SLUG);
-
-  if (existing) {
-    return (await attachPostTags(db, existing)) ?? existing;
-  }
-
-  const input = buildAboutDraftInput();
-  const post = await createPost(db, input, ABOUT_SLUG);
-
-  await syncPostTags(db, post.id, []);
-  return (await attachPostTags(db, await findPostById(db, post.id))) ?? post;
+  const post = await findPostBySlug(db, ABOUT_SLUG);
+  return attachPostTags(db, post);
 }
 
 export async function createAdminPost(raw: unknown): Promise<PostRow> {
   const db = getDb();
-  const input = buildPersistedInput(raw, 'draft');
+  const input = buildPersistedInput(raw);
   const slug = await generateUniquePostSlug(db);
 
   const post = await createPost(db, input, slug);
@@ -212,9 +183,24 @@ export async function createAdminPost(raw: unknown): Promise<PostRow> {
   return (await attachPostTags(db, await findPostById(db, post.id))) ?? post;
 }
 
+export async function saveAdminAboutPost(raw: unknown): Promise<PostRow> {
+  const db = getDb();
+  const input = buildPersistedInput(raw);
+  const existing = await findPostBySlug(db, ABOUT_SLUG);
+  const post = existing ? await updatePost(db, existing.id, input) : await createPost(db, input, ABOUT_SLUG);
+
+  if (!post) {
+    throw new Error('Unable to save about page.');
+  }
+
+  await syncPostAssetReferences(db, post);
+  await syncPostTags(db, post.id, input.tagNames);
+  return (await attachPostTags(db, await findPostById(db, post.id))) ?? post;
+}
+
 export async function updateAdminPost(id: string, raw: unknown): Promise<PostRow | null> {
   const db = getDb();
-  const input = buildPersistedInput(raw, 'draft');
+  const input = buildPersistedInput(raw);
 
   const post = await updatePost(db, id, input);
 
@@ -225,32 +211,6 @@ export async function updateAdminPost(id: string, raw: unknown): Promise<PostRow
   }
 
   return null;
-}
-
-export async function publishAdminPost(id: string): Promise<PostRow | null> {
-  const db = getDb();
-  const current = await findPostById(db, id);
-
-  if (!current) {
-    return null;
-  }
-
-  if (!current.content_markdown.trim()) {
-    throw new PostValidationError('CONTENT_REQUIRED', 'Content is required to publish.');
-  }
-
-  const post = await setPostStatus(db, id, 'published');
-
-  if (post) {
-    await syncPostAssetReferences(db, post);
-    return withCurrentContentHtml(await findPostById(db, post.id));
-  }
-
-  return null;
-}
-
-export async function unpublishAdminPost(id: string): Promise<PostRow | null> {
-  return withCurrentContentHtml(await setPostStatus(getDb(), id, 'archived'));
 }
 
 export async function pinAdminPost(id: string): Promise<PostRow | null> {

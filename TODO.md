@@ -6,7 +6,7 @@
 - [x] Cloudflare D1 stores posts, tags, sessions, settings, friend links, view counts, and rate limits.
 - [x] Private Cloudflare R2 stores uploaded media behind Sakura Cactus `/i/:token` access checks.
 - [x] Admin login uses environment credentials, D1-backed sessions, HttpOnly Secure SameSite cookies, and D1-backed login rate limits.
-- [x] Writing flow supports new posts, editing, local autosave/recovery, drafts, publishing, unpublishing, pinning, and soft deletion.
+- [x] Writing flow supports new posts, editing, browser-only autosave/recovery, direct publishing, revision updates, pinning, and permanent deletion.
 - [x] The editor handles image upload, paste/drop upload, first mixed paste preservation, and private asset reference cleanup.
 - [x] Public pages include home, articles, post detail, tags, timeline, search, friends, about, RSS, sitemap, and robots.
 - [x] Friend links support public applications, admin review/edit/hide/delete, manual health checks, and scheduled health checks.
@@ -17,7 +17,7 @@
 
 ## 高优先级
 
-- [ ] 博客数据导出：导出文章、标签、设置、友链和媒体引用清单。
+- [ ] 博客数据导出：导出已发表文章、标签、友链和用户选择的文章图片。
 - [ ] 博客数据导入：从受信备份恢复博客数据，不实现任意第三方运行时代码。
 - [ ] 备份格式版本管理：为导出文件加入 schema/version、生成时间、校验摘要和兼容性说明。
 - [ ] 导入前 dry-run / 预检查：验证文件格式、版本、引用完整性、容量限制和 D1/R2 可用性。
@@ -30,7 +30,7 @@
 - [ ] 离开页面前未保存内容提醒：当前已有本地自动暂存和恢复提示，但没有浏览器级离开确认。
 - [ ] 后台运行状态页：展示 D1/R2 绑定、最近维护任务、友链健康检查和安全配置提示。
 - [ ] 浏览器上传前图片压缩：在不改变 5 MiB 服务端限制的前提下降低常见图片体积。
-- [ ] 草稿临时预览链接：为未发布文章提供受控的短期预览入口。
+- [ ] 本地临时纸页预览：在不写入 D1 的前提下优化未发表内容预览体验。
 - [ ] 更完整的可观测性：补充关键失败计数、维护任务结果和导入导出事件记录。
 - [ ] 独立标签管理页：当前标签随文章编辑自动维护，后续可增加合并、重命名和清理界面。
 - [ ] 全文 RSS：在完成安全的绝对 URL 重写后，再考虑输出安全的全文内容。
@@ -38,7 +38,7 @@
 
 ## 低优先级
 
-- [ ] 更丰富的编辑器辅助能力，例如快捷插入、草稿模板和更细的 Markdown 工具。
+- [ ] 更丰富的编辑器辅助能力，例如快捷插入、写作模板和更细的 Markdown 工具。
 - [ ] 低风险的动效和阅读体验优化。
 - [ ] 更多可配置的站点展示文案和导航项。
 

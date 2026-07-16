@@ -1,6 +1,7 @@
 const TEMPORARY_PAPER_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const TEMPORARY_PAPER_KEY = 'sakura-cactus:temporary-paper';
+export const ABOUT_AUTOSAVE_KEY = 'sakura-cactus:writer:about';
 export const POST_AUTOSAVE_KEY_PREFIX = 'sakura-cactus:writer:post:';
 export const WRITER_AUTOSAVE_VERSION = 2;
 
@@ -120,8 +121,12 @@ export function getPostAutosaveKey(postId: string): string {
   return `${POST_AUTOSAVE_KEY_PREFIX}${postId}`;
 }
 
-export function getWriterAutosaveKey(postId: string | null): string {
-  return postId ? getPostAutosaveKey(postId) : TEMPORARY_PAPER_KEY;
+export function getWriterAutosaveKey(postId: string | null, aboutMode = false): string {
+  if (postId) {
+    return getPostAutosaveKey(postId);
+  }
+
+  return aboutMode ? ABOUT_AUTOSAVE_KEY : TEMPORARY_PAPER_KEY;
 }
 
 export function buildWriterAutosaveSnapshot(input: {
@@ -133,8 +138,9 @@ export function buildWriterAutosaveSnapshot(input: {
   tagInput: string;
   coverImage?: string | null;
   updatedAt?: number;
+  aboutMode?: boolean;
 }): WriterAutosaveSnapshot {
-  const draftKey = getWriterAutosaveKey(input.postId);
+  const draftKey = getWriterAutosaveKey(input.postId, input.aboutMode);
   const updatedAt = input.updatedAt ?? Date.now();
 
   return {
@@ -148,7 +154,7 @@ export function buildWriterAutosaveSnapshot(input: {
     tagInput: input.tagInput,
     coverImage: input.coverImage ?? '',
     updatedAt,
-    expiresAt: input.postId ? null : updatedAt + TEMPORARY_PAPER_TTL_MS
+    expiresAt: input.postId || input.aboutMode ? null : updatedAt + TEMPORARY_PAPER_TTL_MS
   };
 }
 

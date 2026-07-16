@@ -4,7 +4,8 @@ import {
   createAdminPost,
   getAdminPosts,
   isPostConflictError,
-  isPostValidationError
+  isPostValidationError,
+  saveAdminAboutPost
 } from '@/features/posts/post.service';
 import type { PostStatus, PostVisibility } from '@/features/posts/post.types';
 import { POST_STATUSES, POST_VISIBILITIES } from '@/features/posts/post.schema';
@@ -39,7 +40,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const post = await createAdminPost(body);
+    const isAboutPost = Boolean(body && typeof body === 'object' && (body as Record<string, unknown>).type === 'about');
+    const post = isAboutPost ? await saveAdminAboutPost(body) : await createAdminPost(body);
     return jsonOk({ post }, { status: 201 });
   } catch (error) {
     if (isPostValidationError(error)) {

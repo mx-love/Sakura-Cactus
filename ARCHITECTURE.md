@@ -17,7 +17,7 @@ Cloudflare Worker fetch
   -> D1 repository and/or private R2 bucket
 ```
 
-`src/worker.ts` keeps the Cloudflare module Worker entrypoint. Normal requests are delegated to Astro. The weekly scheduled handler independently runs expired draft-asset cleanup, stale-session cleanup, and bounded-concurrency friend-link health checks. Failure in one scheduled task does not prevent the other tasks from running.
+`src/worker.ts` keeps the Cloudflare module Worker entrypoint. Normal requests are delegated to Astro. The weekly scheduled handler independently runs expired temporary-media cleanup, stale-session cleanup, and bounded-concurrency friend-link health checks. Failure in one scheduled task does not prevent the other tasks from running.
 
 ## Authentication boundary
 
@@ -39,7 +39,7 @@ Mutating admin/auth endpoints also reject a conflicting `Origin` or `Sec-Fetch-S
 - `src/lib/schema.ts`: backward-compatible automatic bootstrap. A schema-version marker reduces warm/cold-isolate DDL work to one read after version 8 is present.
 - `migrations/`: explicit local/managed migration history. Remote migration application remains an operator action.
 
-Association replacements for post assets, post tags, and multi-setting updates use D1 batch operations so a statement failure does not leave a partially replaced set.
+Published posts are the only server-side article state. Unpublished writing, including a new about page before first save, stays in browser localStorage. Association replacements for post assets, post tags, and multi-setting updates use D1 batch operations so a statement failure does not leave a partially replaced set.
 
 ## Markdown and HTML
 

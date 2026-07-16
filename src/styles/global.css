@@ -236,21 +236,11 @@ summary {
   line-height: 1.2;
 }
 
-.sc-badge-draft {
-  color: var(--color-muted);
-}
-
 .sc-badge-published,
 .sc-badge-public {
   border-color: rgba(126, 181, 158, 0.42);
   background: rgba(126, 181, 158, 0.12);
   color: #437765;
-}
-
-.sc-badge-archived {
-  border-color: rgba(227, 200, 107, 0.56);
-  background: rgba(227, 200, 107, 0.16);
-  color: #796727;
 }
 
 .sc-badge-private {

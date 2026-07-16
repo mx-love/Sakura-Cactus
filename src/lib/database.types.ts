@@ -1,7 +1,7 @@
 export type UserRole = 'admin';
 export type UserStatus = 'active' | 'disabled';
-export type PostStatus = 'draft' | 'published' | 'archived';
-export type PostVisibility = 'public' | 'private';
+export type PostStatus = 'published';
+export type PostVisibility = 'public';
 export type AssetVisibility = 'draft' | 'public' | 'private' | 'deleted';
 export type AssetRole = 'inline' | 'cover';
 export type SettingType = 'string' | 'number' | 'boolean' | 'json';

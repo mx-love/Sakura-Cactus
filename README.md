@@ -1,10 +1,11 @@
 # Sakura Cactus
 
-Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统，适合用于文章、笔记、随笔和长期归档。项目使用 Cloudflare D1 保存内容与设置，使用 Cloudflare R2 保存图片和媒体文件。
+Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统，适合用于文章、笔记、随笔和长期记录。项目使用 Cloudflare D1 保存已发表内容与设置，使用 Cloudflare R2 保存图片和媒体文件。
 
 ## 核心功能
 
-- Markdown 写作后台，支持编辑、预览、本地自动暂存、恢复提示、发布、撤回、修订、置顶和删除
+- Markdown 写作后台，支持编辑、预览、本地自动暂存、恢复提示、正式发表、修订、置顶和永久删除
+- 未发表内容只保存在当前浏览器 localStorage；服务端只保存 `published` 文章，不提供服务端草稿、撤回或归档状态
 - 公开博客页面，包含首页、文章列表、文章详情、标签、时间轴、搜索、关于页和友人帐
 - Cloudflare D1 存储文章、标签、设置、友链和会话数据
 - 私有 Cloudflare R2 管理图片和媒体文件，支持上传、粘贴、拖拽和复用，并通过 `/i/:token` 代理读取

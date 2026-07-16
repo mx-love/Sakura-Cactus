@@ -50,8 +50,6 @@ Project maintenance: dependency verification is complete; current work is roadma
   - `GET /api/admin/posts/:id`
   - `PUT /api/admin/posts/:id`
   - `DELETE /api/admin/posts/:id`
-  - `POST /api/admin/posts/:id/publish`
-  - `POST /api/admin/posts/:id/unpublish`
 - [x] Implemented `/admin/posts`, `/admin/posts/new`, and `/admin/posts/[id]`.
 - [x] Implemented Markdown rendering with basic HTML sanitization.
 - [x] Implemented public homepage post list.
@@ -84,11 +82,11 @@ Project maintenance: dependency verification is complete; current work is roadma
 - [x] Removed the status dropdown from the writing flow.
 - [x] Added Edit and Preview tabs for Markdown content.
 - [x] Preview renders `asset:token` images through `/i/:token`.
-- [x] Updated action buttons so status is controlled by Save draft, Publish, Update, and Unpublish.
+- [x] Updated the writing flow so unpublished content remains browser-local and saved posts are published records.
 - [x] Added public `SiteHeader` with desktop and mobile navigation.
 - [x] Improved homepage hero, latest post cards, and empty state.
 - [x] Improved public post detail layout and prose image styling.
-- [x] Added `/archive` placeholder page.
+- [x] Added the public timeline view for published posts.
 - [x] Added `/about` placeholder page.
 - [x] Added unified `AdminLayout`.
 - [x] Added admin navigation for Dashboard, Posts, Media, and Settings.
