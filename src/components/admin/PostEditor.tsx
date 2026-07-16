@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { AssetRow } from '@/features/assets/asset.types';
 import { extractAssetTokens, renderMarkdown } from '@/features/posts/post.renderer';
-import type { PostRow, PostStatus } from '@/features/posts/post.types';
+import type { PostRow } from '@/features/posts/post.types';
 import { bindCodeCopyControls } from '@/lib/prose-controls';
 import {
-  TEMPORARY_PAPER_KEY,
   buildWriterAutosaveSnapshot,
   clearWriterAutosaveSnapshot,
   createWriterAutosaveComparable,
@@ -38,7 +37,6 @@ type PostFormState = {
   tagInput: string;
   publishedAt: string;
   contentMarkdown: string;
-  status: PostStatus;
 };
 
 type SubmitAction = 'publish' | 'delete';
@@ -78,8 +76,7 @@ function postToState(post?: (PostRow & { tags?: Array<{ name: string }> }) | nul
     excerpt: post?.excerpt ?? '',
     tagInput: post?.tags?.map((tag) => tag.name).join(', ') ?? '',
     publishedAt: toDateTimeLocal(post?.published_at),
-    contentMarkdown: post?.content_markdown ?? '',
-    status: post?.status ?? 'draft'
+    contentMarkdown: post?.content_markdown ?? ''
   };
 }
 
@@ -170,9 +167,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const isDirty = useMemo(() => !snapshotsEqual(savedSnapshot, currentSnapshot), [savedSnapshot, currentSnapshot]);
   const previewHtml = useMemo(() => renderMarkdown(form.contentMarkdown), [form.contentMarkdown]);
   const isBusy = isSubmitting || isUploadingImage;
-  const isCollected = form.status === 'published';
-  const isCleanExistingPost = isExisting && isCollected && !isDirty && saveFeedback !== 'error';
-  const mainActionLabel = isCollected ? '保存修订' : '收录';
+  const isCleanExistingPost = isExisting && !isDirty && saveFeedback !== 'error';
+  const mainActionLabel = isExisting ? '保存修订' : '收录';
   const storageHintText = isExisting
     ? '本地修改只保存在当前浏览器；点击“保存修订”后才会同步到公开文章。'
     : '临时纸页只保存在当前浏览器；收录后会进入博客公开内容。';
@@ -240,7 +236,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
           excerpt: post?.excerpt ?? '',
           contentMarkdown: post?.content_markdown ?? '',
           tagInput: post?.tags?.map((tag) => tag.name).join(', ') ?? '',
-          coverImage: ''
+          coverImage: '',
+          aboutMode
         })
       );
 
@@ -273,12 +270,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       return;
     }
 
-    if (aboutMode) {
-      lastAutosaveComparableRef.current = null;
-      return;
-    }
-
-    const result = readWriterAutosaveSnapshot(TEMPORARY_PAPER_KEY);
+    const storageKey = getWriterAutosaveKey(null, aboutMode);
+    const result = readWriterAutosaveSnapshot(storageKey);
 
     if (result.error) {
       setAutosaveRecoveryNotice('发现一份无法恢复的本地暂存，已跳过恢复。');
@@ -468,7 +461,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       contentMarkdown: liveForm.contentMarkdown,
       tagInput: liveForm.tagInput,
       coverImage: '',
-      updatedAt
+      updatedAt,
+      aboutMode
     });
 
     return hasMeaningfulWriterContent(snapshot) ? snapshot : null;
@@ -754,7 +748,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
   function clearTemporaryPaper() {
     isRestorePromptOpenRef.current = false;
-    clearWriterAutosaveSnapshot(TEMPORARY_PAPER_KEY);
+    clearWriterAutosaveSnapshot(getWriterAutosaveKey(null, aboutMode));
     clearAutosaveTimers();
     lastAutosaveComparableRef.current = createCurrentComparableFromLiveForm();
     setTemporaryPaper(null);
@@ -795,7 +789,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   }
 
   function saveTemporaryPaper() {
-    if (aboutMode || isExisting || isRecoveryPending) {
+    if (isExisting || isRecoveryPending) {
       return;
     }
 
@@ -813,7 +807,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       excerpt: liveForm.excerpt,
       contentMarkdown: liveForm.contentMarkdown,
       tagInput: liveForm.tagInput,
-      coverImage: ''
+      coverImage: '',
+      aboutMode
     });
 
     setError(null);
@@ -826,7 +821,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       return;
     }
 
-    if (!writeWriterAutosaveSnapshot(TEMPORARY_PAPER_KEY, snapshot)) {
+    if (!writeWriterAutosaveSnapshot(snapshot.draftKey, snapshot)) {
       setMessage(null);
       setError('当前浏览器无法暂存临时纸页。');
       setAutosaveState('error');
@@ -852,9 +847,9 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       return;
     }
 
-    const wasCollected = isCollected;
+    const wasCollected = isExisting;
     const publishedAt = postId ? toIsoDateTime(liveForm.publishedAt) : null;
-    const autosaveKey = getWriterAutosaveKey(postId);
+    const autosaveKey = getWriterAutosaveKey(postId, aboutMode);
     setError(null);
     setMessage(null);
     setSaveFeedback('idle');
@@ -876,7 +871,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
           status: 'published',
           visibility: 'public',
           publishedAt,
-          tags: liveForm.tagInput
+          tags: liveForm.tagInput,
+          type: aboutMode ? 'about' : undefined
         })
       });
 
@@ -900,7 +896,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
           contentMarkdown: nextForm.contentMarkdown,
           tagInput: nextForm.tagInput,
           coverImage: '',
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
+          aboutMode
         })
       );
       setPostId(savedPost.id);
@@ -949,7 +946,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       }
 
       cleanupUnsavedSessionUploads();
-      clearWriterAutosaveSnapshot(getWriterAutosaveKey(postId));
+      clearWriterAutosaveSnapshot(getWriterAutosaveKey(postId, aboutMode));
       window.location.assign(aboutMode ? '/about?fresh=1' : '/articles');
     } finally {
       setIsSubmitting(false);
@@ -959,7 +956,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
   function primaryButtonText() {
     if (submitAction === 'publish' && isSubmitting) {
-      return isCollected ? '保存中...' : '收录中...';
+      return isExisting ? '保存中...' : '收录中...';
     }
 
     if (submitAction === 'publish' && saveFeedback === 'error') {
@@ -1016,9 +1013,9 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
         <h1>{aboutMode ? '关于' : '写作'}</h1>
       </header>
 
-      {!aboutMode && temporaryPaper ? (
+      {temporaryPaper ? (
         <div className="sc-temporary-paper" role="status">
-          <span>发现一张尚未完成的临时纸页</span>
+          <span>{aboutMode ? '发现一份未发表的关于页本地暂存' : '发现一张尚未完成的临时纸页'}</span>
           <div className="sc-temporary-paper-actions">
             <button type="button" onClick={restoreTemporaryPaper}>继续写</button>
             <button type="button" onClick={clearTemporaryPaper}>舍弃暂存</button>
@@ -1146,7 +1143,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
           <h2 className="sc-writer-card-title">收录</h2>
           <div className="sc-writer-fields">
             <div className="sc-writer-publish-actions">
-              {!aboutMode && !isExisting ? (
+              {!isExisting ? (
                 <button
                   className="sc-button sc-button-secondary sc-writer-secondary-action disabled:opacity-60"
                   disabled={isBusy || !isEditorReady || isRecoveryPending}

@@ -17,7 +17,7 @@ Cloudflare Worker fetch
   -> D1 repository and/or private R2 bucket
 ```
 
-`src/worker.ts` keeps the Cloudflare module Worker entrypoint. Normal requests are delegated to Astro. The weekly scheduled handler independently runs expired draft-asset cleanup, stale-session cleanup, and bounded-concurrency friend-link health checks. Failure in one scheduled task does not prevent the other tasks from running.
+`src/worker.ts` keeps the Cloudflare module Worker entrypoint. Normal requests are delegated to Astro. The weekly scheduled handler independently runs expired temporary-media cleanup, stale-session cleanup, and bounded-concurrency friend-link health checks. Failure in one scheduled task does not prevent the other tasks from running.
 
 ## Authentication boundary
 
@@ -39,7 +39,9 @@ Mutating admin/auth endpoints also reject a conflicting `Origin` or `Sec-Fetch-S
 - `src/lib/schema.ts`: backward-compatible automatic bootstrap. A schema-version marker reduces warm/cold-isolate DDL work to one read after version 8 is present.
 - `migrations/`: explicit local/managed migration history. Remote migration application remains an operator action.
 
-Association replacements for post assets, post tags, and multi-setting updates use D1 batch operations so a statement failure does not leave a partially replaced set.
+Published posts are the only server-side article state. Unpublished writing, including a new about page before first save, stays in browser localStorage. Association replacements for post assets, post tags, and multi-setting updates use D1 batch operations so a statement failure does not leave a partially replaced set.
+
+`src/features/data-portability` owns blog data import/export. It exports only published/public/current content, approved friend links, and optionally article-bound R2 media. Inspect is read-only and produces a short-lived file/session-bound plan token. Import revalidates the same file, uploads new media before D1 writes, writes D1 rows through batch operations, and compensates only media uploaded by the current import if D1 fails.
 
 ## Markdown and HTML
 
@@ -67,7 +69,7 @@ R2 remains private and is available only through the `MEDIA_BUCKET` binding. Upl
 - New public caching: the explicit allowlist in `src/lib/cache.ts`, with a documented cache key.
 - New scheduled work: a separate failure boundary in `src/worker.ts`.
 - New Markdown processing: immediately before or after sanitize in the renderer, with a malicious-input test.
-- Future export/import and backup work: a dedicated feature module with its own repository/service/security boundaries. It should not be implemented directly inside page routes or a generic plugin system.
+- Future data format changes: extend `src/features/data-portability` with a new explicit file version and fixture set. Do not export site secrets, infrastructure bindings, or browser-local drafts.
 
 ## Extension boundaries and plugin policy
 

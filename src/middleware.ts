@@ -6,6 +6,7 @@ import { jsonError } from '@/lib/response';
 import { ensureD1Schema } from '@/lib/schema';
 import { ROBOTS_NOINDEX_NOFOLLOW, getCanonicalRedirectUrl } from '@/lib/seo';
 import { applySecurityHeaders, isMutatingRequest, isSameOriginBrowserRequest } from '@/lib/security/request';
+import { DATA_PORTABILITY_LIMITS } from '@/features/data-portability/data-portability.constants';
 
 function isAdminPage(pathname: string): boolean {
   return pathname === '/admin' || pathname.startsWith('/admin/');
@@ -58,7 +59,13 @@ function exceedsRequestSizeLimit(request: Request, pathname: string): boolean {
     return false;
   }
 
-  const maxBytes = pathname === '/api/admin/assets/upload' ? 6 * 1024 * 1024 : 256 * 1024;
+  const maxBytes = pathname === '/api/admin/assets/upload'
+    ? 6 * 1024 * 1024
+    : pathname === '/api/admin/data-portability/inspect' || pathname === '/api/admin/data-portability/import'
+      ? DATA_PORTABILITY_LIMITS.apiFileRequestBytes
+      : pathname === '/api/admin/data-portability/export'
+        ? DATA_PORTABILITY_LIMITS.apiJsonRequestBytes
+        : 256 * 1024;
   return contentLength > maxBytes;
 }
 

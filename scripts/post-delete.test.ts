@@ -150,8 +150,8 @@ function createServiceDb(): SqliteD1Database {
       content_markdown TEXT NOT NULL,
       content_html TEXT,
       cover_asset_id TEXT,
-      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
-      visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
+      status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published')),
+      visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public')),
       seo_title TEXT,
       seo_description TEXT,
       reading_time_minutes INTEGER NOT NULL DEFAULT 1 CHECK (reading_time_minutes >= 1),
@@ -227,6 +227,12 @@ function createServiceDb(): SqliteD1Database {
       visibility, usage_count, created_by, created_at, updated_at, deleted_at
     ) VALUES (?, ?, ?, ?, 'image/png', 10, NULL, NULL, NULL, 'public', ?, 'u1', ?, ?, NULL)`
   ).run('asset-cover-shared', coverSharedToken, 'r2-cover-shared', 'cover-shared.png', 2, now, now);
+  db.prepare(
+    `INSERT INTO assets (
+      id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+      visibility, usage_count, created_by, created_at, updated_at, deleted_at
+    ) VALUES (?, ?, ?, ?, 'image/png', 10, NULL, NULL, NULL, 'public', ?, 'u1', ?, ?, NULL)`
+  ).run('asset-about-exclusive', 'E'.repeat(24), 'r2-about-exclusive', 'about-exclusive.png', 1, now, now);
 
   const insertPost = db.prepare(
     `INSERT INTO posts (
@@ -247,7 +253,7 @@ function createServiceDb(): SqliteD1Database {
     now
   );
   insertPost.run('p-shared', 'shared-post', 'Shared', `![two](asset:${sharedToken})`, null, 'published', 'Shared', now, now, now);
-  insertPost.run('p-draft', 'draft-post', 'Draft', 'draft body', null, 'draft', 'Draft', null, now, now);
+  insertPost.run('p-update', 'update-post', 'Update', 'published body', null, 'published', 'Update', now, now, now);
   insertPost.run('p-published', 'published-post', 'Published', 'published body', null, 'published', 'Published', now, now, now);
   insertPost.run(
     'p-cover-delete',
@@ -370,21 +376,80 @@ async function testPostDeleteService(): Promise<void> {
 
   assert.equal(await service.deleteAdminPost('missing-post'), null);
 
-  const updated = await service.updateAdminPost('p-draft', {
-    title: 'Draft Updated',
+  const updated = await service.updateAdminPost('p-update', {
+    title: 'Published Updated',
     excerpt: '',
-    contentMarkdown: 'still the same draft row',
-    status: 'draft',
+    contentMarkdown: 'still the same published row',
+    status: 'published',
     visibility: 'public',
     tags: ''
   });
-  assert.equal(updated?.id, 'p-draft');
-  assert.equal(countRows(sqliteD1.db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-draft'), 1);
-  assert.equal(countRows(sqliteD1.db, 'SELECT COUNT(*) AS count FROM posts WHERE slug = ?', 'draft-post'), 1);
+  assert.equal(updated?.id, 'p-update');
+  assert.equal(countRows(sqliteD1.db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-update'), 1);
+  assert.equal(countRows(sqliteD1.db, 'SELECT COUNT(*) AS count FROM posts WHERE slug = ?', 'update-post'), 1);
 
-  assert.ok(await service.getAdminPost('p-draft'));
-  assert.equal(await service.getPublicPostBySlug('draft-post'), null);
+  assert.ok(await service.getAdminPost('p-update'));
   assert.ok(await service.getPublicPostBySlug('published-post'));
+
+  await assert.rejects(
+    () =>
+      service.createAdminPost({
+        title: 'Draft should fail',
+        contentMarkdown: 'body',
+        status: 'draft',
+        visibility: 'public'
+      }),
+    /Invalid post status/
+  );
+  await assert.rejects(
+    () =>
+      service.createAdminPost({
+        title: 'Archived should fail',
+        contentMarkdown: 'body',
+        status: 'archived',
+        visibility: 'public'
+      }),
+    /Invalid post status/
+  );
+  await assert.rejects(
+    () =>
+      service.createAdminPost({
+        title: 'Private should fail',
+        contentMarkdown: 'body',
+        status: 'published',
+        visibility: 'private'
+      }),
+    /Invalid post visibility/
+  );
+
+  const aboutFirst = await service.saveAdminAboutPost({
+    title: 'About',
+    excerpt: '',
+    contentMarkdown: `about body ![about](asset:${'E'.repeat(24)})`,
+    status: 'published',
+    visibility: 'public',
+    tags: ''
+  });
+  assert.equal(aboutFirst.slug, 'about');
+  assert.equal(aboutFirst.status, 'published');
+  assert.equal(countRows(sqliteD1.db, "SELECT COUNT(*) AS count FROM posts WHERE slug = 'about'"), 1);
+
+  const aboutSecond = await service.saveAdminAboutPost({
+    title: 'About Updated',
+    excerpt: '',
+    contentMarkdown: `updated about body ![about](asset:${'E'.repeat(24)})`,
+    status: 'published',
+    visibility: 'public',
+    tags: ''
+  });
+  assert.equal(aboutSecond.id, aboutFirst.id);
+  assert.equal(countRows(sqliteD1.db, "SELECT COUNT(*) AS count FROM posts WHERE slug = 'about'"), 1);
+
+  const deletedAbout = await service.deleteAdminPost(aboutFirst.id);
+  assert.equal(deletedAbout?.id, aboutFirst.id);
+  assert.equal(countRows(sqliteD1.db, "SELECT COUNT(*) AS count FROM posts WHERE slug = 'about'"), 0);
+  assert.equal(countRows(sqliteD1.db, 'SELECT COUNT(*) AS count FROM assets WHERE id = ?', 'asset-about-exclusive'), 0);
+  assert.equal(bucket.deletedKeys.includes('r2-about-exclusive'), true);
 }
 
 async function testDeleteApiSucceedsWhenR2CleanupFails(): Promise<void> {
@@ -745,6 +810,166 @@ function testPostHardDeleteMigration(): void {
   assert.equal((db.prepare('SELECT version FROM sakura_schema_state WHERE id = 1').get() as { version: number }).version, 9);
 }
 
+function testSimplifyPostStatusMigration(): void {
+  const db = new DatabaseSync(':memory:');
+  db.exec('PRAGMA foreign_keys=ON');
+  const migrationsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
+
+  for (const migration of [
+    '0001_init.sql',
+    '0002_add_user_email.sql',
+    '0003_add_assets_sha256_index.sql',
+    '0004_add_post_pinned_at.sql',
+    '0005_create_friend_links.sql',
+    '0006_site_settings_controls.sql',
+    '0007_friend_health_and_view_api.sql',
+    '0008_security_hardening.sql',
+    '0009_hard_delete_posts.sql'
+  ]) {
+    db.exec(readFileSync(path.join(migrationsDir, migration), 'utf8'));
+  }
+
+  db.prepare(
+    `INSERT INTO users (id, username, email, display_name, password_hash, role, status, created_at, updated_at, last_login_at)
+     VALUES ('u1', 'admin', 'admin@example.com', NULL, 'hash', 'admin', 'active', ?, ?, NULL)`
+  ).run(now, now);
+
+  for (const [id, token, r2Key] of [
+    ['asset-live', 'L'.repeat(24), 'r2-live'],
+    ['asset-about', 'M'.repeat(24), 'r2-about'],
+    ['asset-draft-inline', 'N'.repeat(24), 'r2-draft-inline'],
+    ['asset-draft-cover', 'O'.repeat(24), 'r2-draft-cover'],
+    ['asset-archived-inline', 'P'.repeat(24), 'r2-archived-inline'],
+    ['asset-private-inline', 'Q'.repeat(24), 'r2-private-inline'],
+    ['asset-shared-history', 'R'.repeat(24), 'r2-shared-history'],
+    ['asset-temp', 'S'.repeat(24), 'r2-temp']
+  ]) {
+    db.prepare(
+      `INSERT INTO assets (
+        id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, 'image/png', 10, NULL, NULL, ?, 'public', 0, 'u1', ?, ?, NULL)`
+    ).run(id, token, r2Key, `${id}.png`, id, now, now);
+  }
+
+  db.prepare('INSERT INTO tags (id, name, slug, color, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)').run(
+    'tag1',
+    'Tag',
+    'tag',
+    now,
+    now
+  );
+
+  const insertPost = db.prepare(
+    `INSERT INTO posts (
+      id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+      seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+    ) VALUES (?, ?, ?, NULL, ?, NULL, ?, ?, ?, NULL, NULL, 1, 1, ?, NULL, ?, ?)`
+  );
+  insertPost.run('p-live', 'live', 'Live', `![live](asset:${'L'.repeat(24)})`, null, 'published', 'public', now, now, now);
+  insertPost.run('p-about', 'about', 'About', `![about](asset:${'M'.repeat(24)})`, null, 'published', 'public', now, now, now);
+  insertPost.run('p-draft', 'draft', 'Draft', `![draft](asset:${'N'.repeat(24)})`, 'asset-draft-cover', 'draft', 'public', null, now, now);
+  insertPost.run('p-draft-about', 'about-draft', 'About Draft', 'draft about', null, 'draft', 'public', null, now, now);
+  insertPost.run(
+    'p-archived',
+    'archived',
+    'Archived',
+    `![archived](asset:${'P'.repeat(24)})\n![shared](asset:${'R'.repeat(24)})`,
+    null,
+    'archived',
+    'public',
+    null,
+    now,
+    now
+  );
+  insertPost.run('p-private', 'private', 'Private', `![private](asset:${'Q'.repeat(24)})`, null, 'published', 'private', now, now, now);
+
+  for (const postId of ['p-live', 'p-about', 'p-draft', 'p-archived', 'p-private']) {
+    db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').run(postId, 'tag1');
+    db.prepare('INSERT INTO post_view_counts (post_id, count, updated_at) VALUES (?, 1, ?)').run(postId, now);
+  }
+  for (const [postId, assetId] of [
+    ['p-live', 'asset-live'],
+    ['p-live', 'asset-shared-history'],
+    ['p-about', 'asset-about'],
+    ['p-draft', 'asset-draft-inline'],
+    ['p-archived', 'asset-archived-inline'],
+    ['p-archived', 'asset-shared-history'],
+    ['p-private', 'asset-private-inline']
+  ]) {
+    db.prepare("INSERT INTO post_assets (post_id, asset_id, role, created_at) VALUES (?, ?, 'inline', ?)").run(postId, assetId, now);
+  }
+
+  db.exec(readFileSync(path.join(migrationsDir, '0010_simplify_post_status.sql'), 'utf8'));
+
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-live'), 1);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-about'), 1);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-draft'), 0);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-draft-about'), 0);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-archived'), 0);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM posts WHERE id = ?', 'p-private'), 0);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_tags WHERE post_id IN (?, ?, ?, ?)', 'p-draft', 'p-draft-about', 'p-archived', 'p-private'), 0);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_assets WHERE post_id IN (?, ?, ?, ?)', 'p-draft', 'p-draft-about', 'p-archived', 'p-private'), 0);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM post_view_counts WHERE post_id IN (?, ?, ?, ?)', 'p-draft', 'p-draft-about', 'p-archived', 'p-private'), 0);
+  assert.deepEqual(sortedAssetIds(db, 'historical_post_asset_cleanup_candidates'), [
+    'asset-archived-inline',
+    'asset-draft-cover',
+    'asset-draft-inline',
+    'asset-private-inline',
+    'asset-shared-history'
+  ]);
+  assert.equal(countRows(db, 'SELECT COUNT(*) AS count FROM historical_post_asset_cleanup_candidates WHERE asset_id = ?', 'asset-temp'), 0);
+
+  const postsSql = (db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'posts'").get() as { sql: string }).sql;
+  assert.match(postsSql, /status TEXT NOT NULL DEFAULT 'published' CHECK \(status IN \('published'\)\)/);
+  assert.match(postsSql, /visibility TEXT NOT NULL DEFAULT 'public' CHECK \(visibility IN \('public'\)\)/);
+  assert.match(postsSql, /slug TEXT NOT NULL UNIQUE/);
+  assert.match(postsSql, /FOREIGN KEY \(cover_asset_id\) REFERENCES assets\(id\) ON DELETE SET NULL/);
+
+  const indexNames = new Set((db.prepare('PRAGMA index_list(posts)').all() as Array<{ name: string }>).map((index) => index.name));
+  assert.equal(indexNames.has('idx_posts_slug'), true);
+  assert.equal(indexNames.has('idx_posts_public_lookup'), true);
+  assert.equal(indexNames.has('idx_posts_status_published'), false);
+  assert.equal(indexNames.has('idx_posts_created_at'), true);
+  assert.equal(indexNames.has('idx_posts_pinned_at'), true);
+
+  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
+  assert.equal((db.prepare('PRAGMA integrity_check').get() as { integrity_check: string }).integrity_check, 'ok');
+  assert.throws(() => {
+    db.prepare(
+      `INSERT INTO posts (
+        id, slug, title, content_markdown, status, visibility, reading_time_minutes,
+        word_count, published_at, created_at, updated_at
+      ) VALUES ('p-new-draft', 'new-draft', 'New Draft', 'body', 'draft', 'public', 1, 1, ?, ?, ?)`
+    ).run(now, now, now);
+  });
+  assert.throws(() => {
+    db.prepare(
+      `INSERT INTO posts (
+        id, slug, title, content_markdown, status, visibility, reading_time_minutes,
+        word_count, published_at, created_at, updated_at
+      ) VALUES ('p-new-archived', 'new-archived', 'New Archived', 'body', 'archived', 'public', 1, 1, ?, ?, ?)`
+    ).run(now, now, now);
+  });
+  assert.throws(() => {
+    db.prepare(
+      `INSERT INTO posts (
+        id, slug, title, content_markdown, status, visibility, reading_time_minutes,
+        word_count, published_at, created_at, updated_at
+      ) VALUES ('p-new-deleted', 'new-deleted', 'New Deleted', 'body', 'deleted', 'public', 1, 1, ?, ?, ?)`
+    ).run(now, now, now);
+  });
+  assert.throws(() => {
+    db.prepare(
+      `INSERT INTO posts (
+        id, slug, title, content_markdown, status, visibility, reading_time_minutes,
+        word_count, published_at, created_at, updated_at
+      ) VALUES ('p-new-private', 'new-private', 'New Private', 'body', 'published', 'private', 1, 1, ?, ?, ?)`
+    ).run(now, now, now);
+  });
+  assert.equal((db.prepare('SELECT version FROM sakura_schema_state WHERE id = 1').get() as { version: number }).version, 10);
+}
+
 function testPostEditorDeleteSuccessPath(): void {
   const editorPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/components/admin/PostEditor.tsx');
   const source = readFileSync(editorPath, 'utf8');
@@ -752,14 +977,32 @@ function testPostEditorDeleteSuccessPath(): void {
 
   assert.match(deletePostFunction, /if \(!response\.ok\) \{[\s\S]*return;[\s\S]*\}/);
   assert.match(deletePostFunction, /cleanupUnsavedSessionUploads\(\);/);
-  assert.match(deletePostFunction, /clearWriterAutosaveSnapshot\(getWriterAutosaveKey\(postId\)\);/);
+  assert.match(deletePostFunction, /clearWriterAutosaveSnapshot\(getWriterAutosaveKey\(postId, aboutMode\)\);/);
   assert.match(deletePostFunction, /window\.location\.assign\(aboutMode \? '\/about\?fresh=1' : '\/articles'\);/);
+}
+
+function testPostLifecycleUiAndRoutes(): void {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const writeSource = readFileSync(path.join(root, 'src/pages/write.astro'), 'utf8');
+  const editorSource = readFileSync(path.join(root, 'src/components/admin/PostEditor.tsx'), 'utf8');
+  const autosaveSource = readFileSync(path.join(root, 'src/components/admin/postEditorAutosave.ts'), 'utf8');
+
+  assert.doesNotMatch(writeSource, /ensureAdminAboutPost/);
+  assert.match(writeSource, /getAdminAboutEditorPost/);
+  assert.match(autosaveSource, /ABOUT_AUTOSAVE_KEY/);
+  assert.match(editorSource, /getWriterAutosaveKey\(null, aboutMode\)/);
+  assert.match(editorSource, /type: aboutMode \? 'about' : undefined/);
+  assert.doesNotMatch(editorSource, /isCollected/);
+  assert.throws(() => readFileSync(path.join(root, 'src/pages/api/admin/posts/[id]/unpublish.ts'), 'utf8'));
+  assert.throws(() => readFileSync(path.join(root, 'src/pages/api/admin/posts/[id]/publish.ts'), 'utf8'));
 }
 
 await testPostDeleteService();
 await testDeleteApiSucceedsWhenR2CleanupFails();
 await testHistoricalPostAssetCandidateCleanup();
 testPostHardDeleteMigration();
+testSimplifyPostStatusMigration();
 testPostEditorDeleteSuccessPath();
+testPostLifecycleUiAndRoutes();
 
 console.log('Post hard-delete checks passed.');

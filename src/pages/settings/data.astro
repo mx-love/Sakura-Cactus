@@ -1,0 +1,358 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { getCurrentAdminUser } from '@/features/auth/auth.service';
+import { getBlogDataSummary } from '@/features/data-portability/data-portability.service';
+import { ROBOTS_NOINDEX_NOFOLLOW } from '@/lib/seo';
+
+export const prerender = false;
+
+const adminUser = await getCurrentAdminUser(Astro);
+
+if (!adminUser) {
+  return Astro.redirect(`/admin/login?next=${encodeURIComponent('/settings/data')}`);
+}
+
+const summary = await getBlogDataSummary();
+const summaryJson = JSON.stringify(summary).replaceAll('<', '\\u003c');
+---
+
+<SiteLayout title="博客数据 | Sakura Cactus" description="Sakura Cactus 博客数据" robots={ROBOTS_NOINDEX_NOFOLLOW}>
+  <section class="sc-settings-page sc-data-page">
+    <div class="sc-settings-shell">
+      <header class="sc-settings-header">
+        <a class="sc-settings-link" href="/settings">返回设置</a>
+        <h1>博客数据</h1>
+      </header>
+
+      <div class="sc-data-grid">
+        <section class="sc-settings-group sc-data-panel">
+          <h2>当前站点可导出内容</h2>
+          <dl class="sc-data-stats">
+            <div>
+              <dt>文章</dt>
+              <dd id="current-articles">{summary.publishedArticles}</dd>
+            </div>
+            <div>
+              <dt>标签</dt>
+              <dd id="current-tags">{summary.usedTags}</dd>
+            </div>
+            <div>
+              <dt>文章图片</dt>
+              <dd id="current-media">{summary.referencedMedia}</dd>
+            </div>
+            <div>
+              <dt>友链</dt>
+              <dd id="current-friends">{summary.friends}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="sc-settings-group sc-data-panel">
+          <h2>导出博客数据</h2>
+          <div class="sc-data-options" id="export-options">
+            <label><input id="export-articles" type="checkbox" checked /> 已发表文章与标签</label>
+            <label><input id="export-media" type="checkbox" /> 文章图片</label>
+            <label><input id="export-friends" type="checkbox" /> 友链</label>
+          </div>
+          <p class="sc-data-note" id="export-media-note">未包含图片文件。导入其他站点后，原站图片链接可能仍依赖原站可访问。</p>
+          <button class="sc-button sc-button-primary" id="export-button" type="button">导出所选内容</button>
+          <p class="sc-data-message" id="export-message" role="status"></p>
+        </section>
+
+        <section class="sc-settings-group sc-data-panel">
+          <h2>导入博客数据</h2>
+          <div class="sc-data-file-picker">
+            <label for="import-file">选择导入文件</label>
+            <input id="import-file" type="file" accept=".json,.zip,application/json,application/zip" />
+            <p id="inspect-message" role="status">支持 JSON 和 ZIP</p>
+          </div>
+
+          <div class="sc-data-file-summary" id="file-summary" hidden>
+            <h3>文件内容</h3>
+            <dl class="sc-data-stats">
+              <div>
+                <dt>文章</dt>
+                <dd id="file-articles">未包含</dd>
+              </div>
+              <div>
+                <dt>标签</dt>
+                <dd id="file-tags">未包含</dd>
+              </div>
+              <div>
+                <dt>图片</dt>
+                <dd id="file-media">未包含</dd>
+              </div>
+              <div>
+                <dt>友链</dt>
+                <dd id="file-friends">未包含</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="sc-data-import-controls" id="import-controls" hidden>
+            <div class="sc-data-options">
+              <label><input id="import-articles" type="checkbox" /> 文章与标签</label>
+              <label><input id="import-media" type="checkbox" /> 文章图片</label>
+              <label><input id="import-friends" type="checkbox" /> 友链</label>
+            </div>
+
+            <div class="sc-data-selects">
+              <label>
+                文章冲突
+                <select id="article-conflict">
+                  <option value="skip" selected>跳过同 Slug 文章</option>
+                  <option value="overwrite">覆盖同 Slug 文章</option>
+                  <option value="copy">另存为副本</option>
+                </select>
+              </label>
+              <label>
+                友链冲突
+                <select id="friend-conflict">
+                  <option value="skip" selected>跳过已有友链</option>
+                  <option value="update">更新已有友链</option>
+                </select>
+              </label>
+            </div>
+
+            <button class="sc-button sc-button-primary" id="import-button" type="button">开始导入</button>
+          </div>
+
+          <div class="sc-data-result" id="import-result" hidden>
+            <h3>本次导入结果</h3>
+            <dl class="sc-data-result-list">
+              <div><dt>文章</dt><dd id="result-articles">新建 0，覆盖 0，跳过 0</dd></div>
+              <div><dt>标签</dt><dd id="result-tags">新建 0，沿用 0</dd></div>
+              <div><dt>图片</dt><dd id="result-media">上传 0，复用 0，失败 0</dd></div>
+              <div><dt>友链</dt><dd id="result-friends">新建 0，更新 0，跳过 0</dd></div>
+            </dl>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <script id="sc-data-summary" type="application/json" set:html={summaryJson} is:inline></script>
+  <script>
+    // @ts-nocheck -- small inline admin flow; guarded by private route and admin API middleware.
+    const exportArticles = document.getElementById('export-articles');
+    const exportMedia = document.getElementById('export-media');
+    const exportFriends = document.getElementById('export-friends');
+    const exportButton = document.getElementById('export-button');
+    const exportMessage = document.getElementById('export-message');
+    const exportMediaNote = document.getElementById('export-media-note');
+    const importFile = document.getElementById('import-file');
+    const inspectMessage = document.getElementById('inspect-message');
+    const fileSummary = document.getElementById('file-summary');
+    const importControls = document.getElementById('import-controls');
+    const importArticles = document.getElementById('import-articles');
+    const importMedia = document.getElementById('import-media');
+    const importFriends = document.getElementById('import-friends');
+    const articleConflict = document.getElementById('article-conflict');
+    const friendConflict = document.getElementById('friend-conflict');
+    const importButton = document.getElementById('import-button');
+    const importResult = document.getElementById('import-result');
+    let importPlanToken = '';
+    let inspectedFile = null;
+
+    function checked(input) {
+      return input instanceof HTMLInputElement ? input.checked : false;
+    }
+
+    function setText(id, value) {
+      const node = document.getElementById(id);
+
+      if (node) {
+        node.textContent = String(value);
+      }
+    }
+
+    function setMessage(node, text, isError = false) {
+      if (!node) {
+        return;
+      }
+
+      node.textContent = text;
+      node.dataset.state = isError ? 'error' : 'success';
+    }
+
+    async function readApiError(response, fallback) {
+      const payload = await response.json().catch(() => null);
+      return payload?.error?.message || fallback;
+    }
+
+    function syncExportControls() {
+      if (exportMedia instanceof HTMLInputElement) {
+        exportMedia.disabled = !checked(exportArticles);
+
+        if (exportMedia.disabled) {
+          exportMedia.checked = false;
+        }
+      }
+
+      if (exportMediaNote) {
+        exportMediaNote.hidden = checked(exportMedia) || !checked(exportArticles);
+      }
+    }
+
+    function syncImportControls() {
+      if (importMedia instanceof HTMLInputElement) {
+        importMedia.disabled = !checked(importArticles) || importMedia.dataset.available !== 'true';
+
+        if (importMedia.disabled) {
+          importMedia.checked = false;
+        }
+      }
+
+      if (importButton instanceof HTMLButtonElement) {
+        importButton.disabled = !checked(importArticles) && !checked(importFriends);
+      }
+    }
+
+    exportArticles?.addEventListener('change', syncExportControls);
+    exportMedia?.addEventListener('change', syncExportControls);
+    syncExportControls();
+
+    exportButton?.addEventListener('click', async () => {
+      exportButton.disabled = true;
+      setMessage(exportMessage, '正在导出……');
+
+      try {
+        const response = await fetch('/api/admin/data-portability/export', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            articles: checked(exportArticles),
+            media: checked(exportMedia),
+            friends: checked(exportFriends)
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(await readApiError(response, '导出失败。'));
+        }
+
+        const blob = await response.blob();
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const match = /filename="([^"]+)"/.exec(disposition);
+        const filename = match?.[1] || 'sakura-cactus-data.json';
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+        setMessage(exportMessage, '已生成博客数据文件。');
+      } catch (error) {
+        setMessage(exportMessage, error instanceof Error ? error.message : '导出失败。', true);
+      } finally {
+        exportButton.disabled = false;
+      }
+    });
+
+    importArticles?.addEventListener('change', syncImportControls);
+    importMedia?.addEventListener('change', syncImportControls);
+    importFriends?.addEventListener('change', syncImportControls);
+
+    importFile?.addEventListener('change', async () => {
+      const file = importFile.files?.[0];
+      inspectedFile = null;
+      importPlanToken = '';
+      fileSummary.hidden = true;
+      importControls.hidden = true;
+      importResult.hidden = true;
+
+      if (!file) {
+        setMessage(inspectMessage, '支持 JSON 和 ZIP');
+        return;
+      }
+
+      setMessage(inspectMessage, '正在读取文件……');
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        setMessage(inspectMessage, '正在检查文件……');
+        const response = await fetch('/api/admin/data-portability/inspect', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(await readApiError(response, '文件不完整、已损坏或格式不受支持。'));
+        }
+
+        const payload = await response.json();
+        const inspect = payload.data.inspect;
+        inspectedFile = file;
+        importPlanToken = inspect.importPlanToken || '';
+        setText('file-articles', inspect.file.articles || '未包含');
+        setText('file-tags', inspect.file.tags || '未包含');
+        setText('file-media', inspect.file.media || '未包含');
+        setText('file-friends', inspect.file.friends || '未包含');
+        importArticles.checked = Boolean(inspect.availableSections.articles);
+        importArticles.disabled = !inspect.availableSections.articles;
+        importMedia.checked = Boolean(inspect.availableSections.media);
+        importMedia.dataset.available = inspect.availableSections.media ? 'true' : 'false';
+        importFriends.checked = Boolean(inspect.availableSections.friends);
+        importFriends.disabled = !inspect.availableSections.friends;
+        fileSummary.hidden = false;
+        importControls.hidden = false;
+        syncImportControls();
+        setMessage(inspectMessage, '文件可用，可以导入。');
+      } catch (error) {
+        setMessage(inspectMessage, error instanceof Error ? error.message : '文件不完整、已损坏或格式不受支持。', true);
+      }
+    });
+
+    importButton?.addEventListener('click', async () => {
+      if (!inspectedFile || !importPlanToken) {
+        setMessage(inspectMessage, '请选择导入文件。', true);
+        return;
+      }
+
+      importButton.disabled = true;
+      setMessage(inspectMessage, '正在导入……');
+
+      try {
+        const formData = new FormData();
+        formData.append('file', inspectedFile);
+        formData.append('options', JSON.stringify({
+          importPlanToken,
+          sections: {
+            articles: checked(importArticles),
+            media: checked(importMedia),
+            friends: checked(importFriends)
+          },
+          articleConflictStrategy: articleConflict?.value || 'skip',
+          friendConflictStrategy: friendConflict?.value || 'skip'
+        }));
+        const response = await fetch('/api/admin/data-portability/import', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(await readApiError(response, '导入失败。'));
+        }
+
+        const payload = await response.json();
+        const result = payload.data.result;
+        setText('result-articles', `新建 ${result.articles.created}，覆盖 ${result.articles.overwritten}，跳过 ${result.articles.skipped}`);
+        setText('result-tags', `新建 ${result.tags.created}，沿用 ${result.tags.reused}`);
+        setText('result-media', `上传 ${result.media.uploaded}，复用 ${result.media.reused}，失败 ${result.media.failed}`);
+        setText('result-friends', `新建 ${result.friends.created}，更新 ${result.friends.updated}，跳过 ${result.friends.skipped}`);
+        importResult.hidden = false;
+        setMessage(inspectMessage, '本次导入完成。');
+      } catch (error) {
+        setMessage(inspectMessage, error instanceof Error ? error.message : '导入失败。', true);
+      } finally {
+        syncImportControls();
+      }
+    });
+  </script>
+</SiteLayout>

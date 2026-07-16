@@ -51,7 +51,7 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[TEST]` a cross-site login POST returns 403.
 - [x] `[CODE]` rate-limit identity trusts Cloudflare `CF-Connecting-IP`; user-controlled `X-Forwarded-For` is not used as a fallback.
 - [x] `[CODE]` GET and HEAD handlers do not change admin state.
-- [x] `[CODE]` API request content length is capped at 256 KiB, with a 6 MiB multipart allowance for the 5 MiB upload endpoint.
+- [x] `[CODE]` API request content length is capped at 256 KiB by default, with explicit larger allowances for the 5 MiB upload endpoint and bounded blog-data JSON/ZIP import endpoints.
 - [x] `[CODE]` login `next` accepts a single-leading-slash same-origin path and rejects protocol-relative, absolute, backslash, control-character, and encoded variants.
 - [x] `[TEST]` `next=//evil.example` is absent from the rendered login redirect target; pure tests cover encoded backslash/control variants.
 - [x] `[CODE]` no permissive application CORS response is configured.
@@ -61,6 +61,7 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[CODE]` values are passed through D1 prepared statements and `.bind()`.
 - [x] `[CODE]` dynamic query fragments come only from internal whitelists/condition builders.
 - [x] `[CODE]` post-asset, post-tag, and multi-setting replacements use D1 batch operations.
+- [x] `[CODE]` blog data import validates file checksum/version/sections, blocks sensitive fields, never trusts database IDs or `content_html`, and writes selected D1 rows through batch operations.
 - [x] `[TEST]` migrations 0001 through 0008 apply successfully to a fresh local D1 database.
 - [x] `[CODE]` automatic bootstrap remains backward-compatible and uses a version marker after schema version 8.
 - [ ] `[CONSOLE]` confirm production migration history before manually applying 0008; do not run remote migration blindly on an auto-bootstrapped database.
@@ -88,6 +89,7 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[CODE]` object keys and 24-byte public access tokens are generated server-side.
 - [x] `[CODE]` filenames are control/path sanitized and are not used as object keys or response header values.
 - [x] `[CODE]` a failed D1 insert triggers best-effort deletion of the newly uploaded R2 object.
+- [x] `[CODE]` blog data ZIP import validates media checksum/MIME/header/size, reuses existing SHA-256 matches, generates new R2 keys/tokens, and compensates only objects uploaded by the current import on D1 failure.
 - [x] `[CODE]` referenced assets cannot be manually deleted; scheduled cleanup rechecks references per candidate.
 - [x] `[CODE]` media responses use allowlisted types, `nosniff`, inline disposition, ETag, and private/public cache policy.
 - [x] `[CODE]` upload frequency is D1-rate-limited per admin/client address.

@@ -3,7 +3,7 @@ import type { AssetRow, PostRow } from '@/lib/database.types';
 import { nowIso } from '@/lib/db';
 import { createRandomId } from '@/features/auth/crypto.service';
 import type { NormalizedPostInput } from './post.schema';
-import type { PostListFilters, PostStatus } from './post.types';
+import type { PostListFilters } from './post.types';
 
 export interface PersistedPostInput extends NormalizedPostInput {
   contentHtml: string;
@@ -300,7 +300,6 @@ export async function slugExists(db: D1Database, slug: string, excludeId?: strin
 
 export async function createPost(db: D1Database, input: PersistedPostInput, slug: string): Promise<PostRow> {
   const now = nowIso();
-  const status = input.status;
   const post: PostRow = {
     id: createRandomId('p'),
     slug,
@@ -309,13 +308,13 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
     content_markdown: input.contentMarkdown,
     content_html: input.contentHtml,
     cover_asset_id: null,
-    status,
+    status: 'published',
     visibility: input.visibility,
     seo_title: input.seoTitle,
     seo_description: input.seoDescription,
     reading_time_minutes: input.readingTimeMinutes,
     word_count: input.wordCount,
-    published_at: input.publishedAt ?? (status === 'published' ? now : null),
+    published_at: input.publishedAt ?? now,
     pinned_at: null,
     created_at: now,
     updated_at: now
@@ -360,7 +359,7 @@ export async function updatePost(db: D1Database, id: string, input: PersistedPos
   }
 
   const now = nowIso();
-  const publishedAt = input.publishedAt ?? (input.status === 'published' ? (current.published_at ?? now) : current.published_at);
+  const publishedAt = input.publishedAt ?? current.published_at ?? now;
 
   await db
     .prepare(
@@ -394,28 +393,6 @@ export async function updatePost(db: D1Database, id: string, input: PersistedPos
       now,
       id
     )
-    .run();
-
-  return findPostById(db, id);
-}
-
-export async function setPostStatus(db: D1Database, id: string, status: PostStatus): Promise<PostRow | null> {
-  const current = await findPostById(db, id);
-
-  if (!current) {
-    return null;
-  }
-
-  const now = nowIso();
-  const publishedAt = status === 'published' ? (current.published_at ?? now) : current.published_at;
-
-  await db
-    .prepare(
-      `UPDATE posts
-       SET status = ?, published_at = ?, updated_at = ?
-       WHERE id = ?`
-    )
-    .bind(status, publishedAt, now, id)
     .run();
 
   return findPostById(db, id);

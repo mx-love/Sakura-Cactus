@@ -52,7 +52,7 @@ Scope: local uncommitted security hardening changes only. No commit, push, deplo
 - Confirm R2 bucket is private, public development URL is disabled, and no public custom domain is attached.
 - Confirm Cache Rules do not cache `/admin*`, `/api/admin*`, `/api/auth*`, `/write*`, `/settings*`, or private media responses.
 - Confirm D1 backup/recovery and observability retention/access policies.
-- Preview-test login/logout, image upload/read, article publish/unpublish, friend application/health check, view counting, and scheduled cleanup.
+- Preview-test login/logout, image upload/read, article publishing/editing/permanent deletion, blog data import/export, friend application/health check, view counting, and scheduled cleanup.
 
 ## Test Results
 
