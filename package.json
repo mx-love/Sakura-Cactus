@@ -16,7 +16,10 @@
     "db:migration:apply:prod": "wrangler d1 migrations apply sakura_blog_prod --remote",
     "admin:create": "node --experimental-strip-types scripts/create-admin.ts",
     "test:security": "node --experimental-transform-types scripts/security-checks.ts",
-    "test:posts": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/post-delete.test.ts"
+    "test:posts": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/post-delete.test.ts",
+    "test:data": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/data-portability.test.ts",
+    "test:data:fixtures": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/data-portability.test.ts --fixtures",
+    "test:data:fixtures:verify": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/data-portability.test.ts --verify-fixtures"
   },
   "dependencies": {
     "@astrojs/cloudflare": "13.5.2",

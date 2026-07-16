@@ -160,5 +160,6 @@ Before routing production traffic:
 - Confirm Cache Rules never publicly cache `/admin*`, `/api/admin*`, `/api/auth*`, `/write*`, `/settings*`, or private media responses.
 - Verify D1 backups or point-in-time recovery, observability retention/access, and least-privilege account access.
 - Exercise login/logout, image upload/read, browser-local writing, publishing, editing, permanent deletion, friend application/health checks, view counting, and scheduled cleanup in preview.
+- Exercise `/settings/data` summary, JSON export, ZIP export, automatic inspect, import without images, import with images, about single-instance behavior, and conflict strategies in preview. This is application data portability, not a substitute for Cloudflare D1/R2 backups.
 
 After deployment, inspect response headers on both successful and error responses for private paths. They must include `Cache-Control: no-store`; HTTPS responses should also include the application security headers documented in `SECURITY_CHECKLIST.md`.

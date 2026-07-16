@@ -1796,6 +1796,113 @@ summary {
   color: var(--color-danger);
 }
 
+.sc-data-page .sc-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sc-data-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.sc-data-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.sc-data-stats,
+.sc-data-result-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sc-data-stats div,
+.sc-data-result-list div {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.sc-data-stats dt,
+.sc-data-result-list dt {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.sc-data-stats dd,
+.sc-data-result-list dd {
+  margin: 0.25rem 0 0;
+  font-weight: 800;
+}
+
+.sc-data-options,
+.sc-data-selects {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.sc-data-options label,
+.sc-data-selects label,
+.sc-data-file-picker label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+}
+
+.sc-data-selects {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sc-data-selects label {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.sc-data-selects select,
+.sc-data-file-picker input[type="file"] {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.sc-data-note,
+.sc-data-message,
+.sc-data-file-picker p {
+  margin: 0.75rem 0;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+}
+
+.sc-data-message[data-state="error"],
+.sc-data-file-picker p[data-state="error"] {
+  color: var(--color-danger);
+}
+
+.sc-data-message[data-state="success"],
+.sc-data-file-picker p[data-state="success"] {
+  color: #437765;
+}
+
+.sc-data-file-summary,
+.sc-data-import-controls,
+.sc-data-result {
+  margin-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
 .sc-friends-shell {
   max-width: 860px;
 }

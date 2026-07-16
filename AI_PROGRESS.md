@@ -128,11 +128,13 @@ Project maintenance: dependency verification is complete; current work is roadma
 - [x] Confirmed the remaining production dependency audit item is 1 known low-severity Babel source-map advisory from the React/Vite toolchain.
 - [x] Confirmed writer local autosave/recovery and first paste content preservation from current code.
 - [x] Started second-stage documentation synchronization so TODO, README, architecture, and progress notes match implemented code.
+- [x] Added `/settings/data` for blog data export/import.
+- [x] Added data portability APIs for summary, export, inspect, and import.
+- [x] Added JSON/ZIP blog data format v1 with checksums, media manifest, conflict strategies, automatic inspect, and fixture tests.
 
 ## Pending
 
 - [ ] Await explicit user confirmation before push, deployment, merge, or remote database operation.
-- [ ] Plan the next independent feature branch for versioned blog export and validated blog import.
 
 ## Known Issues
 
@@ -155,7 +157,11 @@ Project maintenance: dependency verification is complete; current work is roadma
 pnpm.cmd install --frozen-lockfile --offline
 pnpm.cmd exec tsc --noEmit --pretty false
 pnpm.cmd check
+pnpm.cmd test:posts
 pnpm.cmd test:security
+pnpm.cmd test:data
+pnpm.cmd test:data:fixtures
+pnpm.cmd test:data:fixtures:verify
 pnpm.cmd build
 ```
 

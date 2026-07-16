@@ -16,7 +16,7 @@
 
 `draft`、`archived`、`deleted` 不再是运行时文章状态。旧服务端草稿、撤回/归档和非公开文章由 `migrations/0010_simplify_post_status.sql` 在升级时永久清理。清理前只保存相关 `asset_id` 到 `historical_post_asset_cleanup_candidates`，不保存正文、标题、slug 或恢复数据。
 
-阶段 2 已在阶段 1 提交 `5c7d53a` 后重新复核代码、migration、测试和文档引用。当前未发现 P0，也未发现影响阶段 3 数据导入导出的 P1；可以进入博客数据导入导出实现。
+阶段 2 已在阶段 1 提交 `5c7d53a` 后重新复核代码、migration、测试和文档引用，未发现 P0/P1 阻断。阶段 3 已在 `codex/blog-data-portability` 实现博客数据文件导入导出。
 
 ## 1. 当前真实文章状态模型
 
@@ -182,7 +182,7 @@ about 页继续使用 `posts.slug = 'about'`，不建立第二套页面表。
 
 ## 9. 当前可安全导出的内容
 
-阶段 3 可基于以下范围实现：
+博客数据文件 v1 导出以下范围：
 
 - 当前 D1 中存在的 published/public/current 普通文章。
 - published/public/current about 单实例。
@@ -192,6 +192,11 @@ about 页继续使用 `posts.slug = 'about'`，不建立第二套页面表。
 - 用户选择导出的友链。
 
 导出应以 Markdown 为内容权威，导入时重新生成 `content_html`。
+
+容器：
+
+- 未选择图片二进制时生成 JSON。
+- 选择文章图片时生成 ZIP，结构为 `manifest.json`、`data.json` 和 `media/`。
 
 ## 10. 当前不得导出的内容
 
@@ -211,6 +216,8 @@ about 页继续使用 `posts.slug = 'about'`，不建立第二套页面表。
 - rate limits、audit logs、cache、日志。
 - site settings。
 - 未绑定临时上传、孤立媒体、已删除媒体、系统默认资源。
+
+导入 inspect 会递归阻断敏感字段，并拒绝 `content_html`、数据库 ID、R2 key、Secret、session/cookie/CSRF、Cloudflare binding 等字段。
 
 ## 11. 测试覆盖
 
@@ -234,11 +241,21 @@ about 页继续使用 `posts.slug = 'about'`，不建立第二套页面表。
 - about 编辑器不再调用 ensure 占位创建。
 - 旧 publish/unpublish route 文件不存在。
 
-仍需阶段 2/3 补充：
+阶段 3 新增 `pnpm.cmd test:data`、`test:data:fixtures`、`test:data:fixtures:verify` 覆盖：
 
-- 浏览器级 localStorage 和 no-D1-write smoke。
-- 数据导入导出 API/UI/fixture 测试。
-- 媒体导出时逐个读取 R2 对象并处理缺失对象。
+- JSON/ZIP 导出。
+- about 作为单实例导出和导入。
+- 标签只包含导出文章实际使用的标签。
+- 未选择友链时不导出友链，友链可独立导出。
+- 未选择图片时不包含二进制，导入不写 R2。
+- 选择图片时生成 ZIP 并逐个读取 R2 对象。
+- 正文图片、封面图片、外部图片、临时未绑定图片和去重。
+- inspect 只读、checksum/version/count/status/secret/multiple-about 阻断。
+- import plan token 绑定文件 hash 和会话。
+- 跳过、覆盖、副本冲突策略。
+- Markdown 重新渲染，不信任 `content_html`。
+- 媒体 SHA-256 复用、R2 上传、Markdown/封面重写。
+- R2 上传失败不产生半成品文章。
 
 ## 12. 风险分级
 
@@ -250,7 +267,7 @@ P2：
 
 - public query 仍依赖 `published_at <= now`，未来如果需要彻底移除定时公开语义，需要另行决定。
 - D1 只能证明 R2 元数据存在，不能证明 R2 对象实际存在；导出媒体时必须逐个读取 R2。
-- 导入导出仍需独立实现资源限制、文件检查、冲突策略、媒体重写和 D1/R2 补偿逻辑。
+- 导入导出已有资源限制、文件检查、冲突策略、媒体重写和 D1/R2 补偿逻辑；后续可补充更细的导入导出审计日志。
 
 P3：
 
