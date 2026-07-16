@@ -409,6 +409,8 @@ async function testExportAndInspect(): Promise<{ jsonBytes: Uint8Array; zipBytes
   assert.equal(data.articles.length, 1);
   assert.equal(data.aboutPage.slug, 'about');
   assert.equal(data.tags.length, 1);
+  assert.equal(data.manifest.counts.tags, summary.usedTags);
+  assert.equal(data.manifest.counts.media, summary.referencedMedia);
   assert.equal(data.friends, undefined);
   assert.equal(JSON.stringify(data).includes('content_html'), false);
   assert.equal(data.mediaManifest.length, 2);
@@ -427,6 +429,69 @@ async function testExportAndInspect(): Promise<{ jsonBytes: Uint8Array; zipBytes
   assert.ok(files.some((file) => file.path === 'data.json'));
   assert.equal(files.filter((file) => file.path.startsWith('media/')).length, 2);
   return { jsonBytes: jsonExport.bytes, zipBytes: zipExport.bytes };
+}
+
+function insertSummaryPost(
+  db: DatabaseSync,
+  id: string,
+  slug: string,
+  status = 'published',
+  visibility = 'public'
+): void {
+  db.prepare(
+    `INSERT INTO posts (
+      id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+      seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+    ) VALUES (?, ?, ?, NULL, 'body', NULL, NULL, ?, ?, NULL, NULL, 1, 1, ?, NULL, ?, ?)`
+  ).run(id, slug, slug, status, visibility, now, now, now);
+}
+
+async function testSummaryTagCounts(): Promise<void> {
+  const d1 = createDb();
+  setTestEnv(d1, new FakeR2Bucket());
+  const db = d1.db;
+
+  for (let index = 1; index <= 21; index += 1) {
+    insertSummaryPost(db, `post-${index}`, `post-${index}`);
+  }
+
+  const noTagSummary = await getBlogDataSummary();
+  assert.equal(noTagSummary.publishedArticles, 21);
+  assert.equal(noTagSummary.usedTags, 0);
+
+  db.prepare("INSERT INTO tags (id, name, slug, color, created_at, updated_at) VALUES ('tag-shared', 'Shared', 'shared', NULL, ?, ?)").run(now, now);
+  db.prepare("INSERT INTO post_tags (post_id, tag_id) VALUES ('post-1', 'tag-shared')").run();
+  db.prepare("INSERT INTO post_tags (post_id, tag_id) VALUES ('post-2', 'tag-shared')").run();
+  assert.equal((await getBlogDataSummary()).usedTags, 1);
+
+  insertSummaryPost(db, 'post-about-summary', 'about');
+  db.prepare("INSERT INTO tags (id, name, slug, color, created_at, updated_at) VALUES ('tag-about', 'About', 'about-tag', NULL, ?, ?)").run(now, now);
+  db.prepare("INSERT INTO post_tags (post_id, tag_id) VALUES ('post-about-summary', 'tag-about')").run();
+  assert.equal((await getBlogDataSummary()).usedTags, 2);
+
+  db.prepare("INSERT INTO tags (id, name, slug, color, created_at, updated_at) VALUES ('tag-unused-summary', 'Unused', 'unused-summary', NULL, ?, ?)").run(now, now);
+  assert.equal((await getBlogDataSummary()).usedTags, 2);
+
+  db.exec('PRAGMA ignore_check_constraints=ON');
+  insertSummaryPost(db, 'post-draft-summary', 'draft-summary', 'draft');
+  insertSummaryPost(db, 'post-archived-summary', 'archived-summary', 'archived');
+  insertSummaryPost(db, 'post-private-summary', 'private-summary', 'published', 'private');
+  db.exec('PRAGMA ignore_check_constraints=OFF');
+  db.prepare("INSERT INTO tags (id, name, slug, color, created_at, updated_at) VALUES ('tag-hidden-summary', 'Hidden', 'hidden-summary', NULL, ?, ?)").run(now, now);
+
+  for (const postId of ['post-draft-summary', 'post-archived-summary', 'post-private-summary']) {
+    db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').run(postId, 'tag-hidden-summary');
+  }
+
+  const summary = await getBlogDataSummary();
+  assert.equal(summary.usedTags, 2);
+  assert.equal(summary.referencedMedia, 0);
+  const exported = parseJsonExport(
+    (await exportBlogData({ articles: true, media: false, friends: false }, 'https://source.example')).bytes
+  );
+  assert.equal(exported.manifest.counts.tags, summary.usedTags);
+  assert.equal(exported.manifest.counts.media, summary.referencedMedia);
+  assert.equal(exported.tags.length, summary.usedTags);
 }
 
 async function testImportJsonWithoutMedia(jsonBytes: Uint8Array): Promise<void> {
@@ -640,6 +705,7 @@ async function verifyFixtures(): Promise<void> {
 
 async function main(): Promise<void> {
   const { jsonBytes, zipBytes } = await testExportAndInspect();
+  await testSummaryTagCounts();
   const { inlineSha } = await seedSource();
   await testImportJsonWithoutMedia(jsonBytes);
   await testImportZipWithMedia(zipBytes);
