@@ -165,20 +165,19 @@ about 页继续使用 `posts.slug = 'about'`，不建立第二套页面表。
 
 升级流程：
 
-1. `PRAGMA foreign_keys=off`
-2. `BEGIN TRANSACTION`
-3. 确保 `historical_post_asset_cleanup_candidates` 存在
-4. 从旧 `draft`、`archived`、非 `public` 文章的 `post_assets` 保存候选 asset_id
-5. 从旧 `draft`、`archived`、非 `public` 文章的 `cover_asset_id` 保存候选 asset_id
-6. 删除旧文章的 `post_tags`、`post_assets`、`post_view_counts`
-7. 物理删除旧文章
+1. 使用 D1 支持的 `PRAGMA defer_foreign_keys = ON`
+2. 确保 `historical_post_asset_cleanup_candidates` 存在
+3. 从旧 `draft`、`archived`、非 `public` 文章的 `post_assets` 保存候选 asset_id
+4. 从旧 `draft`、`archived`、非 `public` 文章的 `cover_asset_id` 保存候选 asset_id
+5. 删除旧文章的 `post_tags`、`post_assets`、`post_view_counts`
+6. 物理删除旧文章
+7. 暂存存活文章的标签、媒体和浏览量关系，避免 `DROP TABLE posts` 的级联动作误删
 8. 重建 `posts`，status 只允许 `published`，visibility 只允许 `public`
-9. 重建保留索引
-10. 写入 schema version 10
-11. `COMMIT`
-12. `PRAGMA foreign_keys=on`
+9. 恢复存活文章关系并删除暂存表
+10. 重建保留索引
+11. 写入 schema version 10
 
-不会在 SQL migration 中删除 R2 对象。候选媒体继续由现有补偿脚本幂等处理。
+Wrangler 负责 migration 原子性，SQL 不包含显式 `BEGIN`、`COMMIT`、`ROLLBACK` 或 `SAVEPOINT`。不会在 SQL migration 中删除 R2 对象，候选媒体继续由现有补偿脚本幂等处理。
 
 ## 9. 当前可安全导出的内容
 

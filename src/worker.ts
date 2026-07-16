@@ -2,13 +2,11 @@ import astroWorker from '@astrojs/cloudflare/entrypoints/server';
 import { cleanupExpiredDraftAssets } from './features/assets/asset.service';
 import { checkApprovedFriendLinksHealthIfEnabled } from './features/friends/friend.service';
 import { getDb } from './lib/db';
-import { ensureD1Schema } from './lib/schema';
 import { cleanupStaleSessions } from './features/auth/session.repo';
 import { reportError } from './lib/logging';
 
 async function runScheduledTasks(cron: string): Promise<void> {
   const db = getDb();
-  await ensureD1Schema(db);
 
   try {
     const stats = await cleanupExpiredDraftAssets();
