@@ -4,13 +4,15 @@ Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统
 
 ## 核心功能
 
-- Markdown 写作后台，支持编辑、预览、发布、修订、置顶和删除
+- Markdown 写作后台，支持编辑、预览、本地自动暂存、恢复提示、发布、撤回、修订、置顶和删除
 - 公开博客页面，包含首页、文章列表、文章详情、标签、时间轴、搜索、关于页和友人帐
 - Cloudflare D1 存储文章、标签、设置、友链和会话数据
-- Cloudflare R2 管理图片和媒体文件，支持上传、粘贴、拖拽和复用
+- 私有 Cloudflare R2 管理图片和媒体文件，支持上传、粘贴、拖拽和复用，并通过 `/i/:token` 代理读取
 - 站点设置、友链申请、友链健康检查、访问量开关和 favicon 外链
-- [Waline](https://waline.js.org/) 评论入口，评论数据由外部 Waline 服务保存
+- [Waline](https://waline.js.org/) 评论入口，开启评论并配置外部 Waline 服务后显示，评论数据由外部 Waline 服务保存
 - 支持 RSS、sitemap、robots、canonical、Open Graph 和结构化数据。
+- CSRF 风格同源校验、登录/上传/友链/浏览计数限流、SSRF 防护、安全响应头和私有响应 `no-store`
+- 直接依赖已固定为精确版本，并与 `pnpm-lock.yaml` 保持一致
 - 适配 Cloudflare Workers SSR 部署
 
 ## 技术栈
@@ -94,12 +96,39 @@ pnpm.cmd dev
 pnpm.cmd build
 ```
 
+常用检查：
+
+```bash
+pnpm.cmd exec tsc --noEmit --pretty false
+pnpm.cmd check
+pnpm.cmd test:security
+pnpm.cmd build
+pnpm.cmd audit --prod --registry=https://registry.npmjs.org/
+```
+
+在 Windows 沙箱或受限用户目录中运行 `pnpm.cmd check` / `pnpm.cmd build` 时，可将 Wrangler 配置目录指向项目内已忽略的本地目录：
+
+```powershell
+$env:XDG_CONFIG_HOME='D:\code\Sakura-Cactus\.wrangler-config'
+$env:ASTRO_TELEMETRY_DISABLED='1'
+pnpm.cmd check
+pnpm.cmd build
+```
+
 ## 安全说明
 
 - 不提交 `.env` 和 `.dev.vars`
 - 不提交密码、Token 或密钥
 - 后台密码使用 Cloudflare“密钥”
 - R2 Bucket 保持私有
+- D1/R2 生产资源、缓存规则、备份和 Secret 状态需要在 Cloudflare 控制台确认
+- 当前生产依赖审计保留 1 个已知低危 Babel 传递依赖告警，等待上游发布可用修复版本
+
+## 计划功能
+
+- Versioned blog export
+- Validated blog import
+- Backup preview, dry-run, and conflict resolution
 
 ## 致谢
 

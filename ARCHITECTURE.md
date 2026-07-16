@@ -67,8 +67,30 @@ R2 remains private and is available only through the `MEDIA_BUCKET` binding. Upl
 - New public caching: the explicit allowlist in `src/lib/cache.ts`, with a documented cache key.
 - New scheduled work: a separate failure boundary in `src/worker.ts`.
 - New Markdown processing: immediately before or after sanitize in the renderer, with a malicious-input test.
+- Future export/import and backup work: a dedicated feature module with its own repository/service/security boundaries. It should not be implemented directly inside page routes or a generic plugin system.
 
-Potential future extension boundaries are Markdown processing, publish hooks, media validation, scheduled-task registration, SEO metadata, and comment providers. No plugin registry was added during this audit: there is not yet a real second implementation that justifies a runtime abstraction. If one is later introduced, its context must expose narrow post/media/metadata values only and must never include raw environment variables, credentials, cookies, D1/R2 bindings, or session tokens.
+## Extension boundaries and plugin policy
+
+The current codebase already has explicit responsibility boundaries:
+
+- repositories own D1 prepared statements and row mapping;
+- services own validation, public/admin projections, and D1/R2 coordination;
+- `src/lib/security/` owns request and outbound URL policy;
+- `src/features/posts/post.renderer.ts` owns Markdown-to-HTML rendering;
+- `src/worker.ts` owns the Worker entrypoint and scheduled-task orchestration.
+
+The intended extension seams are Markdown content processing, article publish workflows, media validation/processing, scheduled-task registration, SEO metadata, comment providers, and future backup export/import.
+
+There is no dynamic Plugin Registry today. Sakura Cactus does not support uploading and executing arbitrary third-party plugin code in production. Do not create empty plugin directories, empty registries, or framework abstractions until there are at least two real implementations of the same kind. If that threshold is reached, prefer a build-time static registration interface with a narrow typed context.
+
+Any future extension context must be capability-based and must not expose:
+
+- `ADMIN_PASSWORD`, `ADMIN_PASSWORD_HASH`, or `SESSION_SECRET`;
+- the complete Cloudflare `env` object;
+- session records, raw cookies, or session tokens;
+- raw D1 or R2 bindings;
+- arbitrary SQL execution;
+- internal request objects carrying credentials.
 
 ## Known structural debt
 

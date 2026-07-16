@@ -77,7 +77,7 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[TEST]` malicious Markdown security checks remove executable script, event-handler, JavaScript URL, and data-image output.
 - [x] `[CODE]` JSON embedded with `set:html` escapes `<`; JSON-LD also escapes `<`.
 - [x] `[CODE]` search highlighting uses text nodes/textContent for user-controlled values.
-- [ ] `[PENDING]` a full nonce/hash CSP awaits extraction of legacy inline scripts and a decision on the external Waline client.
+- [x] `[CODE]` the current CSP baseline intentionally covers `base-uri`, `object-src`, and `frame-ancestors`; a full nonce/hash script/style CSP is not an active roadmap item unless a future feature creates a concrete need.
 
 ## Private R2 media
 

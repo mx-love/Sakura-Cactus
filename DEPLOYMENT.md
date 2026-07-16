@@ -38,7 +38,7 @@ Advanced users may use `ADMIN_PASSWORD_HASH` instead of `ADMIN_PASSWORD`. If bot
 node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
 ```
 
-RSS, sitemap, and robots metadata use the current request origin automatically. No extra site URL variable is required. Local development uses localhost, `workers.dev` uses the workers.dev domain, and custom domains use the bound domain.
+RSS, sitemap, robots metadata, canonical redirects, and absolute SEO URLs use the configured `SITE_URL` origin through `src/lib/seo.ts`. Set `SITE_URL` to the final production origin, such as `https://blog.example.com`, before routing production traffic. If it is missing or invalid, the code falls back to the project default origin.
 
 ## Public Site Identity Variables
 

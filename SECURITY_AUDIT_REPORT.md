@@ -9,7 +9,7 @@
 
 本次审计问题清单共 12 项：**1 项 P0、6 项 P1、5 项 P2**。已在不改变界面视觉和主要业务行为的前提下修复全部 P0/P1，以及 P2 的代码侧问题；需要控制台或后续结构重构处理的内容列入“未完成项与建议”。没有发现无需管理员会话即可直接调用的管理 API，也没有发现已提交的真实生产密钥。修复后本地类型检查、Astro 检查、构建、安全回归测试、D1 全量迁移和运行时冒烟测试均通过；生产依赖审计仅剩 1 项低危 Babel 开发构建链告警。
 
-当前残余风险评为**低到中**，主要来自需要生产控制台确认的 Cloudflare 配置、尚未完成完整 nonce/hash CSP 的内联脚本、标准 Workers `fetch` 无法进行 DNS 解析结果绑定，以及等待上游发布的 Babel 7 修复版本。
+当前残余风险评为**低到中**，主要来自需要生产控制台确认的 Cloudflare 配置、当前基础 CSP 策略的已接受限制、标准 Workers `fetch` 无法进行 DNS 解析结果绑定，以及等待上游发布的 Babel 7 修复版本。
 
 ## 系统与信任边界
 
@@ -154,8 +154,8 @@
 
 ## 未完成项与建议
 
-1. **完整 CSP（中）**：当前 CSP 已封锁对象、frame ancestor 和恶意 base，但尚未限制全部 script/style source。原因是多个历史 Astro 内联脚本及 Waline 动态客户端仍需要迁移。建议先将四个页面内联脚本提取为类型化客户端模块，再为必要脚本引入 nonce/hash，最后收紧 `script-src`/`style-src`/`connect-src`。
-2. **Waline 供应链（中）**：页面使用可变的 unpkg `@waline/client@v3` 地址。建议在兼容性测试后锁定确切版本并优先随应用自托管；同步收紧 CSP 的脚本、样式和连接目标。
+1. **基础 CSP（已接受限制）**：当前 CSP 已封锁对象、frame ancestor 和恶意 base，保留为基础策略。完整 nonce/hash `script-src`/`style-src` 不是当前路线图任务；只有未来合法功能出现明确阻断或风险变化时，再作为独立前端/安全改造评估。
+2. **Waline 供应链（中）**：页面使用可变的 unpkg `@waline/client@v3` 地址。建议在兼容性测试后锁定确切版本并优先随应用自托管；这应作为独立供应链任务处理，不隐含本轮继续收紧 CSP。
 3. **DNS rebinding（中/低）**：应用已阻止字面内部地址并逐跳复验，但标准 Workers API 不能把 DNS 校验结果固定给随后同一 fetch。继续使用 Cloudflare 平台出站防护；若未来提供受支持的 resolver/pinning 能力，应在出站边界接入。
 4. **Babel 审计告警（低）**：最终 audit 的唯一残留为 `@babel/core <=7.29.0` source-map 任意文件读取公告，来自 `@astrojs/react -> @vitejs/plugin-react`。公告标注修复版本 `>=7.29.1`，但该 Babel 7 版本当前尚未发布。不要伪造 override；待上游发布后更新，或单独规划 Babel 8/相关插件主版本迁移。
 5. **无 Content-Length 的大请求（低）**：middleware 可在解析前拒绝已声明的超大请求；chunked/无长度请求仍需依赖 Cloudflare 平台请求体上限和各 handler 的解析后校验。可在有稳定流式方案时增加统一 body reader。
