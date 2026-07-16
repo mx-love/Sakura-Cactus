@@ -530,10 +530,6 @@ summary {
   max-width: 860px;
 }
 
-.sc-prose-shell {
-  max-width: 760px;
-}
-
 .sc-home-intro {
   display: grid;
   align-content: start;
@@ -777,7 +773,7 @@ summary {
   text-decoration: none;
 }
 
-.sc-article-shell {
+.sc-public-content-shell {
   width: min(100% - 2rem, 920px);
   margin-inline: auto;
   padding-block: clamp(1.5rem, 4vw, 3rem);
@@ -1426,6 +1422,10 @@ summary {
   padding-block: clamp(2rem, 5vw, 4rem);
 }
 
+.sc-settings-content {
+  width: 100%;
+}
+
 .sc-settings-header {
   margin-bottom: 1.25rem;
 }
@@ -1809,6 +1809,7 @@ summary {
 }
 
 .sc-data-panel {
+  width: 100%;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
@@ -1841,6 +1842,7 @@ summary {
 .sc-data-result-list dd {
   margin: 0.25rem 0 0;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .sc-data-options,
@@ -1857,6 +1859,11 @@ summary {
   align-items: center;
   gap: 0.55rem;
   font-weight: 700;
+}
+
+.sc-data-options input {
+  flex: 0 0 auto;
+  margin: 0;
 }
 
 .sc-data-selects {
@@ -2265,8 +2272,7 @@ summary {
 .sc-paper-piece,
 .sc-calendar-note,
 .sc-featured-paper,
-.sc-paper-public-shell,
-.sc-about-paper-shell {
+.sc-paper-public-shell {
   position: relative;
 }
 
@@ -2716,14 +2722,6 @@ summary {
   transform: rotate(0.5deg);
 }
 
-.sc-about-paper-shell {
-  border: 1px solid rgba(240, 227, 231, 0.78);
-  border-radius: 26px 20px 28px 22px;
-  background: rgba(255, 255, 255, 0.74);
-  box-shadow: 0 18px 44px rgba(102, 66, 82, 0.042);
-  padding-inline: clamp(1.2rem, 4vw, 2.5rem);
-}
-
 .sc-friends-paper-shell .sc-friend-card {
   border-radius: 24px 18px 22px 20px;
   background: rgba(255, 255, 255, 0.72);
@@ -2938,8 +2936,7 @@ summary {
   .sc-calendar-note,
   .sc-featured-paper,
   .sc-paper-strip,
-  .sc-paper-public-shell,
-  .sc-about-paper-shell {
+  .sc-paper-public-shell {
     animation: sc-paper-fade-up 420ms ease both;
   }
 
@@ -3006,10 +3003,6 @@ summary {
 }
 
 @media (min-width: 900px) {
-  .sc-home-shell {
-    padding-top: clamp(calc(2rem - 12px), calc(5vw - 12px), calc(4rem - 12px));
-  }
-
   .sc-home-desk {
     grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);
     gap: 0;
@@ -3310,8 +3303,7 @@ summary {
     flex-wrap: wrap;
   }
 
-  .sc-paper-public-shell,
-  .sc-about-paper-shell {
+  .sc-paper-public-shell {
     width: min(100% - 1rem, 860px);
     padding-inline: 1rem;
   }
@@ -3364,7 +3356,7 @@ summary {
     display: none;
   }
 
-  .sc-article-shell {
+  .sc-public-content-shell {
     width: min(100% - 1rem, 920px);
     padding-block: 1rem 2rem;
   }
@@ -3388,6 +3380,25 @@ summary {
   }
 
   .sc-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-settings-shell {
+    width: min(100% - 1rem, 980px);
+    padding-block: 1rem 2rem;
+  }
+
+  .sc-data-page .sc-settings-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sc-data-stats,
+  .sc-data-result-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-data-selects {
     grid-template-columns: 1fr;
   }
 

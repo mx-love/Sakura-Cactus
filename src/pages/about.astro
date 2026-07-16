@@ -38,61 +38,63 @@ const canonicalUrl = absoluteSiteUrl('/about');
   ogImage={aboutPost?.coverImageUrl ?? undefined}
 >
   <section class="sc-page">
-    <div class="sc-public-shell sc-prose-shell sc-about-paper-shell">
-      <nav class="sc-breadcrumb" aria-label="面包屑">
-        <a href="/">首页</a>
-        <span>»</span>
-        <span>关于</span>
-      </nav>
+    <div class="sc-public-content-shell sc-article-shell">
+      <div class="sc-article-paper">
+        <nav class="sc-breadcrumb sc-article-inner" aria-label="面包屑">
+          <a href="/">首页</a>
+          <span>»</span>
+          <span>关于</span>
+        </nav>
 
-      {aboutPost ? (
-        <article>
-          {canEdit ? (
-            <div class="sc-article-topbar sc-about-action-bar">
-              <span></span>
-              <PostDetailAdminActions
-                client:load
-                isAdmin={true}
-                postId={aboutPost.id}
-                showPin={false}
-                editHref="/write?type=about"
-                deleteRedirectTo="/about?fresh=1"
-              />
+        {aboutPost ? (
+          <article>
+            {canEdit ? (
+              <div class="sc-article-topbar sc-article-inner sc-about-action-bar">
+                <span></span>
+                <PostDetailAdminActions
+                  client:load
+                  isAdmin={true}
+                  postId={aboutPost.id}
+                  showPin={false}
+                  editHref="/write?type=about"
+                  deleteRedirectTo="/about?fresh=1"
+                />
+              </div>
+            ) : null}
+            <header class="sc-page-header sc-article-inner">
+              <h1>{aboutPost.title}</h1>
+              {aboutPost.excerpt ? <p>{aboutPost.excerpt}</p> : null}
+              {adminStatusNote ? <p class="sc-about-admin-note">{adminStatusNote}</p> : null}
+            </header>
+            <div class="sc-prose prose-content sc-article-inner" set:html={aboutPost.contentHtml} />
+          </article>
+        ) : (
+          <>
+            <header class="sc-page-header sc-article-inner">
+              <h1>关于</h1>
+            </header>
+            <div class="sc-empty sc-about-empty sc-article-inner">
+              <span class="sc-about-empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 3.5h7l3 3V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+                  <path d="M14 3.5V7h3.5" />
+                  <path d="M9 12h6" />
+                  <path d="M9 16h4" />
+                </svg>
+              </span>
+              <p>还没有关于页面。</p>
+              {adminUser ? (
+                <>
+                  <p>写一页简短的自我介绍，它会固定显示在这里。</p>
+                  <a class="sc-button sc-button-primary sc-about-empty-action" href="/write?type=about">编辑关于页面</a>
+                </>
+              ) : (
+                <p>这里会显示站点主人的自我介绍。</p>
+              )}
             </div>
-          ) : null}
-          <header class="sc-page-header">
-            <h1>{aboutPost.title}</h1>
-            {aboutPost.excerpt ? <p>{aboutPost.excerpt}</p> : null}
-            {adminStatusNote ? <p class="sc-about-admin-note">{adminStatusNote}</p> : null}
-          </header>
-          <div class="sc-prose prose-content" set:html={aboutPost.contentHtml} />
-        </article>
-      ) : (
-        <>
-          <header class="sc-page-header">
-            <h1>关于</h1>
-          </header>
-          <div class="sc-empty sc-about-empty">
-            <span class="sc-about-empty-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M7 3.5h7l3 3V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
-                <path d="M14 3.5V7h3.5" />
-                <path d="M9 12h6" />
-                <path d="M9 16h4" />
-              </svg>
-            </span>
-            <p>还没有关于页面。</p>
-            {adminUser ? (
-              <>
-                <p>写一页简短的自我介绍，它会固定显示在这里。</p>
-                <a class="sc-button sc-button-primary sc-about-empty-action" href="/write?type=about">编辑关于页面</a>
-              </>
-            ) : (
-              <p>这里会显示站点主人的自我介绍。</p>
-            )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   </section>
 </SiteLayout>
