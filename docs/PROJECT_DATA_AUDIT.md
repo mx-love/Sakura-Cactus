@@ -2,7 +2,7 @@
 
 审查时间：2026-07-16
 分支：`codex/content-lifecycle-cleanup`
-阶段：阶段 1 生命周期简化后的本地审查记录。
+阶段：阶段 2 本地数据模型复核结论。
 
 本文件记录当前代码的数据模型。未执行 push、deploy、远程 D1 migration、远程 R2 操作或生产数据清理。
 
@@ -16,7 +16,7 @@
 
 `draft`、`archived`、`deleted` 不再是运行时文章状态。旧服务端草稿、撤回/归档和非公开文章由 `migrations/0010_simplify_post_status.sql` 在升级时永久清理。清理前只保存相关 `asset_id` 到 `historical_post_asset_cleanup_candidates`，不保存正文、标题、slug 或恢复数据。
 
-当前未发现阶段 3 数据导入导出的 P0/P1 阻断点；阶段 2 仍需在阶段 1 提交后重新复核。
+阶段 2 已在阶段 1 提交 `5c7d53a` 后重新复核代码、migration、测试和文档引用。当前未发现 P0，也未发现影响阶段 3 数据导入导出的 P1；可以进入博客数据导入导出实现。
 
 ## 1. 当前真实文章状态模型
 
@@ -244,14 +244,39 @@ about 页继续使用 `posts.slug = 'about'`，不建立第二套页面表。
 
 P0：无。
 
-P1：阶段 1 本地代码未发现影响数据导入导出的核心生命周期阻断；阶段 2 需复核后确认。
+P1：无影响数据导入导出的未解决阻断。
 
 P2：
 
 - public query 仍依赖 `published_at <= now`，未来如果需要彻底移除定时公开语义，需要另行决定。
-- 浏览器级 smoke 尚未完成。
 - D1 只能证明 R2 元数据存在，不能证明 R2 对象实际存在；导出媒体时必须逐个读取 R2。
+- 导入导出仍需独立实现资源限制、文件检查、冲突策略、媒体重写和 D1/R2 补偿逻辑。
 
 P3：
 
 - 媒体内部仍使用 `draft` 作为上传可见性名称，当前属于资产生命周期，不影响文章状态。
+
+## 13. 阶段 2 复核清单
+
+复核项：
+
+- 运行时无法创建 `draft` 文章。
+- 运行时无法创建 `archived` 文章。
+- 运行时无法创建 `deleted` 文章。
+- `posts.status` 最终只允许 `published`。
+- `posts.visibility` 最终只允许 `public`。
+- 普通未发表文章只存在 localStorage。
+- 未发表 about 只存在 localStorage。
+- published 文章保存修改时更新原记录。
+- 文章永久删除使用 `DELETE FROM posts WHERE id = ?`。
+- 文章关系通过 D1 batch 和外键约束清理。
+- R2 共享正文图片和共享封面引用均受保护。
+- R2 清理失败保留 assets 记录和可补偿信息，不改变文章删除成功语义。
+- 数据导出范围可明确限定为 published/public/current 内容。
+
+搜索命中分类：
+
+- `draft` 在运行时代码中仅保留为资产可见性、localStorage `draftKey` 字段名和本地恢复文案。
+- `archived` 在运行时代码中未保留为文章状态，只存在历史 migration、升级测试和审计文档。
+- `deleted_at` 和 `status = 'deleted'` 只保留在历史 migration、0009 升级路径、资产生命周期和测试中。
+- `archive` 在前端样式与时间轴页面中表示公开文章时间归档，不是撤回/隐藏状态。
