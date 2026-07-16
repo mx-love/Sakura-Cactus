@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { clearWriterAutosaveSnapshot, getPostAutosaveKey } from './postEditorAutosave';
 
 interface PostDetailAdminActionsProps {
   isAdmin: boolean;
@@ -86,7 +87,7 @@ export function PostDetailAdminActions({
   }
 
   async function deletePost() {
-    if (!postId || !window.confirm('确定删除这篇文章吗？')) {
+    if (!postId || !window.confirm('确定永久删除这篇文章吗？')) {
       return;
     }
 
@@ -104,6 +105,7 @@ export function PostDetailAdminActions({
         return;
       }
 
+      clearWriterAutosaveSnapshot(getPostAutosaveKey(postId));
       window.location.assign(deleteRedirectTo);
     } finally {
       setIsDeleting(false);

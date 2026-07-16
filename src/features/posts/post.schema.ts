@@ -10,7 +10,7 @@ export class PostValidationError extends Error {
   }
 }
 
-export const POST_STATUSES: PostStatus[] = ['draft', 'published', 'archived', 'deleted'];
+export const POST_STATUSES: PostStatus[] = ['draft', 'published', 'archived'];
 export const POST_VISIBILITIES: PostVisibility[] = ['public', 'private'];
 
 export interface NormalizedPostInput {
@@ -100,7 +100,7 @@ export function normalizePostInput(raw: unknown, defaultStatus: PostStatus): Nor
   const status = typeof body.status === 'string' ? (body.status as PostStatus) : defaultStatus;
   const visibility = typeof body.visibility === 'string' ? (body.visibility as PostVisibility) : 'public';
 
-  if (!POST_STATUSES.includes(status) || status === 'deleted') {
+  if (!POST_STATUSES.includes(status)) {
     throw new PostValidationError('INVALID_STATUS', 'Invalid post status.');
   }
 

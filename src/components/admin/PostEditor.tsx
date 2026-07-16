@@ -38,7 +38,7 @@ type PostFormState = {
   tagInput: string;
   publishedAt: string;
   contentMarkdown: string;
-  status: Exclude<PostStatus, 'deleted'>;
+  status: PostStatus;
 };
 
 type SubmitAction = 'publish' | 'delete';
@@ -79,7 +79,7 @@ function postToState(post?: (PostRow & { tags?: Array<{ name: string }> }) | nul
     tagInput: post?.tags?.map((tag) => tag.name).join(', ') ?? '',
     publishedAt: toDateTimeLocal(post?.published_at),
     contentMarkdown: post?.content_markdown ?? '',
-    status: post?.status === 'deleted' ? 'draft' : (post?.status ?? 'draft')
+    status: post?.status ?? 'draft'
   };
 }
 
@@ -928,7 +928,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       return;
     }
 
-    if (!window.confirm('Delete this post? This will remove it from the public site.')) {
+    if (!window.confirm('Delete this post permanently?')) {
       return;
     }
 

@@ -29,7 +29,6 @@ export interface UpdatePostInput extends PostInput {
 export interface PostListFilters {
   status?: PostStatus;
   visibility?: PostVisibility;
-  includeDeleted?: boolean;
 }
 
 export interface PublicPostSummary {

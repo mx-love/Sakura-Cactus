@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { clearWriterAutosaveSnapshot, getPostAutosaveKey } from './postEditorAutosave';
 
 interface PostRowActionsProps {
   postId: string;
@@ -8,7 +9,7 @@ export function PostRowActions({ postId }: PostRowActionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function deletePost() {
-    if (!window.confirm('确定删除这篇文章吗？')) {
+    if (!window.confirm('确定永久删除这篇文章吗？')) {
       return;
     }
 
@@ -21,6 +22,7 @@ export function PostRowActions({ postId }: PostRowActionsProps) {
       });
 
       if (response.ok) {
+        clearWriterAutosaveSnapshot(getPostAutosaveKey(postId));
         window.location.assign('/articles');
       }
     } finally {

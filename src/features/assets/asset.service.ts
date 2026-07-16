@@ -12,6 +12,7 @@ import {
 } from './asset.security';
 import {
   createAssetRecord,
+  deleteAssetRecord,
   findAssetById,
   findAssetByToken,
   findReusableAssetBySha256,
@@ -187,12 +188,35 @@ export async function deleteAssetObjectAndSoftDelete(db: D1Database, asset: Asse
   return softDeleteAsset(db, asset.id);
 }
 
+export async function deleteAssetObjectAndRecord(db: D1Database, asset: AssetRow): Promise<boolean> {
+  await getMediaBucket().delete(asset.r2_key);
+  return deleteAssetRecord(db, asset.id);
+}
+
 export async function cleanupUnreferencedAssets(db: D1Database, assets: AssetRow[]): Promise<void> {
   for (const asset of assets) {
     const isReferenced = await isAssetReferencedByAnyPost(db, asset.id);
 
     if (!isReferenced && !asset.deleted_at) {
       await deleteAssetObjectAndSoftDelete(db, asset);
+    }
+  }
+}
+
+export async function cleanupUnreferencedPostAssets(db: D1Database, postId: string, assets: AssetRow[]): Promise<void> {
+  for (const asset of assets) {
+    const isReferenced = await isAssetReferencedByAnyPost(db, asset.id);
+
+    if (!isReferenced && !asset.deleted_at) {
+      try {
+        await deleteAssetObjectAndRecord(db, asset);
+      } catch (error) {
+        reportError('Post hard-delete asset cleanup failed.', error, {
+          postId,
+          assetId: asset.id,
+          r2Key: asset.r2_key
+        });
+      }
     }
   }
 }

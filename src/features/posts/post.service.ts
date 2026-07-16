@@ -1,12 +1,13 @@
 import { getDb } from '@/lib/db';
+import { reportError } from '@/lib/logging';
 import { randomBytes } from '@/features/auth/crypto.service';
-import { findAssetsByTokens, makeAssetsPublic } from '@/features/assets/asset.repo';
-import { cleanupUnreferencedAssets } from '@/features/assets/asset.service';
+import { findAssetsByTokens, makeAssetsPublic, refreshAssetUsageCounts } from '@/features/assets/asset.repo';
+import { cleanupUnreferencedAssets, cleanupUnreferencedPostAssets } from '@/features/assets/asset.service';
 import { getPostTags, syncPostTags } from '@/features/tags/tag.service';
 import { calculateReadingTimeMinutes, calculateWordCount, decodeHtmlEntities, extractAssetTokens, renderMarkdown } from './post.renderer';
 import {
   createPost,
-  clearPostAssets,
+  deletePostPermanently,
   findPostById,
   findPostBySlug,
   findAdjacentPublicPosts,
@@ -17,12 +18,11 @@ import {
   listPublicPosts,
   listPublicSearchPosts,
   listPublicSitemapPosts,
+  listAssetsForPost,
   replacePostAssets,
-  restorePostAsDraft,
   setPostPinnedAt,
   setPostStatus,
   slugExists,
-  softDeletePost,
   updatePost
 } from './post.repo';
 import { normalizePostInput, PostValidationError } from './post.schema';
@@ -173,13 +173,13 @@ export async function getAdminPosts(filters: PostListFilters = {}): Promise<Post
 export async function getAdminPost(id: string): Promise<PostRow | null> {
   const db = getDb();
   const post = await findPostById(db, id);
-  return post && !post.deleted_at ? attachPostTags(db, post) : null;
+  return attachPostTags(db, post);
 }
 
 export async function getAdminPostBySlug(slug: string): Promise<PublicPostDetail | null> {
   const db = getDb();
   const post = await findPostBySlug(db, slug);
-  return post && !post.deleted_at ? toPublicPostDetail(post, await getPostTags(db, post.id)) : null;
+  return post ? toPublicPostDetail(post, await getPostTags(db, post.id)) : null;
 }
 
 export async function getAdminAboutPost(): Promise<PublicPostDetail | null> {
@@ -190,18 +190,12 @@ export async function ensureAdminAboutPost(): Promise<PostRow> {
   const db = getDb();
   const existing = await findPostBySlug(db, ABOUT_SLUG);
 
-  if (existing && !existing.deleted_at) {
+  if (existing) {
     return (await attachPostTags(db, existing)) ?? existing;
   }
 
   const input = buildAboutDraftInput();
-  const post = existing
-    ? await restorePostAsDraft(db, existing.id, input)
-    : await createPost(db, input, ABOUT_SLUG);
-
-  if (!post) {
-    throw new Error('Unable to prepare about page.');
-  }
+  const post = await createPost(db, input, ABOUT_SLUG);
 
   await syncPostTags(db, post.id, []);
   return (await attachPostTags(db, await findPostById(db, post.id))) ?? post;
@@ -237,7 +231,7 @@ export async function publishAdminPost(id: string): Promise<PostRow | null> {
   const db = getDb();
   const current = await findPostById(db, id);
 
-  if (!current || current.deleted_at) {
+  if (!current) {
     return null;
   }
 
@@ -269,11 +263,22 @@ export async function unpinAdminPost(id: string): Promise<PostRow | null> {
 
 export async function deleteAdminPost(id: string): Promise<PostRow | null> {
   const db = getDb();
-  const post = await softDeletePost(db, id);
+  const assets = await listAssetsForPost(db, id);
+  const post = await deletePostPermanently(db, id);
 
   if (post) {
-    const unusedAssets = await clearPostAssets(db, id);
-    await cleanupUnreferencedAssets(db, unusedAssets);
+    const assetIds = assets.map((asset) => asset.id);
+
+    try {
+      await refreshAssetUsageCounts(db, assetIds);
+    } catch (error) {
+      reportError('Post hard-delete asset usage refresh failed.', error, {
+        postId: post.id,
+        assetIds: assetIds.join(',')
+      });
+    }
+
+    await cleanupUnreferencedPostAssets(db, post.id, assets);
   }
 
   return withCurrentContentHtml(post);

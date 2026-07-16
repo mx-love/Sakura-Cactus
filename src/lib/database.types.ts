@@ -1,6 +1,6 @@
 export type UserRole = 'admin';
 export type UserStatus = 'active' | 'disabled';
-export type PostStatus = 'draft' | 'published' | 'archived' | 'deleted';
+export type PostStatus = 'draft' | 'published' | 'archived';
 export type PostVisibility = 'public' | 'private';
 export type AssetVisibility = 'draft' | 'public' | 'private' | 'deleted';
 export type AssetRole = 'inline' | 'cover';
@@ -50,7 +50,6 @@ export interface PostRow {
   pinned_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface TagRow {

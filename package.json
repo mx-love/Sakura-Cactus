@@ -15,7 +15,8 @@
     "db:migration:apply:local": "wrangler d1 migrations apply sakura_blog_prod --local",
     "db:migration:apply:prod": "wrangler d1 migrations apply sakura_blog_prod --remote",
     "admin:create": "node --experimental-strip-types scripts/create-admin.ts",
-    "test:security": "node --experimental-transform-types scripts/security-checks.ts"
+    "test:security": "node --experimental-transform-types scripts/security-checks.ts",
+    "test:posts": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/post-delete.test.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "13.5.2",

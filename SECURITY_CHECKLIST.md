@@ -110,7 +110,7 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[CODE]` public Cache API storage is an explicit GET-path allowlist and only stores 200 responses with approved content types.
 - [x] `[CODE]` admin pages/APIs, auth APIs, `/write`, `/settings`, `Set-Cookie`, admin-cookie, and `fresh=1` responses bypass public cache.
 - [x] `[CODE]` all private responses, including redirects and errors, force `Cache-Control: no-store`.
-- [x] `[CODE]` public post/feed/search queries require published, public, non-deleted, non-future rows.
+- [x] `[CODE]` public post/feed/search queries require existing published, public, non-future rows.
 - [x] `[CODE]` security headers set `nosniff`, strict-origin referrer policy, restrictive permissions, frame denial, CSP `base-uri`/`object-src`/`frame-ancestors`, and HTTPS HSTS.
 - [ ] `[CONSOLE]` verify dashboard Cache Rules do not override/bypass the application policy for admin/auth/media routes.
 

@@ -62,7 +62,6 @@ export async function incrementPublicPostViewCount(db: D1Database, postId: strin
        WHERE id = ?
          AND status = 'published'
          AND visibility = 'public'
-         AND deleted_at IS NULL
          AND published_at IS NOT NULL
          AND published_at <= ?
        LIMIT 1`

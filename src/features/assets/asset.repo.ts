@@ -234,6 +234,15 @@ export async function softDeleteAsset(db: D1Database, id: string): Promise<Asset
   };
 }
 
+export async function deleteAssetRecord(db: D1Database, id: string): Promise<boolean> {
+  const result = await db
+    .prepare('DELETE FROM assets WHERE id = ? AND deleted_at IS NULL')
+    .bind(id)
+    .run();
+
+  return (result.meta?.changes ?? 0) > 0;
+}
+
 export async function refreshAssetUsageCounts(db: D1Database, assetIds: string[]): Promise<AssetRow[]> {
   const uniqueAssetIds = [...new Set(assetIds)];
   const now = nowIso();
@@ -241,8 +250,13 @@ export async function refreshAssetUsageCounts(db: D1Database, assetIds: string[]
 
   for (const assetId of uniqueAssetIds) {
     const row = await db
-      .prepare('SELECT COUNT(*) AS count FROM post_assets WHERE asset_id = ?')
-      .bind(assetId)
+      .prepare(
+        `SELECT (
+          (SELECT COUNT(*) FROM post_assets WHERE asset_id = ?)
+          + (SELECT COUNT(*) FROM posts WHERE cover_asset_id = ?)
+        ) AS count`
+      )
+      .bind(assetId, assetId)
       .first<{ count: number }>();
     const usageCount = row?.count ?? 0;
 
@@ -283,19 +297,18 @@ export async function refreshAssetUsageCounts(db: D1Database, assetIds: string[]
 export async function isAssetUsedByPublishedPublicPost(db: D1Database, assetId: string): Promise<boolean> {
   const row = await db
     .prepare(
-      `SELECT post_assets.asset_id
-       FROM post_assets
-       INNER JOIN posts ON posts.id = post_assets.post_id
-       WHERE post_assets.asset_id = ?
+      `SELECT posts.id
+       FROM posts
+       LEFT JOIN post_assets ON post_assets.post_id = posts.id
+       WHERE (post_assets.asset_id = ? OR posts.cover_asset_id = ?)
          AND posts.status = 'published'
          AND posts.visibility = 'public'
-         AND posts.deleted_at IS NULL
          AND posts.published_at IS NOT NULL
          AND posts.published_at <= ?
        LIMIT 1`
     )
-    .bind(assetId, nowIso())
-    .first<{ asset_id: string }>();
+    .bind(assetId, assetId, nowIso())
+    .first<{ id: string }>();
 
   return Boolean(row);
 }
@@ -306,9 +319,13 @@ export async function isAssetReferencedByAnyPost(db: D1Database, assetId: string
       `SELECT asset_id
        FROM post_assets
        WHERE asset_id = ?
+       UNION
+       SELECT cover_asset_id AS asset_id
+       FROM posts
+       WHERE cover_asset_id = ?
        LIMIT 1`
     )
-    .bind(assetId)
+    .bind(assetId, assetId)
     .first<{ asset_id: string }>();
 
   return Boolean(row);

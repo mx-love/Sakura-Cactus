@@ -48,17 +48,23 @@ export interface AdjacentPublicPostRow {
   published_at: string | null;
 }
 
+const POST_COLUMNS = `id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+  seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at`;
+
 const PUBLIC_POST_SUMMARY_SELECT = `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown,
   NULL AS content_html, posts.cover_asset_id, posts.status, posts.visibility, NULL AS seo_title,
   NULL AS seo_description, posts.reading_time_minutes, posts.word_count, posts.published_at,
-  posts.pinned_at, posts.created_at, posts.updated_at, posts.deleted_at`;
+  posts.pinned_at, posts.created_at, posts.updated_at`;
+
+const ASSET_COLUMNS = `assets.id, assets.token, assets.r2_key, assets.original_filename, assets.mime_type,
+  assets.size_bytes, assets.width, assets.height, assets.sha256, assets.visibility, assets.usage_count,
+  assets.created_by, assets.created_at, assets.updated_at, assets.deleted_at`;
 
 function publicPostWhere(options: PublicPostQueryOptions = {}): { joins: string[]; conditions: string[]; values: unknown[] } {
   const joins: string[] = [];
   const conditions = [
     "posts.status = 'published'",
     "posts.visibility = 'public'",
-    'posts.deleted_at IS NULL',
     'posts.published_at IS NOT NULL',
     'posts.published_at <= ?'
   ];
@@ -90,10 +96,6 @@ export async function listAdminPosts(db: D1Database, filters: PostListFilters = 
   const conditions: string[] = [];
   const values: unknown[] = [];
 
-  if (!filters.includeDeleted) {
-    conditions.push('deleted_at IS NULL');
-  }
-
   if (filters.status) {
     conditions.push('status = ?');
     values.push(filters.status);
@@ -107,8 +109,7 @@ export async function listAdminPosts(db: D1Database, filters: PostListFilters = 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const statement = db.prepare(
-    `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
+    `SELECT ${POST_COLUMNS}
        FROM posts
        ${where}
        ORDER BY updated_at DESC
@@ -251,8 +252,7 @@ export async function findAdjacentPublicPosts(
 export async function findPostById(db: D1Database, id: string): Promise<PostRow | null> {
   return db
     .prepare(
-      `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
+      `SELECT ${POST_COLUMNS}
        FROM posts
        WHERE id = ?
        LIMIT 1`
@@ -264,8 +264,7 @@ export async function findPostById(db: D1Database, id: string): Promise<PostRow 
 export async function findPostBySlug(db: D1Database, slug: string): Promise<PostRow | null> {
   return db
     .prepare(
-      `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
+      `SELECT ${POST_COLUMNS}
        FROM posts
        WHERE slug = ?
        LIMIT 1`
@@ -274,56 +273,14 @@ export async function findPostBySlug(db: D1Database, slug: string): Promise<Post
     .first<PostRow>();
 }
 
-export async function restorePostAsDraft(db: D1Database, id: string, input: PersistedPostInput): Promise<PostRow | null> {
-  const now = nowIso();
-
-  await db
-    .prepare(
-      `UPDATE posts
-       SET title = ?,
-           excerpt = ?,
-           content_markdown = ?,
-           content_html = ?,
-           status = 'draft',
-           visibility = ?,
-           seo_title = ?,
-           seo_description = ?,
-           reading_time_minutes = ?,
-           word_count = ?,
-           published_at = NULL,
-           pinned_at = NULL,
-           updated_at = ?,
-           deleted_at = NULL
-       WHERE id = ?`
-    )
-    .bind(
-      input.title,
-      input.excerpt,
-      input.contentMarkdown,
-      input.contentHtml,
-      input.visibility,
-      input.seoTitle,
-      input.seoDescription,
-      input.readingTimeMinutes,
-      input.wordCount,
-      now,
-      id
-    )
-    .run();
-
-  return findPostById(db, id);
-}
-
 export async function findPublicPostBySlug(db: D1Database, slug: string): Promise<PostRow | null> {
   return db
     .prepare(
-      `SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
+      `SELECT ${POST_COLUMNS}
        FROM posts
        WHERE slug = ?
          AND status = 'published'
          AND visibility = 'public'
-         AND deleted_at IS NULL
          AND published_at IS NOT NULL
          AND published_at <= ?
        LIMIT 1`
@@ -361,16 +318,15 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
     published_at: input.publishedAt ?? (status === 'published' ? now : null),
     pinned_at: null,
     created_at: now,
-    updated_at: now,
-    deleted_at: null
+    updated_at: now
   };
 
   await db
     .prepare(
       `INSERT INTO posts (
         id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at, deleted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       post.id,
@@ -389,8 +345,7 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
       post.published_at,
       post.pinned_at,
       post.created_at,
-      post.updated_at,
-      post.deleted_at
+      post.updated_at
     )
     .run();
 
@@ -400,7 +355,7 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
 export async function updatePost(db: D1Database, id: string, input: PersistedPostInput): Promise<PostRow | null> {
   const current = await findPostById(db, id);
 
-  if (!current || current.deleted_at) {
+  if (!current) {
     return null;
   }
 
@@ -422,7 +377,7 @@ export async function updatePost(db: D1Database, id: string, input: PersistedPos
            word_count = ?,
            published_at = ?,
            updated_at = ?
-       WHERE id = ? AND deleted_at IS NULL`
+       WHERE id = ?`
     )
     .bind(
       input.title,
@@ -444,10 +399,10 @@ export async function updatePost(db: D1Database, id: string, input: PersistedPos
   return findPostById(db, id);
 }
 
-export async function setPostStatus(db: D1Database, id: string, status: Exclude<PostStatus, 'deleted'>): Promise<PostRow | null> {
+export async function setPostStatus(db: D1Database, id: string, status: PostStatus): Promise<PostRow | null> {
   const current = await findPostById(db, id);
 
-  if (!current || current.deleted_at) {
+  if (!current) {
     return null;
   }
 
@@ -458,7 +413,7 @@ export async function setPostStatus(db: D1Database, id: string, status: Exclude<
     .prepare(
       `UPDATE posts
        SET status = ?, published_at = ?, updated_at = ?
-       WHERE id = ? AND deleted_at IS NULL`
+       WHERE id = ?`
     )
     .bind(status, publishedAt, now, id)
     .run();
@@ -469,7 +424,7 @@ export async function setPostStatus(db: D1Database, id: string, status: Exclude<
 export async function setPostPinnedAt(db: D1Database, id: string, pinnedAt: string | null): Promise<PostRow | null> {
   const current = await findPostById(db, id);
 
-  if (!current || current.deleted_at) {
+  if (!current) {
     return null;
   }
 
@@ -477,7 +432,7 @@ export async function setPostPinnedAt(db: D1Database, id: string, pinnedAt: stri
     .prepare(
       `UPDATE posts
        SET pinned_at = ?
-       WHERE id = ? AND deleted_at IS NULL`
+       WHERE id = ?`
     )
     .bind(pinnedAt, id)
     .run();
@@ -526,29 +481,56 @@ export async function listPostAssetIds(db: D1Database, postId: string): Promise<
   return result.results?.map((row) => row.asset_id) ?? [];
 }
 
-export async function clearPostAssets(db: D1Database, postId: string): Promise<AssetRow[]> {
-  const assetIds = await listPostAssetIds(db, postId);
-  await db.prepare('DELETE FROM post_assets WHERE post_id = ?').bind(postId).run();
-  return refreshAssetUsageCounts(db, assetIds);
+export async function listAssetsForPost(db: D1Database, postId: string): Promise<AssetRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT DISTINCT ${ASSET_COLUMNS}
+       FROM assets
+       WHERE assets.deleted_at IS NULL
+         AND assets.id IN (
+           SELECT asset_id FROM post_assets WHERE post_id = ?
+           UNION
+           SELECT cover_asset_id FROM posts WHERE id = ? AND cover_asset_id IS NOT NULL
+         )`
+    )
+    .bind(postId, postId)
+    .all<AssetRow>();
+
+  return result.results ?? [];
 }
 
-export async function softDeletePost(db: D1Database, id: string): Promise<PostRow | null> {
+export async function deletePostPermanently(db: D1Database, id: string): Promise<PostRow | null> {
   const current = await findPostById(db, id);
 
-  if (!current || current.deleted_at) {
+  if (!current) {
     return null;
   }
 
-  const now = nowIso();
+  const results = await db.batch([
+    db.prepare('DELETE FROM post_tags WHERE post_id = ?').bind(id),
+    db.prepare('DELETE FROM post_assets WHERE post_id = ?').bind(id),
+    db.prepare('DELETE FROM post_view_counts WHERE post_id = ?').bind(id),
+    db.prepare('DELETE FROM posts WHERE id = ?').bind(id)
+  ]);
+  const postDeleteChanges = results[3]?.meta?.changes;
 
-  await db
-    .prepare(
-      `UPDATE posts
-       SET status = 'deleted', deleted_at = ?, updated_at = ?
-       WHERE id = ? AND deleted_at IS NULL`
-    )
-    .bind(now, now, id)
-    .run();
+  if (typeof postDeleteChanges !== 'number') {
+    throw new Error('Post delete did not report an affected row count.');
+  }
 
-  return findPostById(db, id);
+  if (postDeleteChanges === 0) {
+    return null;
+  }
+
+  if (postDeleteChanges !== 1) {
+    throw new Error('Post delete affected an unexpected number of rows.');
+  }
+
+  const remaining = await findPostById(db, id);
+
+  if (remaining) {
+    throw new Error('Post delete did not remove the database row.');
+  }
+
+  return current;
 }

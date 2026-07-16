@@ -1,6 +1,6 @@
 import { nowIso } from './db';
 
-const CURRENT_SCHEMA_VERSION = 8;
+const CURRENT_SCHEMA_VERSION = 9;
 let schemaPromise: Promise<void> | null = null;
 
 async function run(db: D1Database, sql: string): Promise<void> {
@@ -68,7 +68,7 @@ async function ensureTables(db: D1Database): Promise<void> {
       content_markdown TEXT NOT NULL,
       content_html TEXT,
       cover_asset_id TEXT,
-      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived', 'deleted')),
+      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
       visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
       seo_title TEXT,
       seo_description TEXT,
@@ -78,7 +78,6 @@ async function ensureTables(db: D1Database): Promise<void> {
       pinned_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      deleted_at TEXT,
       FOREIGN KEY (cover_asset_id) REFERENCES assets(id) ON DELETE SET NULL
     )`
   );
@@ -201,6 +200,15 @@ async function ensureTables(db: D1Database): Promise<void> {
 
   await run(
     db,
+    `CREATE TABLE IF NOT EXISTS historical_post_asset_cleanup_candidates (
+      asset_id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+    )`
+  );
+
+  await run(
+    db,
     `CREATE TABLE IF NOT EXISTS rate_limits (
       scope TEXT NOT NULL,
       key_hash TEXT NOT NULL,
@@ -232,6 +240,120 @@ async function ensureColumns(db: D1Database): Promise<void> {
   await runIgnoringDuplicateColumn(db, 'ALTER TABLE friend_links ADD COLUMN consecutive_failures INTEGER NOT NULL DEFAULT 0');
 }
 
+async function getPostsTableSql(db: D1Database): Promise<string> {
+  const row = await db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'posts' LIMIT 1")
+    .first<{ sql: string }>();
+
+  return row?.sql ?? '';
+}
+
+async function ensurePostHardDeleteSchema(db: D1Database): Promise<void> {
+  const postsTableSql = await getPostsTableSql(db);
+  const hasDeletedAt = postsTableSql.includes('deleted_at');
+
+  if (!hasDeletedAt && !postsTableSql.includes("'deleted'")) {
+    return;
+  }
+
+  const deletedPostCondition = hasDeletedAt ? "deleted_at IS NOT NULL OR status = 'deleted'" : "status = 'deleted'";
+  const joinedDeletedPostCondition = hasDeletedAt
+    ? "posts.deleted_at IS NOT NULL OR posts.status = 'deleted'"
+    : "posts.status = 'deleted'";
+
+  await run(db, 'PRAGMA foreign_keys=off');
+
+  try {
+    await run(
+      db,
+      `CREATE TABLE IF NOT EXISTS historical_post_asset_cleanup_candidates (
+        asset_id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+      )`
+    );
+    await run(
+      db,
+      `INSERT OR IGNORE INTO historical_post_asset_cleanup_candidates (asset_id, created_at)
+       SELECT DISTINCT post_assets.asset_id, datetime('now')
+       FROM post_assets
+       INNER JOIN posts ON posts.id = post_assets.post_id
+       INNER JOIN assets ON assets.id = post_assets.asset_id
+       WHERE ${joinedDeletedPostCondition}`
+    );
+    await run(
+      db,
+      `INSERT OR IGNORE INTO historical_post_asset_cleanup_candidates (asset_id, created_at)
+       SELECT DISTINCT posts.cover_asset_id, datetime('now')
+       FROM posts
+       INNER JOIN assets ON assets.id = posts.cover_asset_id
+       WHERE posts.cover_asset_id IS NOT NULL
+         AND (${joinedDeletedPostCondition})`
+    );
+    await run(
+      db,
+      `DELETE FROM post_tags
+       WHERE post_id IN (
+         SELECT id FROM posts WHERE ${deletedPostCondition}
+       )`
+    );
+    await run(
+      db,
+      `DELETE FROM post_assets
+       WHERE post_id IN (
+         SELECT id FROM posts WHERE ${deletedPostCondition}
+       )`
+    );
+    await run(
+      db,
+      `DELETE FROM post_view_counts
+       WHERE post_id IN (
+         SELECT id FROM posts WHERE ${deletedPostCondition}
+       )`
+    );
+    await run(db, `DELETE FROM posts WHERE ${deletedPostCondition}`);
+    await run(db, 'DROP INDEX IF EXISTS idx_posts_public_lookup');
+    await run(db, 'DROP INDEX IF EXISTS idx_posts_deleted_at');
+    await run(
+      db,
+      `CREATE TABLE posts_v9 (
+        id TEXT PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        excerpt TEXT,
+        content_markdown TEXT NOT NULL,
+        content_html TEXT,
+        cover_asset_id TEXT,
+        status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+        visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
+        seo_title TEXT,
+        seo_description TEXT,
+        reading_time_minutes INTEGER NOT NULL DEFAULT 1 CHECK (reading_time_minutes >= 1),
+        word_count INTEGER NOT NULL DEFAULT 0 CHECK (word_count >= 0),
+        published_at TEXT,
+        pinned_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (cover_asset_id) REFERENCES assets(id) ON DELETE SET NULL
+      )`
+    );
+    await run(
+      db,
+      `INSERT INTO posts_v9 (
+        id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+      )
+      SELECT id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+      FROM posts`
+    );
+    await run(db, 'DROP TABLE posts');
+    await run(db, 'ALTER TABLE posts_v9 RENAME TO posts');
+  } finally {
+    await run(db, 'PRAGMA foreign_keys=on');
+  }
+}
+
 async function ensureIndexes(db: D1Database): Promise<void> {
   const indexes = [
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)',
@@ -241,10 +363,9 @@ async function ensureIndexes(db: D1Database): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_assets_deleted_at ON assets(deleted_at)',
     'CREATE INDEX IF NOT EXISTS idx_assets_sha256 ON assets(sha256)',
     'CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug)',
-    'CREATE INDEX IF NOT EXISTS idx_posts_public_lookup ON posts(status, visibility, deleted_at, published_at)',
+    'CREATE INDEX IF NOT EXISTS idx_posts_public_lookup ON posts(status, visibility, published_at)',
     'CREATE INDEX IF NOT EXISTS idx_posts_status_published ON posts(status, published_at)',
     'CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at)',
-    'CREATE INDEX IF NOT EXISTS idx_posts_deleted_at ON posts(deleted_at)',
     'CREATE INDEX IF NOT EXISTS idx_posts_pinned_at ON posts(pinned_at)',
     'CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)',
     'CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)',
@@ -292,6 +413,7 @@ async function ensureDefaultSettings(db: D1Database): Promise<void> {
 async function createSchema(db: D1Database): Promise<void> {
   await ensureTables(db);
   await ensureColumns(db);
+  await ensurePostHardDeleteSchema(db);
   await ensureIndexes(db);
   await ensureDefaultSettings(db);
   await db
@@ -309,7 +431,15 @@ async function isSchemaCurrent(db: D1Database): Promise<boolean> {
     const row = await db
       .prepare('SELECT version FROM sakura_schema_state WHERE id = 1 LIMIT 1')
       .first<{ version: number }>();
-    return row?.version === CURRENT_SCHEMA_VERSION;
+
+    if (row?.version !== CURRENT_SCHEMA_VERSION) {
+      return false;
+    }
+
+    const cleanupTable = await db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'historical_post_asset_cleanup_candidates' LIMIT 1")
+      .first<{ name: string }>();
+    return Boolean(cleanupTable);
   } catch {
     return false;
   }

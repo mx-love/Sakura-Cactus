@@ -56,7 +56,7 @@ Project maintenance: dependency verification is complete; current work is roadma
 - [x] Implemented Markdown rendering with basic HTML sanitization.
 - [x] Implemented public homepage post list.
 - [x] Implemented public `/posts/[slug]` detail page.
-- [x] Public routes only expose published public posts with `deleted_at IS NULL`.
+- [x] Public routes only expose existing published public posts.
 - [x] Implemented `src/features/assets` repo/service/security/types.
 - [x] Implemented admin asset APIs:
   - `GET /api/admin/assets`
@@ -95,8 +95,8 @@ Project maintenance: dependency verification is complete; current work is roadma
 - [x] Added `/admin/settings` placeholder page.
 - [x] Updated dashboard, posts, media, and writing pages to use admin navigation.
 - [x] Improved media card presentation and action labels.
-- [x] Automatically delete R2 objects and soft delete D1 asset records when no posts reference them.
-- [x] Delete post now clears its `post_assets` associations and updates asset usage.
+- [x] Automatically delete R2 objects and remove D1 asset records for post-deletion assets when no posts reference them.
+- [x] Delete post now physically removes the post row, clears related associations, and updates asset usage.
 - [x] Removing `asset:token` Markdown from a post now updates usage and soft deletes unused assets on save.
 - [x] Media library shows `Unused`, `Used by 1 post`, or `Used by N posts`.
 - [x] Manual media deletion deletes the R2 object first, then soft deletes the D1 asset record when the asset is unreferenced.
