@@ -48,17 +48,27 @@ export interface AdjacentPublicPostRow {
   published_at: string | null;
 }
 
-const POST_COLUMNS = `id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
-  seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at`;
+export interface PostCoverAssetProjection {
+  cover_asset_token: string | null;
+}
+
+const POST_COLUMNS = `posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown, posts.content_html,
+  posts.cover_asset_id, posts.status, posts.visibility, posts.seo_title, posts.seo_description,
+  posts.reading_time_minutes, posts.word_count, posts.published_at, posts.pinned_at, posts.created_at, posts.updated_at`;
 
 const PUBLIC_POST_SUMMARY_SELECT = `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown,
   NULL AS content_html, posts.cover_asset_id, posts.status, posts.visibility, NULL AS seo_title,
   NULL AS seo_description, posts.reading_time_minutes, posts.word_count, posts.published_at,
-  posts.pinned_at, posts.created_at, posts.updated_at`;
+  posts.pinned_at, posts.created_at, posts.updated_at,
+  cover_assets.token AS cover_asset_token`;
 
 const ASSET_COLUMNS = `assets.id, assets.token, assets.r2_key, assets.original_filename, assets.mime_type,
   assets.size_bytes, assets.width, assets.height, assets.sha256, assets.visibility, assets.usage_count,
   assets.created_by, assets.created_at, assets.updated_at, assets.deleted_at`;
+const PUBLIC_COVER_JOIN = `LEFT JOIN assets cover_assets ON cover_assets.id = posts.cover_asset_id
+  AND cover_assets.deleted_at IS NULL
+  AND cover_assets.visibility != 'deleted'
+  AND cover_assets.mime_type != 'image/svg+xml'`;
 
 function publicPostWhere(options: PublicPostQueryOptions = {}): { joins: string[]; conditions: string[]; values: unknown[] } {
   const joins: string[] = [];
@@ -129,6 +139,7 @@ export async function listPublicPosts(db: D1Database, options: PublicPostQueryOp
     .prepare(
       `${PUBLIC_POST_SUMMARY_SELECT}
        FROM posts
+       ${PUBLIC_COVER_JOIN}
        ${joins.join('\n')}
        WHERE ${conditions.join(' AND ')}
        ${publicPostOrder(options)}
@@ -161,6 +172,7 @@ export async function listPublicFeedPosts(db: D1Database, limit = 50): Promise<P
     .prepare(
       `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.published_at, posts.updated_at
        FROM posts
+       ${PUBLIC_COVER_JOIN}
        WHERE ${conditions.join(' AND ')}
        ORDER BY posts.published_at DESC, posts.updated_at DESC
        LIMIT ?`
@@ -264,9 +276,10 @@ export async function findPostById(db: D1Database, id: string): Promise<PostRow 
 export async function findPostBySlug(db: D1Database, slug: string): Promise<PostRow | null> {
   return db
     .prepare(
-      `SELECT ${POST_COLUMNS}
+      `SELECT ${POST_COLUMNS}, cover_assets.token AS cover_asset_token
        FROM posts
-       WHERE slug = ?
+       ${PUBLIC_COVER_JOIN}
+       WHERE posts.slug = ?
        LIMIT 1`
     )
     .bind(slug)
@@ -276,13 +289,14 @@ export async function findPostBySlug(db: D1Database, slug: string): Promise<Post
 export async function findPublicPostBySlug(db: D1Database, slug: string): Promise<PostRow | null> {
   return db
     .prepare(
-      `SELECT ${POST_COLUMNS}
+      `SELECT ${POST_COLUMNS}, cover_assets.token AS cover_asset_token
        FROM posts
-       WHERE slug = ?
-         AND status = 'published'
-         AND visibility = 'public'
-         AND published_at IS NOT NULL
-         AND published_at <= ?
+       ${PUBLIC_COVER_JOIN}
+       WHERE posts.slug = ?
+         AND posts.status = 'published'
+         AND posts.visibility = 'public'
+         AND posts.published_at IS NOT NULL
+         AND posts.published_at <= ?
        LIMIT 1`
     )
     .bind(slug, nowIso())
@@ -351,6 +365,59 @@ export async function createPost(db: D1Database, input: PersistedPostInput, slug
   return post;
 }
 
+export function prepareCreatePost(db: D1Database, input: PersistedPostInput, slug: string): { post: PostRow; statement: D1PreparedStatement } {
+  const now = nowIso();
+  const post: PostRow = {
+    id: createRandomId('p'),
+    slug,
+    title: input.title,
+    excerpt: input.excerpt,
+    content_markdown: input.contentMarkdown,
+    content_html: input.contentHtml,
+    cover_asset_id: null,
+    status: 'published',
+    visibility: input.visibility,
+    seo_title: input.seoTitle,
+    seo_description: input.seoDescription,
+    reading_time_minutes: input.readingTimeMinutes,
+    word_count: input.wordCount,
+    published_at: input.publishedAt ?? now,
+    pinned_at: null,
+    created_at: now,
+    updated_at: now
+  };
+
+  return {
+    post,
+    statement: db
+      .prepare(
+        `INSERT INTO posts (
+          id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+          seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        post.id,
+        post.slug,
+        post.title,
+        post.excerpt,
+        post.content_markdown,
+        post.content_html,
+        post.cover_asset_id,
+        post.status,
+        post.visibility,
+        post.seo_title,
+        post.seo_description,
+        post.reading_time_minutes,
+        post.word_count,
+        post.published_at,
+        post.pinned_at,
+        post.created_at,
+        post.updated_at
+      )
+  };
+}
+
 export async function updatePost(db: D1Database, id: string, input: PersistedPostInput): Promise<PostRow | null> {
   const current = await findPostById(db, id);
 
@@ -396,6 +463,68 @@ export async function updatePost(db: D1Database, id: string, input: PersistedPos
     .run();
 
   return findPostById(db, id);
+}
+
+export async function prepareUpdatePost(db: D1Database, id: string, input: PersistedPostInput): Promise<{ post: PostRow; statement: D1PreparedStatement } | null> {
+  const current = await findPostById(db, id);
+
+  if (!current) {
+    return null;
+  }
+
+  const now = nowIso();
+  const publishedAt = input.publishedAt ?? current.published_at ?? now;
+  const post: PostRow = {
+    ...current,
+    title: input.title,
+    excerpt: input.excerpt,
+    content_markdown: input.contentMarkdown,
+    content_html: input.contentHtml,
+    status: input.status,
+    visibility: input.visibility,
+    seo_title: input.seoTitle,
+    seo_description: input.seoDescription,
+    reading_time_minutes: input.readingTimeMinutes,
+    word_count: input.wordCount,
+    published_at: publishedAt,
+    updated_at: now
+  };
+
+  return {
+    post,
+    statement: db
+      .prepare(
+        `UPDATE posts
+         SET title = ?,
+             excerpt = ?,
+             content_markdown = ?,
+             content_html = ?,
+             status = ?,
+             visibility = ?,
+             seo_title = ?,
+             seo_description = ?,
+             reading_time_minutes = ?,
+             word_count = ?,
+             published_at = ?,
+             updated_at = ?
+         WHERE id = ?`
+      )
+      .bind(
+        input.title,
+        input.excerpt,
+        input.contentMarkdown,
+        input.contentHtml,
+        input.status,
+        input.visibility,
+        input.seoTitle,
+        input.seoDescription,
+        input.readingTimeMinutes,
+        input.wordCount,
+        publishedAt,
+        now,
+        id
+      )
+  };
 }
 
 export async function setPostPinnedAt(db: D1Database, id: string, pinnedAt: string | null): Promise<PostRow | null> {
@@ -447,6 +576,35 @@ export async function replacePostAssets(db: D1Database, postId: string, assetIds
   await db.batch(statements);
 
   return refreshAssetUsageCounts(db, [...affectedAssetIds]);
+}
+
+export async function getPostAssetReplacementPlan(db: D1Database, postId: string, assetIds: string[]): Promise<{ statements: D1PreparedStatement[]; affectedAssetIds: string[] }> {
+  const uniqueAssetIds = [...new Set(assetIds)];
+  const now = nowIso();
+  const existing = await db
+    .prepare('SELECT asset_id FROM post_assets WHERE post_id = ?')
+    .bind(postId)
+    .all<{ asset_id: string }>();
+  const affectedAssetIds = new Set<string>(existing.results?.map((row) => row.asset_id) ?? []);
+
+  for (const assetId of uniqueAssetIds) {
+    affectedAssetIds.add(assetId);
+  }
+
+  return {
+    affectedAssetIds: [...affectedAssetIds],
+    statements: [
+      db.prepare('DELETE FROM post_assets WHERE post_id = ?').bind(postId),
+      ...uniqueAssetIds.map((assetId) =>
+        db
+          .prepare(
+            `INSERT INTO post_assets (post_id, asset_id, role, created_at)
+             VALUES (?, ?, 'inline', ?)`
+          )
+          .bind(postId, assetId, now)
+      )
+    ]
+  };
 }
 
 export async function listPostAssetIds(db: D1Database, postId: string): Promise<string[]> {

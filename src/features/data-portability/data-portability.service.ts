@@ -1,13 +1,14 @@
 import { SESSION_COOKIE_NAME } from '@/features/auth/auth.constants';
 import { bytesToBase64Url, createRandomId, createRandomToken, sha256Base64Url } from '@/features/auth/crypto.service';
 import { getCookieValue, getSessionSecret, hashSessionToken } from '@/features/auth/auth.service';
-import { findReusableAssetBySha256, refreshAssetUsageCounts } from '@/features/assets/asset.repo';
+import { findAssetsByTokens, findReusableAssetBySha256, refreshAssetUsageCounts } from '@/features/assets/asset.repo';
 import { cleanupUnreferencedPostAssets, getMediaBucket } from '@/features/assets/asset.service';
+import { ALLOWED_IMAGE_TYPES, assertValidImageBytes, extensionForMimeType } from '@/features/assets/asset.security';
 import { normalizePublicHttpUrl } from '@/lib/security/external-url';
 import type { AssetRow, FriendLinkRow, PostRow, TagRow } from '@/lib/database.types';
 import { getDb, nowIso } from '@/lib/db';
 import { reportError } from '@/lib/logging';
-import { calculateReadingTimeMinutes, calculateWordCount, extractAssetTokens, renderMarkdown } from '@/features/posts/post.renderer';
+import { calculateReadingTimeMinutes, calculateWordCount, extractAssetTokens, renderMarkdown, rewriteMarkdownAssetUrls } from '@/features/posts/post.renderer';
 import { DATA_PORTABILITY_LIMITS, DATA_PORTABILITY_TEXT, BLOG_DATA_FORMAT, BLOG_DATA_VERSION } from './data-portability.constants';
 import { createDataZip, DataZipError, parseDataZip, type ParsedZipFile, type ZipInputFile } from './data-portability.zip';
 
@@ -177,23 +178,18 @@ export class BlogDataError extends Error {
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const ABOUT_SLUG = 'about';
-const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/svg+xml': 'svg'
-};
-const IMAGE_MAGIC: Record<string, number[][]> = {
-  'image/jpeg': [[0xff, 0xd8, 0xff]],
-  'image/png': [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
-  'image/gif': [
-    [0x47, 0x49, 0x46, 0x38, 0x37, 0x61],
-    [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]
-  ],
-  'image/webp': [[0x52, 0x49, 0x46, 0x46]],
-  'image/svg+xml': []
-};
+const IMAGE_MIME_EXTENSIONS = Object.fromEntries([...ALLOWED_IMAGE_TYPES].map((mimeType) => [mimeType, extensionForMimeType(mimeType)])) as Record<string, string>;
+const D1_IN_CHUNK_SIZE = 80;
+
+function chunkValues<T>(values: T[], size = D1_IN_CHUNK_SIZE): T[][] {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+
+  return chunks;
+}
 
 function normalizeSelections(raw: unknown): BlogDataSelections {
   const input = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
@@ -377,7 +373,7 @@ function assertDataShape(data: BlogDataFile): void {
     throw new BlogDataError('UNKNOWN_SECTION', DATA_PORTABILITY_TEXT.unsupportedFile);
   }
 
-  const selections = normalizeSelections(data.selectedSections);
+  normalizeSelections(data.selectedSections);
   const articles = Array.isArray(data.articles) ? data.articles : [];
   const aboutPage = data.aboutPage ?? null;
   const tags = Array.isArray(data.tags) ? data.tags : [];
@@ -495,9 +491,6 @@ function assertDataShape(data: BlogDataFile): void {
     throw new BlogDataError('COUNT_MISMATCH', DATA_PORTABILITY_TEXT.unsupportedFile);
   }
 
-  if (selections.media && media.length === 0) {
-    throw new BlogDataError('MEDIA_MANIFEST_REQUIRED', DATA_PORTABILITY_TEXT.unsupportedFile);
-  }
 }
 
 function sanitizeFilename(value: string | null): string {
@@ -583,27 +576,30 @@ async function listExportablePosts(db: D1Database): Promise<PostRow[]> {
 
 async function listTagsForPostIds(db: D1Database, postIds: string[]): Promise<Map<string, TagRow[]>> {
   const tagsByPost = new Map<string, TagRow[]>();
+  const uniquePostIds = [...new Set(postIds)];
 
-  if (postIds.length === 0) {
+  if (uniquePostIds.length === 0) {
     return tagsByPost;
   }
 
-  const placeholders = postIds.map(() => '?').join(', ');
-  const result = await db
-    .prepare(
-      `SELECT post_tags.post_id, tags.id, tags.name, tags.slug, tags.color, tags.created_at, tags.updated_at
-       FROM post_tags
-       INNER JOIN tags ON tags.id = post_tags.tag_id
-       WHERE post_tags.post_id IN (${placeholders})
-       ORDER BY tags.name ASC`
-    )
-    .bind(...postIds)
-    .all<TagRow & { post_id: string }>();
+  for (const chunk of chunkValues(uniquePostIds)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const result = await db
+      .prepare(
+        `SELECT post_tags.post_id, tags.id, tags.name, tags.slug, tags.color, tags.created_at, tags.updated_at
+         FROM post_tags
+         INNER JOIN tags ON tags.id = post_tags.tag_id
+         WHERE post_tags.post_id IN (${placeholders})
+         ORDER BY tags.name ASC`
+      )
+      .bind(...chunk)
+      .all<TagRow & { post_id: string }>();
 
-  for (const row of result.results ?? []) {
-    const list = tagsByPost.get(row.post_id) ?? [];
-    list.push(row);
-    tagsByPost.set(row.post_id, list);
+    for (const row of result.results ?? []) {
+      const list = tagsByPost.get(row.post_id) ?? [];
+      list.push(row);
+      tagsByPost.set(row.post_id, list);
+    }
   }
 
   return tagsByPost;
@@ -624,37 +620,50 @@ async function listApprovedFriends(db: D1Database): Promise<FriendLinkRow[]> {
 }
 
 async function listReferencedAssets(db: D1Database, posts: PostRow[]): Promise<Map<string, AssetRow>> {
-  const postIds = posts.map((post) => post.id);
+  const postIds = [...new Set(posts.map((post) => post.id))];
   const assets = new Map<string, AssetRow>();
 
   if (postIds.length === 0) {
     return assets;
   }
 
-  const placeholders = postIds.map(() => '?').join(', ');
-  const values: unknown[] = [...postIds, ...postIds];
-  const result = await db
-    .prepare(
-      `SELECT DISTINCT assets.id, assets.token, assets.r2_key, assets.original_filename, assets.mime_type,
-        assets.size_bytes, assets.width, assets.height, assets.sha256, assets.visibility, assets.usage_count,
-        assets.created_by, assets.created_at, assets.updated_at, assets.deleted_at
-       FROM assets
-       WHERE assets.deleted_at IS NULL
-         AND assets.visibility != 'deleted'
-         AND assets.id IN (
-      SELECT asset_id FROM post_assets WHERE post_id IN (${placeholders})
-      UNION
-      SELECT cover_asset_id FROM posts WHERE id IN (${placeholders}) AND cover_asset_id IS NOT NULL
-    )`
-    )
-    .bind(...values)
-    .all<AssetRow>();
+  for (const chunk of chunkValues(postIds)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const result = await db
+      .prepare(
+        `SELECT DISTINCT assets.id, assets.token, assets.r2_key, assets.original_filename, assets.mime_type,
+          assets.size_bytes, assets.width, assets.height, assets.sha256, assets.visibility, assets.usage_count,
+          assets.created_by, assets.created_at, assets.updated_at, assets.deleted_at
+         FROM assets
+         WHERE assets.deleted_at IS NULL
+           AND assets.visibility != 'deleted'
+           AND assets.id IN (
+        SELECT asset_id FROM post_assets WHERE post_id IN (${placeholders})
+        UNION
+        SELECT cover_asset_id FROM posts WHERE id IN (${placeholders}) AND cover_asset_id IS NOT NULL
+      )`
+      )
+      .bind(...chunk, ...chunk)
+      .all<AssetRow>();
 
-  for (const asset of result.results ?? []) {
-    assets.set(asset.id, asset);
+    for (const asset of result.results ?? []) {
+      assets.set(asset.id, asset);
+    }
   }
 
   return assets;
+}
+
+function assertJsonFileLimit(bytes: Uint8Array): void {
+  if (bytes.byteLength > DATA_PORTABILITY_LIMITS.jsonFileBytes) {
+    throw new BlogDataError('FILE_TOO_LARGE', DATA_PORTABILITY_TEXT.fileTooLarge, 413);
+  }
+}
+
+function assertZipFileLimit(bytes: Uint8Array): void {
+  if (bytes.byteLength > DATA_PORTABILITY_LIMITS.zipFileBytes) {
+    throw new BlogDataError('FILE_TOO_LARGE', DATA_PORTABILITY_TEXT.fileTooLarge, 413);
+  }
 }
 
 async function buildExportData(selections: BlogDataSelections, sourceOrigin: string): Promise<{ data: BlogDataFile; mediaAssets: AssetRow[] }> {
@@ -667,6 +676,14 @@ async function buildExportData(selections: BlogDataSelections, sourceOrigin: str
   const articleRows: BlogDataArticle[] = [];
   let aboutPage: BlogDataArticle | null = null;
   const assetsById = selections.articles ? await listReferencedAssets(db, posts) : new Map<string, AssetRow>();
+  if (selections.articles) {
+    const markdownTokens = [...new Set(posts.flatMap((post) => extractAssetTokens(post.content_markdown)))];
+    const markdownAssets = await findAssetsByTokens(db, markdownTokens);
+
+    for (const asset of markdownAssets) {
+      assetsById.set(asset.id, asset);
+    }
+  }
   const mediaEntries = new Map<string, BlogDataMediaEntry>();
 
   for (const post of posts) {
@@ -818,7 +835,9 @@ export async function getBlogDataSummary(): Promise<BlogDataSummary> {
 export async function exportBlogData(rawSelections: unknown, sourceOrigin: string): Promise<BlogDataExportResult> {
   const selections = normalizeSelections(rawSelections);
   const { data, mediaAssets } = await buildExportData(selections, sourceOrigin);
+  assertDataShape(data);
   const jsonBytes = textEncoder.encode(JSON.stringify(data, null, 2));
+  assertJsonFileLimit(jsonBytes);
 
   if (!selections.media) {
     return {
@@ -848,6 +867,7 @@ export async function exportBlogData(rawSelections: unknown, sourceOrigin: strin
     }
 
     const bytes = await readR2ObjectBytes(object);
+    assertImageBytes(bytes, entry.mimeType);
     const checksum = await sha256Bytes(bytes);
 
     if (entry.sha256 && checksum !== entry.sha256) {
@@ -861,7 +881,9 @@ export async function exportBlogData(rawSelections: unknown, sourceOrigin: strin
   const unsignedDataWithPaths = { ...dataWithPaths };
   delete (unsignedDataWithPaths as Partial<BlogDataFile>).checksums;
   const finalizedData = await finalizeDataFile(unsignedDataWithPaths as Omit<BlogDataFile, 'checksums'>);
+  assertDataShape(finalizedData);
   const finalizedJsonBytes = textEncoder.encode(JSON.stringify(finalizedData, null, 2));
+  assertJsonFileLimit(finalizedJsonBytes);
   const manifest = {
     format: BLOG_DATA_FORMAT,
     version: BLOG_DATA_VERSION,
@@ -882,11 +904,14 @@ export async function exportBlogData(rawSelections: unknown, sourceOrigin: strin
     ],
     mediaTotalBytes: mediaFiles.reduce((sum, file) => sum + file.bytes.byteLength, 0)
   };
+  const manifestBytes = textEncoder.encode(JSON.stringify(manifest, null, 2));
+  assertJsonFileLimit(manifestBytes);
   const zipBytes = createDataZip([
-    { path: 'manifest.json', bytes: textEncoder.encode(JSON.stringify(manifest, null, 2)) },
+    { path: 'manifest.json', bytes: manifestBytes },
     { path: 'data.json', bytes: finalizedJsonBytes },
     ...mediaFiles
   ]);
+  assertZipFileLimit(zipBytes);
 
   return {
     bytes: zipBytes,
@@ -897,9 +922,7 @@ export async function exportBlogData(rawSelections: unknown, sourceOrigin: strin
 }
 
 async function parseJsonBytes(bytes: Uint8Array): Promise<BlogDataFile> {
-  if (bytes.byteLength > DATA_PORTABILITY_LIMITS.jsonFileBytes) {
-    throw new BlogDataError('FILE_TOO_LARGE', DATA_PORTABILITY_TEXT.fileTooLarge, 413);
-  }
+  assertJsonFileLimit(bytes);
 
   let data: BlogDataFile;
 
@@ -949,6 +972,7 @@ async function parseBlogDataFile(file: File): Promise<ParsedBlogDataFile> {
     } catch {
       throw new BlogDataError('ZIP_MANIFEST_INVALID', DATA_PORTABILITY_TEXT.zipStructureInvalid);
     }
+    assertJsonFileLimit(manifestBytes);
     const declaredPaths = new Set(['manifest.json', 'data.json']);
 
     for (const entry of data.mediaManifest ?? []) {
@@ -1094,6 +1118,9 @@ async function collectConflicts(data: BlogDataFile): Promise<BlogDataInspectResu
 
 export async function inspectBlogDataFile(file: File, request: Request): Promise<BlogDataInspectResult> {
   const parsed = await parseBlogDataFile(file);
+  if (parsed.data.selectedSections.articles && !parsed.data.selectedSections.media) {
+    await prepareExistingMediaReferences(getDb(), parsed);
+  }
   const token = await signPlanToken({
     fileHash: parsed.fileHash,
     session: await getSessionBinding(request),
@@ -1128,25 +1155,13 @@ function assertImageBytes(bytes: Uint8Array, mimeType: string): void {
     throw new BlogDataError('MEDIA_TOO_LARGE', DATA_PORTABILITY_TEXT.mediaTooLarge);
   }
 
-  const signatures = IMAGE_MAGIC[mimeType];
-
-  if (!signatures) {
+  if (!ALLOWED_IMAGE_TYPES.has(mimeType)) {
     throw new BlogDataError('INVALID_MEDIA_TYPE', DATA_PORTABILITY_TEXT.unsupportedFile);
   }
 
-  if (mimeType === 'image/svg+xml') {
-    const text = textDecoder.decode(bytes.slice(0, Math.min(bytes.byteLength, 512))).trim().toLowerCase();
-
-    if (!text.startsWith('<svg') && !text.includes('<svg')) {
-      throw new BlogDataError('INVALID_MEDIA_TYPE', DATA_PORTABILITY_TEXT.unsupportedFile);
-    }
-
-    return;
-  }
-
-  const ok = signatures.some((signature) => signature.every((byte, index) => bytes[index] === byte));
-
-  if (!ok) {
+  try {
+    assertValidImageBytes(bytes, mimeType);
+  } catch {
     throw new BlogDataError('INVALID_MEDIA_TYPE', DATA_PORTABILITY_TEXT.unsupportedFile);
   }
 }
@@ -1159,15 +1174,19 @@ function importedR2Key(mimeType: string): string {
 }
 
 function rewriteInternalMedia(markdown: string, mediaTokenMap: Map<string, string>, sourceOrigin: string, includeMedia: boolean): string {
-  return markdown.replace(/(!\[[^\]]*]\(\s*)(?:asset:|\/i\/)([A-Za-z0-9_-]{24,64})(\s*\))/g, (_match, prefix: string, token: string, suffix: string) => {
+  return rewriteMarkdownAssetUrls(markdown, (token) => {
     const mappedToken = mediaTokenMap.get(token);
 
     if (includeMedia && mappedToken) {
-      return `${prefix}asset:${mappedToken}${suffix}`;
+      return `asset:${mappedToken}`;
+    }
+
+    if (!includeMedia && mappedToken) {
+      return `asset:${mappedToken}`;
     }
 
     const origin = sourceOrigin.replace(/\/+$/, '');
-    return `${prefix}${origin}/i/${token}${suffix}`;
+    return `${origin}/i/${token}`;
   });
 }
 
@@ -1222,6 +1241,51 @@ interface PreparedMediaImport {
   result: BlogDataImportResult['media'];
 }
 
+function collectReferencedMediaTokens(data: BlogDataFile): string[] {
+  const tokens = new Set<string>();
+
+  for (const article of allImportArticles(data)) {
+    for (const token of extractAssetTokens(article.markdown)) {
+      tokens.add(token);
+    }
+
+    if (article.coverMediaToken) {
+      tokens.add(article.coverMediaToken);
+    }
+  }
+
+  return [...tokens];
+}
+
+async function prepareExistingMediaReferences(db: D1Database, parsed: ParsedBlogDataFile): Promise<PreparedMediaImport> {
+  const referencedTokens = collectReferencedMediaTokens(parsed.data);
+  const assets = await findAssetsByTokens(db, referencedTokens);
+  const assetByToken = new Map(assets.map((asset) => [asset.token, asset]));
+  const missingTokens = referencedTokens.filter((token) => !assetByToken.has(token));
+
+  if (missingTokens.length > 0) {
+    throw new BlogDataError('MEDIA_REQUIRED', `备份未包含图片文件，且当前站点缺少部分图片；请使用包含媒体的备份。缺失 ${missingTokens.length} 个 token。`);
+  }
+
+  const bucket = getMediaBucket();
+
+  for (const asset of assets) {
+    const object = await bucket.get(asset.r2_key);
+
+    if (!object) {
+      throw new BlogDataError('MEDIA_REQUIRED', '备份未包含图片文件，且当前站点缺少部分图片；请使用包含媒体的备份。');
+    }
+  }
+
+  return {
+    tokenMap: new Map(referencedTokens.map((token) => [token, token])),
+    assetIdByToken: new Map(assets.map((asset) => [asset.token, asset.id])),
+    assetInsertStatements: [],
+    uploadedAssets: [],
+    result: { uploaded: 0, reused: assets.length, failed: 0 }
+  };
+}
+
 async function prepareMediaImport(db: D1Database, parsed: ParsedBlogDataFile, includeMedia: boolean): Promise<PreparedMediaImport> {
   const tokenMap = new Map<string, string>();
   const assetIdByToken = new Map<string, string>();
@@ -1230,7 +1294,7 @@ async function prepareMediaImport(db: D1Database, parsed: ParsedBlogDataFile, in
   const result = { uploaded: 0, reused: 0, failed: 0 };
 
   if (!includeMedia) {
-    return { tokenMap, assetIdByToken, assetInsertStatements, uploadedAssets, result };
+    return prepareExistingMediaReferences(db, parsed);
   }
 
   const bucket = getMediaBucket();
@@ -1325,7 +1389,7 @@ export async function importBlogDataFile(file: File, request: Request, rawOption
 
   await verifyPlanToken(importPlanToken, parsed.fileHash, request);
 
-  if (sections.media && (!parsed.isZip || parsed.mediaFiles.size === 0)) {
+  if (sections.media && parsed.data.manifest.counts.media > 0 && (!parsed.isZip || parsed.mediaFiles.size === 0)) {
     throw new BlogDataError('MEDIA_FILE_MISSING', DATA_PORTABILITY_TEXT.unsupportedFile);
   }
 
@@ -1353,6 +1417,7 @@ export async function importBlogDataFile(file: File, request: Request, rawOption
   };
   const now = nowIso();
   const oldAssetIds = new Set<string>();
+  const referencedAssetIds = new Set<string>();
 
   try {
     if (sections.articles) {
@@ -1429,6 +1494,14 @@ export async function importBlogDataFile(file: File, request: Request, rawOption
         const coverToken = article.coverMediaToken ? mediaImport.tokenMap.get(article.coverMediaToken) : null;
         const coverAssetId = coverToken ? mediaImport.assetIdByToken.get(coverToken) ?? null : null;
         const publishedAt = assertIso(article.publishedAt, 'Published At');
+
+        for (const assetId of inlineAssetIds) {
+          referencedAssetIds.add(assetId);
+        }
+
+        if (coverAssetId) {
+          referencedAssetIds.add(coverAssetId);
+        }
 
         if (action === 'create') {
           statements.push(
@@ -1550,7 +1623,7 @@ export async function importBlogDataFile(file: File, request: Request, rawOption
     throw error;
   }
 
-  const affectedAssetIds = [...new Set([...oldAssetIds, ...mediaImport.assetIdByToken.values()])];
+  const affectedAssetIds = [...new Set([...oldAssetIds, ...referencedAssetIds, ...mediaImport.uploadedAssets.map((asset) => asset.assetId)])];
 
   if (affectedAssetIds.length > 0) {
     try {

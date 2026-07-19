@@ -1,17 +1,17 @@
 import { getDb } from '@/lib/db';
 import { reportError } from '@/lib/logging';
 import { randomBytes } from '@/features/auth/crypto.service';
-import { findAssetsByTokens, makeAssetsPublic, refreshAssetUsageCounts } from '@/features/assets/asset.repo';
+import { findAssetsByTokens, getMakeAssetsPublicStatements, refreshAssetUsageCounts } from '@/features/assets/asset.repo';
 import { cleanupUnreferencedAssets, cleanupUnreferencedPostAssets } from '@/features/assets/asset.service';
-import { getPostTags, syncPostTags } from '@/features/tags/tag.service';
+import { getPostTagSyncStatements, getPostTags, preparePostTags } from '@/features/tags/tag.service';
 import { calculateReadingTimeMinutes, calculateWordCount, decodeHtmlEntities, extractAssetTokens, renderMarkdown } from './post.renderer';
 import {
-  createPost,
   deletePostPermanently,
   findPostById,
   findPostBySlug,
   findAdjacentPublicPosts,
   findPublicPostBySlug,
+  getPostAssetReplacementPlan,
   countPublicPosts,
   listPublicFeedPosts,
   listAdminPosts,
@@ -19,10 +19,10 @@ import {
   listPublicSearchPosts,
   listPublicSitemapPosts,
   listAssetsForPost,
-  replacePostAssets,
+  prepareCreatePost,
+  prepareUpdatePost,
   setPostPinnedAt,
   slugExists,
-  updatePost
 } from './post.repo';
 import { normalizePostInput, PostValidationError } from './post.schema';
 import type { PostListFilters, PostRow, PublicPostDetail, PublicPostSummary, PublicPostTag } from './post.types';
@@ -75,17 +75,25 @@ async function generateUniquePostSlug(db: D1Database): Promise<string> {
   throw new PostConflictError('Unable to generate a unique post link.');
 }
 
-async function syncPostAssetReferences(db: D1Database, post: PostRow): Promise<void> {
-  const tokens = extractAssetTokens(post.content_markdown);
+async function preparePostAssetIds(db: D1Database, markdown: string): Promise<string[]> {
+  const tokens = extractAssetTokens(markdown);
   const assets = await findAssetsByTokens(db, tokens);
-  const assetIds = assets.map((asset) => asset.id);
+  const foundTokens = new Set(assets.map((asset) => asset.token));
+  const missingTokens = tokens.filter((token) => !foundTokens.has(token));
 
-  const unusedAssets = await replacePostAssets(db, post.id, assetIds);
-
-  if (post.visibility === 'public') {
-    await makeAssetsPublic(db, assetIds);
+  if (missingTokens.length > 0) {
+    throw new PostValidationError('ASSET_NOT_FOUND', 'Some referenced images are no longer available.');
   }
 
+  return assets.map((asset) => asset.id);
+}
+
+async function finalizePostSave(db: D1Database, affectedAssetIds: string[]): Promise<void> {
+  if (affectedAssetIds.length === 0) {
+    return;
+  }
+
+  const unusedAssets = await refreshAssetUsageCounts(db, affectedAssetIds);
   await cleanupUnreferencedAssets(db, unusedAssets);
 }
 
@@ -112,22 +120,25 @@ async function getTagsForPostIds(db: D1Database, postIds: string[]): Promise<Map
     return tagsByPostId;
   }
 
-  const placeholders = uniquePostIds.map(() => '?').join(', ');
-  const result = await db
-    .prepare(
-      `SELECT post_tags.post_id, tags.name, tags.slug
-       FROM post_tags
-       INNER JOIN tags ON tags.id = post_tags.tag_id
-       WHERE post_tags.post_id IN (${placeholders})
-       ORDER BY tags.name ASC`
-    )
-    .bind(...uniquePostIds)
-    .all<{ post_id: string; name: string; slug: string }>();
+  for (let index = 0; index < uniquePostIds.length; index += 80) {
+    const chunk = uniquePostIds.slice(index, index + 80);
+    const placeholders = chunk.map(() => '?').join(', ');
+    const result = await db
+      .prepare(
+        `SELECT post_tags.post_id, tags.name, tags.slug
+         FROM post_tags
+         INNER JOIN tags ON tags.id = post_tags.tag_id
+         WHERE post_tags.post_id IN (${placeholders})
+         ORDER BY tags.name ASC`
+      )
+      .bind(...chunk)
+      .all<{ post_id: string; name: string; slug: string }>();
 
-  for (const row of result.results ?? []) {
-    const tags = tagsByPostId.get(row.post_id) ?? [];
-    tags.push({ name: row.name, slug: row.slug });
-    tagsByPostId.set(row.post_id, tags);
+    for (const row of result.results ?? []) {
+      const tags = tagsByPostId.get(row.post_id) ?? [];
+      tags.push({ name: row.name, slug: row.slug });
+      tagsByPostId.set(row.post_id, tags);
+    }
   }
 
   return tagsByPostId;
@@ -176,10 +187,18 @@ export async function createAdminPost(raw: unknown): Promise<PostRow> {
   const db = getDb();
   const input = buildPersistedInput(raw);
   const slug = await generateUniquePostSlug(db);
+  const assetIds = await preparePostAssetIds(db, input.contentMarkdown);
+  const { tagIds } = await preparePostTags(db, input.tagNames);
+  const { post, statement } = prepareCreatePost(db, input, slug);
+  const assetPlan = await getPostAssetReplacementPlan(db, post.id, assetIds);
 
-  const post = await createPost(db, input, slug);
-  await syncPostAssetReferences(db, post);
-  await syncPostTags(db, post.id, input.tagNames);
+  await db.batch([
+    statement,
+    ...assetPlan.statements,
+    ...getMakeAssetsPublicStatements(db, assetIds),
+    ...getPostTagSyncStatements(db, post.id, tagIds)
+  ]);
+  await finalizePostSave(db, assetPlan.affectedAssetIds);
   return (await attachPostTags(db, await findPostById(db, post.id))) ?? post;
 }
 
@@ -187,26 +206,45 @@ export async function saveAdminAboutPost(raw: unknown): Promise<PostRow> {
   const db = getDb();
   const input = buildPersistedInput(raw);
   const existing = await findPostBySlug(db, ABOUT_SLUG);
-  const post = existing ? await updatePost(db, existing.id, input) : await createPost(db, input, ABOUT_SLUG);
+  const assetIds = await preparePostAssetIds(db, input.contentMarkdown);
+  const { tagIds } = await preparePostTags(db, input.tagNames);
+  const prepared = existing ? await prepareUpdatePost(db, existing.id, input) : prepareCreatePost(db, input, ABOUT_SLUG);
 
-  if (!post) {
+  if (!prepared) {
     throw new Error('Unable to save about page.');
   }
 
-  await syncPostAssetReferences(db, post);
-  await syncPostTags(db, post.id, input.tagNames);
+  const { post, statement } = prepared;
+  const assetPlan = await getPostAssetReplacementPlan(db, post.id, assetIds);
+
+  await db.batch([
+    statement,
+    ...assetPlan.statements,
+    ...getMakeAssetsPublicStatements(db, assetIds),
+    ...getPostTagSyncStatements(db, post.id, tagIds)
+  ]);
+  await finalizePostSave(db, assetPlan.affectedAssetIds);
   return (await attachPostTags(db, await findPostById(db, post.id))) ?? post;
 }
 
 export async function updateAdminPost(id: string, raw: unknown): Promise<PostRow | null> {
   const db = getDb();
   const input = buildPersistedInput(raw);
+  const assetIds = await preparePostAssetIds(db, input.contentMarkdown);
+  const { tagIds } = await preparePostTags(db, input.tagNames);
+  const prepared = await prepareUpdatePost(db, id, input);
 
-  const post = await updatePost(db, id, input);
+  if (prepared) {
+    const { post, statement } = prepared;
+    const assetPlan = await getPostAssetReplacementPlan(db, post.id, assetIds);
 
-  if (post) {
-    await syncPostAssetReferences(db, post);
-    await syncPostTags(db, post.id, input.tagNames);
+    await db.batch([
+      statement,
+      ...assetPlan.statements,
+      ...getMakeAssetsPublicStatements(db, assetIds),
+      ...getPostTagSyncStatements(db, post.id, tagIds)
+    ]);
+    await finalizePostSave(db, assetPlan.affectedAssetIds);
     return attachPostTags(db, await findPostById(db, post.id));
   }
 

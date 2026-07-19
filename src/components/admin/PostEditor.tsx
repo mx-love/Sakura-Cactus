@@ -290,20 +290,6 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   }, [aboutMode, isEditorReady, post, postId]);
 
   useEffect(() => {
-    const handlePageExit = () => {
-      cleanupUnsavedSessionUploads();
-    };
-
-    window.addEventListener('pagehide', handlePageExit);
-    window.addEventListener('beforeunload', handlePageExit);
-
-    return () => {
-      window.removeEventListener('pagehide', handlePageExit);
-      window.removeEventListener('beforeunload', handlePageExit);
-    };
-  }, []);
-
-  useEffect(() => {
     if (previewRef.current) {
       bindCodeCopyControls(previewRef.current);
     }
@@ -748,6 +734,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
   function clearTemporaryPaper() {
     isRestorePromptOpenRef.current = false;
+    cleanupUnsavedSessionUploads();
     clearWriterAutosaveSnapshot(getWriterAutosaveKey(null, aboutMode));
     clearAutosaveTimers();
     lastAutosaveComparableRef.current = createCurrentComparableFromLiveForm();
@@ -779,6 +766,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     }
 
     isRestorePromptOpenRef.current = false;
+    cleanupUnsavedSessionUploads();
     clearWriterAutosaveSnapshot(getWriterAutosaveKey(pendingLocalRevision.postId));
     clearAutosaveTimers();
     lastAutosaveComparableRef.current = createCurrentComparableFromLiveForm();
@@ -904,6 +892,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       setForm(nextForm);
       setSavedSnapshot(createSnapshot(nextForm));
       markSavedAssetTokens(savedPost.content_markdown);
+      cleanupUnsavedSessionUploads();
       setTemporaryPaper(null);
       setPendingLocalRevision(null);
       setAutosaveState('idle');

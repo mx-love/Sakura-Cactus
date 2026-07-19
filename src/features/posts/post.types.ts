@@ -51,13 +51,25 @@ export interface PublicPostDetail extends PublicPostSummary {
   visibility: PostVisibility;
 }
 
+type PostWithCoverProjection = PostRow & {
+  cover_asset_token?: string | null;
+};
+
+export function resolvePostCoverImageUrl(post: PostWithCoverProjection): string | null {
+  if (post.cover_asset_id && post.cover_asset_token) {
+    return `/i/${post.cover_asset_token}`;
+  }
+
+  return extractFirstImageUrl(post.content_markdown);
+}
+
 export function toPublicPostSummary(post: PostRow, tags: PublicPostTag[] = []): PublicPostSummary {
   return {
     id: post.id,
     slug: post.slug,
     title: decodeHtmlEntities(post.title),
     excerpt: post.excerpt ? decodeHtmlEntities(post.excerpt) : null,
-    coverImageUrl: extractFirstImageUrl(post.content_markdown),
+    coverImageUrl: resolvePostCoverImageUrl(post),
     tags: tags.map((tag) => ({ name: decodeHtmlEntities(tag.name), slug: tag.slug })),
     publishedAt: post.published_at,
     pinnedAt: post.pinned_at,

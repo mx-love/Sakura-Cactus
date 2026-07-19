@@ -9,7 +9,8 @@ export interface PublicTagSummary extends TagRow {
 const POST_SELECT = `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown,
   NULL AS content_html, posts.cover_asset_id, posts.status, posts.visibility, NULL AS seo_title,
   NULL AS seo_description, posts.reading_time_minutes, posts.word_count, posts.published_at,
-  posts.pinned_at, posts.created_at, posts.updated_at`;
+  posts.pinned_at, posts.created_at, posts.updated_at,
+  cover_assets.token AS cover_asset_token`;
 
 export async function findTagByName(db: D1Database, name: string): Promise<TagRow | null> {
   return db
@@ -50,13 +51,14 @@ export async function createTag(db: D1Database, name: string, slug: string): Pro
 }
 
 export async function replacePostTags(db: D1Database, postId: string, tagIds: string[]): Promise<void> {
-  const statements = [db.prepare('DELETE FROM post_tags WHERE post_id = ?').bind(postId)];
+  await db.batch(getPostTagReplacementStatements(db, postId, tagIds));
+}
 
-  for (const tagId of [...new Set(tagIds)]) {
-    statements.push(db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').bind(postId, tagId));
-  }
-
-  await db.batch(statements);
+export function getPostTagReplacementStatements(db: D1Database, postId: string, tagIds: string[]): D1PreparedStatement[] {
+  return [
+    db.prepare('DELETE FROM post_tags WHERE post_id = ?').bind(postId),
+    ...[...new Set(tagIds)].map((tagId) => db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').bind(postId, tagId))
+  ];
 }
 
 export async function listTagsForPost(db: D1Database, postId: string): Promise<TagRow[]> {
@@ -101,6 +103,10 @@ export async function listPublicPostsByTagSlug(db: D1Database, slug: string, now
     .prepare(
       `${POST_SELECT}
        FROM posts
+       LEFT JOIN assets cover_assets ON cover_assets.id = posts.cover_asset_id
+         AND cover_assets.deleted_at IS NULL
+         AND cover_assets.visibility != 'deleted'
+         AND cover_assets.mime_type != 'image/svg+xml'
        INNER JOIN post_tags ON post_tags.post_id = posts.id
        INNER JOIN tags ON tags.id = post_tags.tag_id
        WHERE tags.slug = ?

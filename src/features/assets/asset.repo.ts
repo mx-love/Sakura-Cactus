@@ -3,6 +3,22 @@ import { nowIso } from '@/lib/db';
 import { createRandomId } from '@/features/auth/crypto.service';
 import type { CreateAssetRecordInput } from './asset.types';
 
+const D1_IN_CHUNK_SIZE = 80;
+
+function uniqueValues(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function chunkValues<T>(values: T[], size = D1_IN_CHUNK_SIZE): T[][] {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
 export async function listAssets(db: D1Database): Promise<AssetRow[]> {
   const result = await db
     .prepare(
@@ -68,13 +84,23 @@ export async function findReusableAssetBySha256(
 
 export async function findAssetsByTokens(db: D1Database, tokens: string[]): Promise<AssetRow[]> {
   const assets: AssetRow[] = [];
+  const uniqueTokens = uniqueValues(tokens);
 
-  for (const token of tokens) {
-    const asset = await findAssetByToken(db, token);
+  for (const chunk of chunkValues(uniqueTokens)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const result = await db
+      .prepare(
+        `SELECT id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+          visibility, usage_count, created_by, created_at, updated_at, deleted_at
+         FROM assets
+         WHERE token IN (${placeholders})
+           AND deleted_at IS NULL
+           AND visibility != 'deleted'`
+      )
+      .bind(...chunk)
+      .all<AssetRow>();
 
-    if (asset && !asset.deleted_at && asset.visibility !== 'deleted') {
-      assets.push(asset);
-    }
+    assets.push(...(result.results ?? []));
   }
 
   return assets;
@@ -100,26 +126,24 @@ export async function listExpiredUnusedDraftAssets(db: D1Database, cutoffIso: st
 
 export async function listUnusedDraftAssetsByTokens(db: D1Database, tokens: string[]): Promise<AssetRow[]> {
   const assets: AssetRow[] = [];
-  const uniqueTokens = [...new Set(tokens)];
+  const uniqueTokens = uniqueValues(tokens);
 
-  for (const token of uniqueTokens) {
-    const asset = await db
+  for (const chunk of chunkValues(uniqueTokens)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const result = await db
       .prepare(
         `SELECT id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
           visibility, usage_count, created_by, created_at, updated_at, deleted_at
          FROM assets
-         WHERE token = ?
+         WHERE token IN (${placeholders})
            AND deleted_at IS NULL
            AND visibility = 'draft'
-           AND usage_count = 0
-         LIMIT 1`
+           AND usage_count = 0`
       )
-      .bind(token)
-      .first<AssetRow>();
+      .bind(...chunk)
+      .all<AssetRow>();
 
-    if (asset) {
-      assets.push(asset);
-    }
+    assets.push(...(result.results ?? []));
   }
 
   return assets;
@@ -195,17 +219,33 @@ export async function updateAssetVisibility(
 
 export async function makeAssetsPublic(db: D1Database, assetIds: string[]): Promise<void> {
   const now = nowIso();
+  const uniqueAssetIds = uniqueValues(assetIds);
 
-  for (const assetId of assetIds) {
+  for (const chunk of chunkValues(uniqueAssetIds)) {
+    const placeholders = chunk.map(() => '?').join(', ');
     await db
       .prepare(
         `UPDATE assets
          SET visibility = 'public', updated_at = ?
-         WHERE id = ? AND deleted_at IS NULL`
+         WHERE id IN (${placeholders}) AND deleted_at IS NULL`
       )
-      .bind(now, assetId)
+      .bind(now, ...chunk)
       .run();
   }
+}
+
+export function getMakeAssetsPublicStatements(db: D1Database, assetIds: string[]): D1PreparedStatement[] {
+  const now = nowIso();
+  return chunkValues(uniqueValues(assetIds)).map((chunk) => {
+    const placeholders = chunk.map(() => '?').join(', ');
+    return db
+      .prepare(
+        `UPDATE assets
+         SET visibility = 'public', updated_at = ?
+         WHERE id IN (${placeholders}) AND deleted_at IS NULL`
+      )
+      .bind(now, ...chunk);
+  });
 }
 
 export async function softDeleteAsset(db: D1Database, id: string): Promise<AssetRow | null> {
@@ -244,21 +284,40 @@ export async function deleteAssetRecord(db: D1Database, id: string): Promise<boo
 }
 
 export async function refreshAssetUsageCounts(db: D1Database, assetIds: string[]): Promise<AssetRow[]> {
-  const uniqueAssetIds = [...new Set(assetIds)];
+  const uniqueAssetIds = uniqueValues(assetIds);
   const now = nowIso();
   const unusedAssets: AssetRow[] = [];
+  const usageCounts = new Map<string, number>();
+
+  for (const chunk of chunkValues(uniqueAssetIds)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const result = await db
+      .prepare(
+        `SELECT asset_id, SUM(count) AS count
+         FROM (
+           SELECT asset_id, COUNT(*) AS count
+           FROM post_assets
+           WHERE asset_id IN (${placeholders})
+           GROUP BY asset_id
+           UNION ALL
+           SELECT cover_asset_id AS asset_id, COUNT(*) AS count
+           FROM posts
+           WHERE cover_asset_id IN (${placeholders})
+           GROUP BY cover_asset_id
+         )
+         WHERE asset_id IS NOT NULL
+         GROUP BY asset_id`
+      )
+      .bind(...chunk, ...chunk)
+      .all<{ asset_id: string; count: number }>();
+
+    for (const row of result.results ?? []) {
+      usageCounts.set(row.asset_id, row.count);
+    }
+  }
 
   for (const assetId of uniqueAssetIds) {
-    const row = await db
-      .prepare(
-        `SELECT (
-          (SELECT COUNT(*) FROM post_assets WHERE asset_id = ?)
-          + (SELECT COUNT(*) FROM posts WHERE cover_asset_id = ?)
-        ) AS count`
-      )
-      .bind(assetId, assetId)
-      .first<{ count: number }>();
-    const usageCount = row?.count ?? 0;
+    const usageCount = usageCounts.get(assetId) ?? 0;
 
     if (usageCount === 0) {
       const asset = await findAssetById(db, assetId);

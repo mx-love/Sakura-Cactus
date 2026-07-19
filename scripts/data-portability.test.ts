@@ -9,9 +9,12 @@ import {
   importBlogDataFile,
   inspectBlogDataFile
 } from '@/features/data-portability/data-portability.service';
-import { parseDataZip } from '@/features/data-portability/data-portability.zip';
+import { createDataZip, parseDataZip } from '@/features/data-portability/data-portability.zip';
 import { BLOG_DATA_FORMAT, BLOG_DATA_VERSION } from '@/features/data-portability/data-portability.constants';
 import { SESSION_COOKIE_NAME } from '@/features/auth/auth.constants';
+import { GET as getImageByToken } from '@/pages/i/[token]';
+import { findAssetsByTokens } from '@/features/assets/asset.repo';
+import { getDb } from '@/lib/db';
 
 type SqlValue = string | number | bigint | null | Uint8Array;
 
@@ -284,6 +287,7 @@ async function seedSource(): Promise<{ d1: SqliteD1Database; bucket: FakeR2Bucke
   setTestEnv(d1, bucket);
   bucket.objects.set('r2-inline', { bytes: pngBytes, contentType: 'image/png' });
   bucket.objects.set('r2-cover', { bytes: coverBytes, contentType: 'image/png' });
+  bucket.objects.set('r2-temp', { bytes: pngBytes, contentType: 'image/png' });
   db.prepare(
     `INSERT INTO assets (
       id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
@@ -333,6 +337,38 @@ async function seedSource(): Promise<{ d1: SqliteD1Database; bucket: FakeR2Bucke
   db.prepare("INSERT INTO friend_links (id, name, url, avatar_url, description, status, sort_order, health_status, consecutive_failures, created_at, updated_at) VALUES ('fl-ok', 'Friend', 'https://www.wikipedia.org/', NULL, 'A friend', 'approved', 0, 'unknown', 0, ?, ?)").run(now, now);
   db.prepare("INSERT INTO friend_links (id, name, url, avatar_url, description, status, sort_order, health_status, consecutive_failures, created_at, updated_at) VALUES ('fl-hidden', 'Hidden', 'https://www.iana.org/', NULL, NULL, 'hidden', 0, 'unknown', 0, ?, ?)").run(now, now);
   return { d1, bucket, inlineSha, coverSha };
+}
+
+async function seedTargetMedia(d1: SqliteD1Database, bucket: FakeR2Bucket): Promise<void> {
+  const inlineSha = await sha256(pngBytes);
+  const coverSha = await sha256(coverBytes);
+  bucket.objects.set('target-inline', { bytes: pngBytes, contentType: 'image/png' });
+  bucket.objects.set('target-cover', { bytes: coverBytes, contentType: 'image/png' });
+  bucket.objects.set('target-temp', { bytes: pngBytes, contentType: 'image/png' });
+  d1.db
+    .prepare(
+      `INSERT INTO assets (
+        id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, 'image/png', ?, NULL, NULL, ?, 'public', 0, 'env_admin', ?, ?, NULL)`
+    )
+    .run('target-inline', inlineToken, 'target-inline', 'inline.png', pngBytes.byteLength, inlineSha, now, now);
+  d1.db
+    .prepare(
+      `INSERT INTO assets (
+        id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, 'image/png', ?, NULL, NULL, ?, 'public', 0, 'env_admin', ?, ?, NULL)`
+    )
+    .run('target-cover', coverToken, 'target-cover', 'cover.png', coverBytes.byteLength, coverSha, now, now);
+  d1.db
+    .prepare(
+      `INSERT INTO assets (
+        id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, 'image/png', ?, NULL, NULL, ?, 'public', 0, 'env_admin', ?, ?, NULL)`
+    )
+    .run('target-temp', tempToken, 'target-temp', 'temp.png', pngBytes.byteLength, inlineSha, now, now);
 }
 
 function jsonFileFromBytes(bytes: Uint8Array, name = 'data.json'): File {
@@ -410,11 +446,11 @@ async function testExportAndInspect(): Promise<{ jsonBytes: Uint8Array; zipBytes
   assert.equal(data.aboutPage.slug, 'about');
   assert.equal(data.tags.length, 1);
   assert.equal(data.manifest.counts.tags, summary.usedTags);
-  assert.equal(data.manifest.counts.media, summary.referencedMedia);
+  assert.equal(data.manifest.counts.media, 3);
   assert.equal(data.friends, undefined);
   assert.equal(JSON.stringify(data).includes('content_html'), false);
-  assert.equal(data.mediaManifest.length, 2);
-  assert.equal(data.mediaManifest.some((entry: any) => entry.token === tempToken), false);
+  assert.equal(data.mediaManifest.length, 3);
+  assert.equal(data.mediaManifest.some((entry: any) => entry.token === tempToken), true);
   const inspect = await inspectWithCurrentEnv(jsonFileFromBytes(jsonExport.bytes));
   assert.equal(inspect.ok, true);
   assert.equal(inspect.file.articles, 2);
@@ -427,7 +463,7 @@ async function testExportAndInspect(): Promise<{ jsonBytes: Uint8Array; zipBytes
   assert.equal(zipExport.json, false);
   const files = parseDataZip(bytesToArrayBuffer(zipExport.bytes));
   assert.ok(files.some((file) => file.path === 'data.json'));
-  assert.equal(files.filter((file) => file.path.startsWith('media/')).length, 2);
+  assert.equal(files.filter((file) => file.path.startsWith('media/')).length, 3);
   return { jsonBytes: jsonExport.bytes, zipBytes: zipExport.bytes };
 }
 
@@ -494,10 +530,68 @@ async function testSummaryTagCounts(): Promise<void> {
   assert.equal(exported.tags.length, summary.usedTags);
 }
 
+async function seedMediaExportRows(d1: SqliteD1Database, bucket: FakeR2Bucket, count: number): Promise<void> {
+  const db = d1.db;
+  const mediaSha = await sha256(pngBytes);
+
+  for (let index = 0; index < count; index += 1) {
+    const token = `E${String(index).padStart(23, '0')}`;
+    const assetId = `asset-export-${index}`;
+    const postId = `post-export-${index}`;
+    const r2Key = `r2-export-${index}`;
+    bucket.objects.set(r2Key, { bytes: pngBytes, contentType: 'image/png' });
+    db.prepare(
+      `INSERT INTO assets (
+        id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, 'image/png', ?, NULL, NULL, ?, 'public', 1, 'env_admin', ?, ?, NULL)`
+    ).run(assetId, token, r2Key, `export-${index}.png`, pngBytes.byteLength, mediaSha, now, now);
+    db.prepare(
+      `INSERT INTO posts (
+        id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+        seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+      ) VALUES (?, ?, ?, NULL, ?, NULL, NULL, 'published', 'public', NULL, NULL, 1, 1, ?, NULL, ?, ?)`
+    ).run(postId, `export-${index}`, `Export ${index}`, `![export](asset:${token})`, now, now, now);
+    db.prepare("INSERT INTO post_assets (post_id, asset_id, role, created_at) VALUES (?, ?, 'inline', ?)").run(postId, assetId, now);
+  }
+}
+
+async function testExportImportMediaLimits(): Promise<void> {
+  const okDb = createDb();
+  const okBucket = new FakeR2Bucket();
+  setTestEnv(okDb, okBucket);
+  await seedMediaExportRows(okDb, okBucket, 120);
+  const zipExport = await exportBlogData({ articles: true, media: true, friends: false }, 'https://source.example');
+  assert.equal(zipExport.json, false);
+  assert.equal(parseDataZip(bytesToArrayBuffer(zipExport.bytes)).filter((file) => file.path.startsWith('media/')).length, 120);
+  assert.equal((await inspectWithCurrentEnv(zipFileFromBytes(zipExport.bytes))).ok, true);
+
+  const tooManyDb = createDb();
+  const tooManyBucket = new FakeR2Bucket();
+  setTestEnv(tooManyDb, tooManyBucket);
+  await seedMediaExportRows(tooManyDb, tooManyBucket, 121);
+  await expectReject('121 media export rejects before creating an unrestorable backup', () =>
+    exportBlogData({ articles: true, media: true, friends: false }, 'https://source.example')
+  );
+
+  const emptyDb = createDb();
+  const emptyBucket = new FakeR2Bucket();
+  setTestEnv(emptyDb, emptyBucket);
+  const emptyZip = await exportBlogData({ articles: true, media: true, friends: false }, 'https://source.example');
+  assert.equal(emptyZip.json, false);
+  assert.equal((await inspectWithCurrentEnv(zipFileFromBytes(emptyZip.bytes))).ok, true);
+}
+
 async function testImportJsonWithoutMedia(jsonBytes: Uint8Array): Promise<void> {
+  const missingTarget = createDb();
+  const missingBucket = new FakeR2Bucket();
+  setTestEnv(missingTarget, missingBucket);
+  await expectReject('articles-only import preflight rejects missing target media', () => inspectWithCurrentEnv(jsonFileFromBytes(jsonBytes)));
+
   const target = createDb();
   const bucket = new FakeR2Bucket();
   setTestEnv(target, bucket);
+  await seedTargetMedia(target, bucket);
   const file = jsonFileFromBytes(jsonBytes);
   const inspect = await inspectWithCurrentEnv(file);
   const result = await importBlogDataFile(file, sessionRequest, {
@@ -510,10 +604,17 @@ async function testImportJsonWithoutMedia(jsonBytes: Uint8Array): Promise<void> 
   assert.equal(result.media.uploaded, 0);
   assert.equal(bucket.putKeys.length, 0);
   assert.equal(countRows(target.db, "SELECT COUNT(*) AS count FROM posts WHERE slug = 'about'"), 1);
-  const post = target.db.prepare("SELECT content_markdown, content_html FROM posts WHERE slug = 'hello-world'").get() as { content_markdown: string; content_html: string };
-  assert.match(post.content_markdown, /https:\/\/source\.example\/i\//);
+  const post = target.db.prepare("SELECT id, content_markdown, content_html, cover_asset_id FROM posts WHERE slug = 'hello-world'").get() as {
+    id: string;
+    content_markdown: string;
+    content_html: string;
+    cover_asset_id: string;
+  };
+  assert.match(post.content_markdown, new RegExp(`asset:${inlineToken}`));
+  assert.equal(post.cover_asset_id, 'target-cover');
   assert.match(post.content_html, /<img/);
-  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM post_assets'), 0);
+  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM post_assets WHERE post_id = ?', post.id), 2);
+  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM assets WHERE id = ?', 'target-inline'), 1);
 }
 
 async function testImportZipWithMedia(zipBytes: Uint8Array): Promise<void> {
@@ -529,14 +630,14 @@ async function testImportZipWithMedia(zipBytes: Uint8Array): Promise<void> {
     friendConflictStrategy: 'skip'
   });
   assert.equal(result.articles.created, 2);
-  assert.equal(result.media.uploaded, 2);
+  assert.equal(result.media.uploaded, 3);
   assert.equal(result.friends.created, 1);
-  assert.equal(bucket.putKeys.length, 2);
+  assert.equal(bucket.putKeys.length, 3);
   const post = target.db.prepare("SELECT content_markdown, cover_asset_id FROM posts WHERE slug = 'hello-world'").get() as { content_markdown: string; cover_asset_id: string };
   assert.match(post.content_markdown, /asset:/);
   assert.doesNotMatch(post.content_markdown, new RegExp(inlineToken));
   assert.ok(post.cover_asset_id);
-  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM post_assets'), 1);
+  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM post_assets'), 2);
 }
 
 async function testReuseAndConflicts(zipBytes: Uint8Array, inlineSha: string): Promise<void> {
@@ -558,16 +659,27 @@ async function testReuseAndConflicts(zipBytes: Uint8Array, inlineSha: string): P
     friendConflictStrategy: 'skip'
   });
   assert.equal(bucket.putKeys.length, 1);
-  const secondInspect = await inspectWithCurrentEnv(file);
-  const skipped = await importBlogDataFile(file, sessionRequest, {
+  await seedTargetMedia(target, bucket);
+  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM assets WHERE token IN (?, ?, ?)', inlineToken, coverToken, tempToken), 3);
+  const zipData = JSON.parse(new TextDecoder().decode(parseDataZip(bytesToArrayBuffer(zipBytes)).find((entry) => entry.path === 'data.json')?.bytes ?? new Uint8Array()));
+  assert.match(JSON.stringify(zipData), new RegExp(inlineToken));
+  assert.match(JSON.stringify(zipData), new RegExp(coverToken));
+  assert.match(JSON.stringify(zipData), new RegExp(tempToken));
+  assert.equal((await findAssetsByTokens(target as unknown as D1Database, [inlineToken, coverToken, tempToken])).length, 3);
+  assert.equal((await findAssetsByTokens(getDb(), [inlineToken, coverToken, tempToken])).length, 3);
+  const secondFile = zipFileFromBytes(zipBytes);
+  const secondInspect = await inspectWithCurrentEnv(secondFile);
+  const skipped = await importBlogDataFile(secondFile, sessionRequest, {
     importPlanToken: secondInspect.importPlanToken,
     sections: { articles: true, media: false, friends: true },
     articleConflictStrategy: 'skip',
     friendConflictStrategy: 'skip'
   });
   assert.equal(skipped.articles.skipped, 2);
-  const overwriteInspect = await inspectWithCurrentEnv(file);
-  const overwritten = await importBlogDataFile(file, sessionRequest, {
+  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM assets WHERE token IN (?, ?, ?)', inlineToken, coverToken, tempToken), 3);
+  const overwriteFile = zipFileFromBytes(zipBytes);
+  const overwriteInspect = await inspectWithCurrentEnv(overwriteFile);
+  const overwritten = await importBlogDataFile(overwriteFile, sessionRequest, {
     importPlanToken: overwriteInspect.importPlanToken,
     sections: { articles: true, media: false, friends: false },
     articleConflictStrategy: 'overwrite',
@@ -575,8 +687,9 @@ async function testReuseAndConflicts(zipBytes: Uint8Array, inlineSha: string): P
   });
   assert.equal(overwritten.articles.overwritten, 2);
   assert.equal(countRows(target.db, "SELECT COUNT(*) AS count FROM posts WHERE slug = 'about'"), 1);
-  const copyInspect = await inspectWithCurrentEnv(file);
-  const copied = await importBlogDataFile(file, sessionRequest, {
+  const copyFile = zipFileFromBytes(zipBytes);
+  const copyInspect = await inspectWithCurrentEnv(copyFile);
+  const copied = await importBlogDataFile(copyFile, sessionRequest, {
     importPlanToken: copyInspect.importPlanToken,
     sections: { articles: true, media: false, friends: false },
     articleConflictStrategy: 'copy',
@@ -608,6 +721,95 @@ async function testFailures(jsonBytes: Uint8Array, zipBytes: Uint8Array): Promis
     articleConflictStrategy: 'skip',
     friendConflictStrategy: 'skip'
   }));
+}
+
+async function testSvgImportAndServingRejected(): Promise<void> {
+  const target = createDb();
+  const bucket = new FakeR2Bucket();
+  setTestEnv(target, bucket);
+  const svgBytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+  const svgToken = 'S'.repeat(24);
+  const unsignedData = {
+    format: BLOG_DATA_FORMAT,
+    version: BLOG_DATA_VERSION,
+    createdAt: now,
+    source: { generator: 'Sakura Cactus', origin: 'https://source.example' },
+    selectedSections: { articles: true, media: true, friends: false },
+    manifest: { counts: { articles: 1, tags: 0, articleTagRelations: 0, media: 1, friends: 0 } },
+    articles: [
+      {
+        type: 'article',
+        slug: 'svg-post',
+        title: 'SVG',
+        excerpt: null,
+        markdown: `![svg](asset:${svgToken})`,
+        publishedAt: now,
+        updatedAt: now,
+        seoTitle: null,
+        seoDescription: null,
+        coverMediaToken: null
+      }
+    ],
+    aboutPage: null,
+    tags: [],
+    articleTagRelations: [],
+    mediaManifest: [
+      {
+        token: svgToken,
+        filename: 'bad.svg',
+        mimeType: 'image/svg+xml',
+        sizeBytes: svgBytes.byteLength,
+        sha256: await sha256(svgBytes),
+        archivePath: 'media/bad.svg',
+        usedBy: ['svg-post'],
+        coverFor: []
+      }
+    ]
+  };
+  const data = await finalizeFixtureData(unsignedData);
+  const dataBytes = new TextEncoder().encode(JSON.stringify(data, null, 2));
+  const manifest = {
+    format: BLOG_DATA_FORMAT,
+    version: BLOG_DATA_VERSION,
+    createdAt: now,
+    selectedSections: data.selectedSections,
+    counts: data.manifest.counts,
+    files: [
+      { path: 'data.json', sizeBytes: dataBytes.byteLength, sha256: await sha256(dataBytes) },
+      { path: 'media/bad.svg', sizeBytes: svgBytes.byteLength, sha256: await sha256(svgBytes) }
+    ],
+    mediaTotalBytes: svgBytes.byteLength
+  };
+  const zipBytes = createDataZip([
+    { path: 'manifest.json', bytes: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) },
+    { path: 'data.json', bytes: dataBytes },
+    { path: 'media/bad.svg', bytes: svgBytes }
+  ]);
+  const file = zipFileFromBytes(zipBytes, 'svg.zip');
+
+  await expectReject('SVG import preflight rejects before writes', () => inspectWithCurrentEnv(file));
+  await expectReject('SVG formal import rejects before writes', () => importBlogDataFile(file, sessionRequest, {
+    importPlanToken: 'not-needed-for-svg-parse-failure',
+    sections: { articles: true, media: true, friends: false },
+    articleConflictStrategy: 'skip',
+    friendConflictStrategy: 'skip'
+  }));
+  assert.equal(bucket.putKeys.length, 0);
+  assert.equal(countRows(target.db, 'SELECT COUNT(*) AS count FROM posts'), 0);
+
+  bucket.objects.set('legacy-svg', { bytes: svgBytes, contentType: 'image/svg+xml' });
+  target.db
+    .prepare(
+      `INSERT INTO assets (
+        id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+      ) VALUES ('asset-svg', ?, 'legacy-svg', 'legacy.svg', 'image/svg+xml', ?, NULL, NULL, ?, 'public', 0, 'env_admin', ?, ?, NULL)`
+    )
+    .run(svgToken, svgBytes.byteLength, await sha256(svgBytes), now, now);
+  const response = await getImageByToken({ params: { token: svgToken }, request: new Request('https://target.example/i/' + svgToken) } as any);
+  assert.equal(response.status, 415);
+  assert.notEqual(response.headers.get('Content-Type'), 'image/svg+xml');
+  assert.notEqual(response.headers.get('Content-Disposition'), 'inline');
 }
 
 async function writeFixtures(jsonBytes: Uint8Array, zipBytes: Uint8Array): Promise<void> {
@@ -669,6 +871,7 @@ async function verifyFixtures(): Promise<void> {
   const target = createDb();
   const bucket = new FakeR2Bucket();
   setTestEnv(target, bucket);
+  await seedTargetMedia(target, bucket);
   const entries = [
     'valid-articles-only.json',
     'valid-articles-friends.json',
@@ -706,11 +909,13 @@ async function verifyFixtures(): Promise<void> {
 async function main(): Promise<void> {
   const { jsonBytes, zipBytes } = await testExportAndInspect();
   await testSummaryTagCounts();
+  await testExportImportMediaLimits();
   const { inlineSha } = await seedSource();
   await testImportJsonWithoutMedia(jsonBytes);
   await testImportZipWithMedia(zipBytes);
   await testReuseAndConflicts(zipBytes, inlineSha);
   await testFailures(jsonBytes, zipBytes);
+  await testSvgImportAndServingRejected();
   await writeFixtures(jsonBytes, zipBytes);
   await verifyFixtures();
   console.log('Blog data portability checks passed.');

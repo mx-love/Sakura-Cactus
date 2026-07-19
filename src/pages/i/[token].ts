@@ -26,6 +26,17 @@ export const GET: APIRoute = async (context) => {
     return notFoundResponse();
   }
 
+  if (result.asset.mime_type === 'image/svg+xml') {
+    return new Response('Unsupported media type', {
+      status: 415,
+      headers: {
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Type': 'text/plain; charset=utf-8'
+      }
+    });
+  }
+
   const headers = new Headers();
   headers.set('Content-Type', result.asset.mime_type);
   headers.set(

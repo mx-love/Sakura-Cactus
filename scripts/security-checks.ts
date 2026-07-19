@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { assertValidImageBytes, assertValidImageFile, sanitizeOriginalFilename } from '../src/features/assets/asset.security.ts';
 import { clearRateLimitWithDb, consumeRateLimitWithDb, getRateLimitWindow } from '../src/features/rate-limit/rate-limit.core.ts';
-import { renderMarkdown } from '../src/features/posts/post.renderer.ts';
+import { extractAssetTokens, extractFirstImageUrl, renderMarkdown, rewriteMarkdownAssetUrls } from '../src/features/posts/post.renderer.ts';
 import {
   fetchPublicHttpStatusWithRedirects,
   normalizePublicHttpUrl,
@@ -395,6 +395,24 @@ function testUploads(): void {
 }
 
 function testMarkdown(): void {
+  const tokenA = 'A'.repeat(24);
+  const tokenB = 'B'.repeat(24);
+  const tokenC = 'C'.repeat(24);
+  const markdownImages = [
+    `![plain](asset:${tokenA})`,
+    `![double](asset:${tokenA} "caption")`,
+    `![single](asset:${tokenB} 'caption')`,
+    `![paren](asset:${tokenC} (caption))`,
+    `![ref][internal-ref]`,
+    `[internal-ref]: asset:${tokenB} "caption"`,
+    `![external](https://example.com/${tokenA}.png)`
+  ].join('\n\n');
+
+  assert.deepEqual(extractAssetTokens(markdownImages).sort(), [tokenA, tokenB, tokenC].sort());
+  assert.equal(extractFirstImageUrl(`![ref][internal-ref]\n\n[internal-ref]: asset:${tokenB} "caption"`), `/i/${tokenB}`);
+  assert.match(rewriteMarkdownAssetUrls(markdownImages, (token) => `asset:mapped-${token}`), /asset:mapped-/);
+  assert.doesNotMatch(rewriteMarkdownAssetUrls(markdownImages, (token) => `asset:mapped-${token}`), /https:\/\/example\.com\/mapped-/);
+
   const maliciousMarkdown = [
     '<script>alert(1)</script>',
     '</script><script>alert(2)</script>',

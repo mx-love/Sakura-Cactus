@@ -52,6 +52,10 @@ function normalizeImageUrl(url: string): string {
   return `/i/${trimmed.slice('asset:'.length).trim()}`;
 }
 
+function parseMarkdownAst(markdown: string): any {
+  return unified().use(remarkParse).use(remarkGfm).parse(markdown);
+}
+
 function visitTree(node: any, visitor: (node: any, index?: number, parent?: any) => void, parent?: any) {
   if (!node || typeof node !== 'object') {
     return;
@@ -66,6 +70,118 @@ function visitTree(node: any, visitor: (node: any, index?: number, parent?: any)
   for (let index = 0; index < node.children.length; index += 1) {
     visitTree(node.children[index], (child) => visitor(child, index, node), node);
   }
+}
+
+function collectMarkdownImageUrls(markdown: string): string[] {
+  const tree = parseMarkdownAst(markdown);
+  const definitions = new Map<string, string>();
+  const urls: string[] = [];
+
+  visitTree(tree, (node) => {
+    if (node?.type === 'definition' && typeof node.identifier === 'string' && typeof node.url === 'string') {
+      definitions.set(node.identifier.toLowerCase(), node.url);
+    }
+  });
+
+  visitTree(tree, (node) => {
+    if (node?.type === 'image' && typeof node.url === 'string') {
+      urls.push(node.url);
+      return;
+    }
+
+    if (node?.type === 'imageReference' && typeof node.identifier === 'string') {
+      const url = definitions.get(node.identifier.toLowerCase());
+
+      if (url) {
+        urls.push(url);
+      }
+    }
+  });
+
+  return urls;
+}
+
+function extractInternalAssetTokenFromUrl(url: string): string | null {
+  const trimmed = url.trim();
+
+  if (trimmed.startsWith('asset:')) {
+    const token = trimmed.slice('asset:'.length).trim();
+    return ASSET_TOKEN_PATTERN.test(token) ? token : null;
+  }
+
+  if (trimmed.startsWith('/i/')) {
+    const token = trimmed.slice('/i/'.length).trim();
+    return ASSET_TOKEN_PATTERN.test(token) ? token : null;
+  }
+
+  return null;
+}
+
+function replaceUrlInNodeSpan(markdown: string, span: { start?: { offset?: number }; end?: { offset?: number } }, url: string, nextUrl: string): string {
+  const start = span.start?.offset;
+  const end = span.end?.offset;
+
+  if (typeof start !== 'number' || typeof end !== 'number' || start < 0 || end > markdown.length || start >= end) {
+    return markdown;
+  }
+
+  const before = markdown.slice(0, start);
+  const body = markdown.slice(start, end);
+  const after = markdown.slice(end);
+  const index = body.indexOf(url);
+
+  if (index < 0) {
+    return markdown;
+  }
+
+  return `${before}${body.slice(0, index)}${nextUrl}${body.slice(index + url.length)}${after}`;
+}
+
+export function rewriteMarkdownAssetUrls(markdown: string, rewrite: (token: string, rawUrl: string) => string | null): string {
+  const tree = parseMarkdownAst(markdown);
+  const replacements: Array<{ start: number; end: number; url: string; nextUrl: string }> = [];
+
+  visitTree(tree, (node) => {
+    if (node?.type !== 'image' && node?.type !== 'definition') {
+      return;
+    }
+
+    if (typeof node.url !== 'string') {
+      return;
+    }
+
+    const token = extractInternalAssetTokenFromUrl(node.url);
+
+    if (!token) {
+      return;
+    }
+
+    const nextUrl = rewrite(token, node.url);
+
+    if (!nextUrl || nextUrl === node.url) {
+      return;
+    }
+
+    const start = node.position?.start?.offset;
+    const end = node.position?.end?.offset;
+
+    if (typeof start === 'number' && typeof end === 'number') {
+      replacements.push({ start, end, url: node.url, nextUrl });
+    }
+  });
+
+  let output = markdown;
+
+  for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
+    output = replaceUrlInNodeSpan(
+      output,
+      { start: { offset: replacement.start }, end: { offset: replacement.end } },
+      replacement.url,
+      replacement.nextUrl
+    );
+  }
+
+  return output;
 }
 
 function getNodeText(node: any): string {
@@ -700,20 +816,12 @@ export function addHeadingIdsToHtml(html: string): { html: string; headings: Mar
 }
 
 export function extractFirstImageUrl(markdown: string): string | null {
-  const pattern = /!\[[^\]]*]\(([^)]+)\)/g;
-  let match: RegExpExecArray | null;
+  for (const rawUrl of collectMarkdownImageUrls(markdown)) {
+    const url = rawUrl.trim();
 
-  while ((match = pattern.exec(markdown)) !== null) {
-    const url = match[1].trim();
-
-    if (url.startsWith('asset:')) {
-      const token = url.slice('asset:'.length).trim();
-      return ASSET_TOKEN_PATTERN.test(token) ? `/i/${token}` : null;
-    }
-
-    if (url.startsWith('/i/')) {
-      const token = url.slice('/i/'.length).trim();
-      return ASSET_TOKEN_PATTERN.test(token) ? `/i/${token}` : null;
+    const token = extractInternalAssetTokenFromUrl(url);
+    if (token) {
+      return `/i/${token}`;
     }
 
     if (isSafeImageUrl(url)) {
@@ -726,11 +834,13 @@ export function extractFirstImageUrl(markdown: string): string | null {
 
 export function extractAssetTokens(markdown: string): string[] {
   const tokens = new Set<string>();
-  const pattern = /!\[[^\]]*]\(\s*(?:asset:|\/i\/)([A-Za-z0-9_-]{24,64})\s*\)/g;
-  let match: RegExpExecArray | null;
 
-  while ((match = pattern.exec(markdown)) !== null) {
-    tokens.add(match[1]);
+  for (const url of collectMarkdownImageUrls(markdown)) {
+    const token = extractInternalAssetTokenFromUrl(url);
+
+    if (token) {
+      tokens.add(token);
+    }
   }
 
   return [...tokens];

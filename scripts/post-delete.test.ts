@@ -42,9 +42,12 @@ class SqliteD1Statement {
 }
 
 class SqliteD1Database {
+  readonly preparedQueries: string[] = [];
+
   constructor(readonly db: DatabaseSync) {}
 
   prepare(query: string) {
+    this.preparedQueries.push(query);
     return new SqliteD1Statement(this.db, query);
   }
 
@@ -390,6 +393,95 @@ async function testPostDeleteService(): Promise<void> {
 
   assert.ok(await service.getAdminPost('p-update'));
   assert.ok(await service.getPublicPostBySlug('published-post'));
+  const coverPost = await service.getPublicPostBySlug('cover-shared-other');
+  assert.equal(coverPost?.coverImageUrl, `/i/${coverSharedToken}`);
+
+  sqliteD1.db.prepare(
+    `INSERT INTO assets (
+      id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+      visibility, usage_count, created_by, created_at, updated_at, deleted_at
+    ) VALUES ('asset-svg-cover', ?, 'r2-svg-cover', 'cover.svg', 'image/svg+xml', 10, NULL, NULL, NULL, 'public', 1, 'u1', ?, ?, NULL)`
+  ).run('S'.repeat(24), now, now);
+  sqliteD1.db.prepare(
+    `INSERT INTO assets (
+      id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+      visibility, usage_count, created_by, created_at, updated_at, deleted_at
+    ) VALUES ('asset-fallback-cover', ?, 'r2-fallback-cover', 'fallback.png', 'image/png', 10, NULL, NULL, NULL, 'public', 1, 'u1', ?, ?, NULL)`
+  ).run('F'.repeat(24), now, now);
+  sqliteD1.db.prepare(
+    `INSERT INTO posts (
+      id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+      seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+    ) VALUES ('p-svg-cover', 'svg-cover', 'SVG Cover', NULL, ?, NULL, 'asset-svg-cover', 'published', 'public', NULL, NULL, 1, 1, ?, NULL, ?, ?)`
+  ).run(`![fallback](asset:${'F'.repeat(24)})`, now, now, now);
+  assert.equal((await service.getPublicPostBySlug('svg-cover'))?.coverImageUrl, `/i/${'F'.repeat(24)}`);
+
+  const manyTokens = Array.from({ length: 60 }, (_, index) => `M${String(index).padStart(23, '0')}`);
+  for (const [index, token] of manyTokens.entries()) {
+    sqliteD1.db.prepare(
+      `INSERT INTO assets (
+        id, token, r2_key, original_filename, mime_type, size_bytes, width, height, sha256,
+        visibility, usage_count, created_by, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, 'image/png', 10, NULL, NULL, NULL, 'draft', 0, 'u1', ?, ?, NULL)`
+    ).run(`asset-many-${index}`, token, `r2-many-${index}`, `many-${index}.png`, now, now);
+  }
+  sqliteD1.preparedQueries.length = 0;
+  const manyPost = await service.createAdminPost({
+    title: 'Many Images',
+    excerpt: '',
+    contentMarkdown: manyTokens.map((token) => `![many](asset:${token})`).join('\n'),
+    status: 'published',
+    visibility: 'public',
+    tags: 'bulk'
+  });
+  assert.equal(countRows(sqliteD1.db, 'SELECT COUNT(*) AS count FROM post_assets WHERE post_id = ?', manyPost.id), 60);
+  assert.equal(sqliteD1.preparedQueries.filter((query) => /WHERE token = \?/i.test(query)).length, 0);
+  assert.ok(sqliteD1.preparedQueries.some((query) => /WHERE token IN \(/i.test(query)));
+
+  await assert.rejects(
+    () =>
+      service.createAdminPost({
+        title: 'Missing Asset',
+        excerpt: '',
+        contentMarkdown: `![missing](asset:${'Z'.repeat(24)})`,
+        status: 'published',
+        visibility: 'public',
+        tags: ''
+      }),
+    /referenced images/
+  );
+  assert.equal(countRows(sqliteD1.db, "SELECT COUNT(*) AS count FROM posts WHERE title = 'Missing Asset'"), 0);
+  const beforeFailedUpdate = sqliteD1.db.prepare('SELECT content_markdown FROM posts WHERE id = ?').get('p-update') as { content_markdown: string };
+  await assert.rejects(
+    () =>
+      service.updateAdminPost('p-update', {
+        title: 'Update Missing Asset',
+        excerpt: '',
+        contentMarkdown: `![missing](asset:${'Y'.repeat(24)})`,
+        status: 'published',
+        visibility: 'public',
+        tags: ''
+      }),
+    /referenced images/
+  );
+  const afterFailedUpdate = sqliteD1.db.prepare('SELECT content_markdown FROM posts WHERE id = ?').get('p-update') as { content_markdown: string };
+  assert.equal(afterFailedUpdate.content_markdown, beforeFailedUpdate.content_markdown);
+
+  sqliteD1.db.prepare("INSERT INTO tags (id, name, slug, color, created_at, updated_at) VALUES ('tag-timeline', 'Timeline', 'timeline', NULL, ?, ?)").run(now, now);
+  const insertTimelinePost = sqliteD1.db.prepare(
+    `INSERT INTO posts (
+      id, slug, title, excerpt, content_markdown, content_html, cover_asset_id, status, visibility,
+      seo_title, seo_description, reading_time_minutes, word_count, published_at, pinned_at, created_at, updated_at
+    ) VALUES (?, ?, ?, NULL, 'body', NULL, NULL, 'published', 'public', NULL, NULL, 1, 1, ?, NULL, ?, ?)`
+  );
+  for (let index = 0; index < 105; index += 1) {
+    const postId = `timeline-${index}`;
+    insertTimelinePost.run(postId, `timeline-${index}`, `Timeline ${index}`, now, now, now);
+    sqliteD1.db.prepare('INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)').run(postId, 'tag-timeline');
+  }
+  const timelinePosts = await service.getPublicPosts({ limit: 150, excludeAbout: true, pinnedFirst: false });
+  assert.ok(timelinePosts.length >= 105);
+  assert.equal(timelinePosts.filter((post) => post.tags.some((tag) => tag.slug === 'timeline')).length, 105);
 
   await assert.rejects(
     () =>

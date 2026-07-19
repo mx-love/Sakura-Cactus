@@ -1,7 +1,16 @@
 import { randomBytes } from '@/features/auth/crypto.service';
 import { getDb, nowIso } from '@/lib/db';
 import type { TagRow } from '@/lib/database.types';
-import { findTagByName, listPublicPostsByTagSlug, listPublicTags, replacePostTags, tagSlugExists, createTag, listTagsForPost } from './tag.repo';
+import {
+  findTagByName,
+  getPostTagReplacementStatements,
+  listPublicPostsByTagSlug,
+  listPublicTags,
+  replacePostTags,
+  tagSlugExists,
+  createTag,
+  listTagsForPost
+} from './tag.repo';
 import { toPublicPostSummary, type PublicPostSummary } from '@/features/posts/post.types';
 
 const TAG_SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -64,6 +73,13 @@ async function createUniqueTagSlug(db: D1Database, name: string): Promise<string
 }
 
 export async function syncPostTags(db: D1Database, postId: string, tagNames: string[]): Promise<TagRow[]> {
+  const { tags } = await preparePostTags(db, tagNames);
+
+  await replacePostTags(db, postId, tags.map((tag) => tag.id));
+  return tags;
+}
+
+export async function preparePostTags(db: D1Database, tagNames: string[]): Promise<{ tags: TagRow[]; tagIds: string[] }> {
   const tags: TagRow[] = [];
 
   for (const name of tagNames) {
@@ -72,8 +88,11 @@ export async function syncPostTags(db: D1Database, postId: string, tagNames: str
     tags.push(tag);
   }
 
-  await replacePostTags(db, postId, tags.map((tag) => tag.id));
-  return tags;
+  return { tags, tagIds: tags.map((tag) => tag.id) };
+}
+
+export function getPostTagSyncStatements(db: D1Database, postId: string, tagIds: string[]): D1PreparedStatement[] {
+  return getPostTagReplacementStatements(db, postId, tagIds);
 }
 
 export async function getPostTags(db: D1Database, postId: string): Promise<TagRow[]> {
