@@ -2,7 +2,6 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
 import CommentSlot from '@/components/comments/CommentSlot.astro';
-import ArticleImageViewer from '@/components/posts/ArticleImageViewer.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdjacentPublicPosts, getAdminPostBySlug, getPublicPostBySlug } from '@/features/posts/post.service';
 import { addHeadingIdsToHtml } from '@/features/posts/post.renderer';
@@ -168,12 +167,7 @@ function formatDate(date: Date | null) {
             ) : null}
           </div>
         </header>
-        <div
-          class="sc-prose prose-content sc-article-prose sc-article-inner"
-          data-article-images={publicPost ? 'true' : undefined}
-          set:html={renderedContent.html}
-        />
-        {publicPost ? <ArticleImageViewer /> : null}
+        <div class="sc-prose prose-content sc-article-prose sc-article-inner" set:html={renderedContent.html} />
         <CommentSlot enabled={siteSettings.commentEnabled} serverURL={commentsServerURL} path={`/posts/${post.slug}`} />
         {previousPost || nextPost ? (
           <footer class="sc-article-nav sc-article-inner" aria-label="文章导航">
@@ -530,21 +524,6 @@ function formatDate(date: Date | null) {
 
           window.addEventListener('pageshow', bindArticleCodeCopyControls);
         </script>
-        {publicPost ? (
-          <script>
-            import { bindArticleImageViewer } from '@/lib/article-image-viewer';
-
-            function bindPublicArticleImageViewer() {
-              bindArticleImageViewer();
-            }
-
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', bindPublicArticleImageViewer, { once: true });
-            } else {
-              bindPublicArticleImageViewer();
-            }
-          </script>
-        ) : null}
       </div>
     </div>
   </article>

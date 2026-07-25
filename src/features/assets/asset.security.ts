@@ -16,10 +16,6 @@ const ALLOWED_EXTENSIONS_BY_MIME: Record<string, Set<string>> = {
   'image/gif': new Set(['gif'])
 };
 
-const MAX_DOWNLOAD_FILENAME_LENGTH = 120;
-const UNSAFE_DOWNLOAD_FILENAME_CHARS =
-  /[\u0000-\u001F\u007F-\u009F\u2028\u2029\u202A-\u202E\u2066-\u2069/\\:"'<>|?*;]/g;
-
 export class AssetValidationError extends Error {
   constructor(
     public readonly code: string,
@@ -93,66 +89,6 @@ export function sanitizeOriginalFilename(value: string): string | null {
 
 export function extensionForMimeType(mimeType: string): string {
   return EXTENSIONS_BY_MIME[mimeType] ?? 'bin';
-}
-
-function truncateCodePoints(value: string, maxLength: number): string {
-  return Array.from(value).slice(0, maxLength).join('');
-}
-
-function downloadFilenameStem(originalFilename: string | null): string {
-  let value = (originalFilename ?? '')
-    .normalize('NFKC')
-    .replace(/[\uD800-\uDFFF]/g, '_')
-    .replace(UNSAFE_DOWNLOAD_FILENAME_CHARS, '_')
-    .replace(/\s+/g, ' ')
-    .replace(/_+/g, '_')
-    .trim();
-  const extensionIndex = value.lastIndexOf('.');
-
-  if (extensionIndex > 0) {
-    value = value.slice(0, extensionIndex);
-  }
-
-  return value.replace(/^[\s._-]+|[\s._-]+$/g, '') || 'image';
-}
-
-export function buildAssetDownloadFilename(originalFilename: string | null, mimeType: string): string {
-  const extension = extensionForMimeType(mimeType.trim().toLowerCase());
-  const maxStemLength = MAX_DOWNLOAD_FILENAME_LENGTH - extension.length - 1;
-  const stem = truncateCodePoints(downloadFilenameStem(originalFilename), maxStemLength)
-    .replace(/[\s._-]+$/g, '') || 'image';
-
-  return `${stem}.${extension}`;
-}
-
-function buildAsciiDownloadFilename(filename: string): string {
-  const extensionIndex = filename.lastIndexOf('.');
-  const extension = extensionIndex >= 0 ? filename.slice(extensionIndex + 1) : 'bin';
-  const stem = extensionIndex >= 0 ? filename.slice(0, extensionIndex) : filename;
-  const maxStemLength = MAX_DOWNLOAD_FILENAME_LENGTH - extension.length - 1;
-  const normalizedStem = stem
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036F]/g, '')
-    .replace(/[^\x20-\x7E]/g, '_')
-    .replace(/[^A-Za-z0-9._-]+/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^[._-]+|[._-]+$/g, '');
-  const asciiStem = truncateCodePoints(normalizedStem, maxStemLength).replace(/[._-]+$/g, '') || 'image';
-
-  return `${asciiStem}.${extension}`;
-}
-
-function encodeRfc5987Value(value: string): string {
-  return encodeURIComponent(value).replace(/['()*]/g, (character) =>
-    `%${character.charCodeAt(0).toString(16).toUpperCase()}`
-  );
-}
-
-export function buildAssetDownloadContentDisposition(originalFilename: string | null, mimeType: string): string {
-  const filename = buildAssetDownloadFilename(originalFilename, mimeType);
-  const asciiFilename = buildAsciiDownloadFilename(filename);
-
-  return `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeRfc5987Value(filename)}`;
 }
 
 export function isValidAssetToken(token: string): boolean {

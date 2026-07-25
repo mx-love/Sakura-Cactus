@@ -1,11 +1,5 @@
 import assert from 'node:assert/strict';
-import {
-  assertValidImageBytes,
-  assertValidImageFile,
-  buildAssetDownloadContentDisposition,
-  buildAssetDownloadFilename,
-  sanitizeOriginalFilename
-} from '../src/features/assets/asset.security.ts';
+import { assertValidImageBytes, assertValidImageFile, sanitizeOriginalFilename } from '../src/features/assets/asset.security.ts';
 import { clearRateLimitWithDb, consumeRateLimitWithDb, getRateLimitWindow } from '../src/features/rate-limit/rate-limit.core.ts';
 import { extractAssetTokens, extractFirstImageUrl, renderMarkdown, rewriteMarkdownAssetUrls } from '../src/features/posts/post.renderer.ts';
 import {
@@ -398,17 +392,6 @@ function testUploads(): void {
   assert.throws(() => assertValidImageBytes(new Uint8Array([0xff, 0xd8, 0xff]), 'image/png'), /does not match/);
   assert.throws(() => assertValidImageBytes(new Uint8Array([0x89, 0x50, 0x4e]), 'image/png'), /does not match/);
   assert.equal(sanitizeOriginalFilename('..\\evil/\r\nname.png'), '.._evil_name.png');
-
-  assert.equal(buildAssetDownloadFilename('..\\evil/\r\n"报告.svg', 'image/png'), 'evil_报告.png');
-  assert.equal(buildAssetDownloadFilename(null, 'image/webp'), 'image.webp');
-  assert.equal(buildAssetDownloadFilename('../\\\r\n"\';.gif', 'image/gif'), 'image.gif');
-  const longFilename = buildAssetDownloadFilename(`${'a'.repeat(500)}.png`, 'image/jpeg');
-  assert.equal(Array.from(longFilename).length, 120);
-  assert.match(longFilename, /\.jpg$/);
-  assert.equal(
-    buildAssetDownloadContentDisposition('..\\evil/\r\n"报告.svg', 'image/png'),
-    'attachment; filename="evil.png"; filename*=UTF-8\'\'evil_%E6%8A%A5%E5%91%8A.png'
-  );
 }
 
 function testMarkdown(): void {
@@ -457,16 +440,6 @@ function testMarkdown(): void {
   assert.doesNotMatch(sanitizedHtml, /<(iframe|object|embed|svg|math)\b/i);
   assert.doesNotMatch(sanitizedHtml, /<[^>]+\sstyle=/i);
   assert.match(sanitizedHtml, /href="https:\/\/example\.com\/"/);
-
-  const imageHtml = renderMarkdown(
-    '![first](https://example.com/first.png)\n\n![second](https://example.com/second.png)'
-  );
-  const imageTags = imageHtml.match(/<img\b[^>]*>/g) ?? [];
-  assert.equal(imageTags.length, 2);
-  assert.match(imageTags[0], /decoding="async"/);
-  assert.doesNotMatch(imageTags[0], /\sloading=/);
-  assert.match(imageTags[1], /decoding="async"/);
-  assert.match(imageTags[1], /loading="lazy"/);
 }
 
 await testRateLimit();

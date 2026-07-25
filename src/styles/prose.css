@@ -479,42 +479,6 @@
   box-shadow: 0 14px 34px rgba(102, 66, 82, 0.055);
 }
 
-.sc-article-prose[data-article-images="true"] img {
-  display: block;
-  inline-size: auto;
-  width: auto;
-  max-inline-size: 100%;
-  max-width: 100%;
-  block-size: auto;
-  height: auto;
-  max-block-size: none;
-  max-height: none;
-  margin-block: clamp(1.25rem, 3vw, 2rem);
-  margin-inline: auto;
-  border-radius: var(--radius-md);
-  cursor: zoom-in;
-}
-
-.sc-article-prose[data-article-images="true"] img.article-image--landscape {
-  max-inline-size: 100%;
-  max-width: 100%;
-}
-
-.sc-article-prose[data-article-images="true"] img.article-image--square {
-  max-inline-size: min(86%, 700px);
-  max-width: min(86%, 700px);
-}
-
-.sc-article-prose[data-article-images="true"] img.article-image--portrait {
-  max-inline-size: min(72%, 620px);
-  max-width: min(72%, 620px);
-}
-
-.sc-article-prose[data-article-images="true"] img.article-image--long {
-  max-inline-size: min(64%, 540px);
-  max-width: min(64%, 540px);
-}
-
 .sc-prose .sc-prose-image-paragraph,
 .prose-content .sc-prose-image-paragraph {
   text-align: center;
@@ -533,33 +497,6 @@
 .sc-prose .sc-prose-image-caption em,
 .prose-content .sc-prose-image-caption em {
   font-style: italic;
-}
-
-@media (min-width: 761px) and (max-width: 1100px) {
-  .sc-article-prose[data-article-images="true"] img.article-image--square {
-    max-inline-size: min(96%, 700px);
-    max-width: min(96%, 700px);
-  }
-
-  .sc-article-prose[data-article-images="true"] img.article-image--portrait {
-    max-inline-size: min(88%, 620px);
-    max-width: min(88%, 620px);
-  }
-
-  .sc-article-prose[data-article-images="true"] img.article-image--long {
-    max-inline-size: min(82%, 540px);
-    max-width: min(82%, 540px);
-  }
-}
-
-@media (max-width: 760px) {
-  .sc-article-prose[data-article-images="true"] img.article-image--landscape,
-  .sc-article-prose[data-article-images="true"] img.article-image--square,
-  .sc-article-prose[data-article-images="true"] img.article-image--portrait,
-  .sc-article-prose[data-article-images="true"] img.article-image--long {
-    max-inline-size: 100%;
-    max-width: 100%;
-  }
 }
 
 @media (max-width: 640px) {
