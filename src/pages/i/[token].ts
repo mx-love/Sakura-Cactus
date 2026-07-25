@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAssetForToken } from '@/features/assets/asset.service';
+import { buildAssetDownloadContentDisposition } from '@/features/assets/asset.security';
 
 export const prerender = false;
 
@@ -44,7 +45,12 @@ export const GET: APIRoute = async (context) => {
     result.isPublic ? 'public, max-age=31536000, immutable' : 'private, no-store'
   );
   headers.set('X-Content-Type-Options', 'nosniff');
-  headers.set('Content-Disposition', 'inline');
+  headers.set(
+    'Content-Disposition',
+    new URL(context.request.url).searchParams.get('download') === '1'
+      ? buildAssetDownloadContentDisposition(result.asset.original_filename, result.asset.mime_type)
+      : 'inline'
+  );
   headers.set('Content-Length', String(result.object.size));
   headers.set('ETag', result.object.httpEtag);
 

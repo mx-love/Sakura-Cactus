@@ -248,6 +248,8 @@ function rehypeRewriteAssetImages() {
 
 function rehypeHardenLinksAndImages() {
   return (tree: any) => {
+    let hasSeenSafeImage = false;
+
     visitTree(tree, (node) => {
       if (node.type !== 'element') {
         return;
@@ -274,7 +276,14 @@ function rehypeHardenLinksAndImages() {
           return;
         }
 
-        node.properties.loading = 'lazy';
+        node.properties.decoding = 'async';
+
+        if (hasSeenSafeImage) {
+          node.properties.loading = 'lazy';
+        } else {
+          delete node.properties.loading;
+          hasSeenSafeImage = true;
+        }
       }
     });
   };
@@ -657,7 +666,7 @@ const sanitizeSchema: SanitizeSchema = {
     ...defaultSchema.attributes,
     a: [...(defaultSchema.attributes?.a ?? []), 'href', 'title', 'rel'],
     code: [...(defaultSchema.attributes?.code ?? []), 'className'],
-    img: [...(defaultSchema.attributes?.img ?? []), 'src', 'alt', 'title', 'loading'],
+    img: [...(defaultSchema.attributes?.img ?? []), 'src', 'alt', 'title', 'loading', 'decoding'],
     blockquote: [
       ...(defaultSchema.attributes?.blockquote ?? []),
       [

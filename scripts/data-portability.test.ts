@@ -12,6 +12,7 @@ import {
 import { createDataZip, parseDataZip } from '@/features/data-portability/data-portability.zip';
 import { BLOG_DATA_FORMAT, BLOG_DATA_VERSION } from '@/features/data-portability/data-portability.constants';
 import { SESSION_COOKIE_NAME } from '@/features/auth/auth.constants';
+import { hashSessionToken } from '@/features/auth/auth.service';
 import { GET as getImageByToken } from '@/pages/i/[token]';
 import { findAssetsByTokens } from '@/features/assets/asset.repo';
 import { getDb } from '@/lib/db';
@@ -175,6 +176,18 @@ function createDb(): SqliteD1Database {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       last_login_at TEXT
+    );
+
+    CREATE TABLE sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      user_agent TEXT,
+      ip_hash TEXT,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      revoked_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE assets (
@@ -806,10 +819,70 @@ async function testSvgImportAndServingRejected(): Promise<void> {
       ) VALUES ('asset-svg', ?, 'legacy-svg', 'legacy.svg', 'image/svg+xml', ?, NULL, NULL, ?, 'public', 0, 'env_admin', ?, ?, NULL)`
     )
     .run(svgToken, svgBytes.byteLength, await sha256(svgBytes), now, now);
-  const response = await getImageByToken({ params: { token: svgToken }, request: new Request('https://target.example/i/' + svgToken) } as any);
+  const response = await getImageByToken({
+    params: { token: svgToken },
+    request: new Request(`https://target.example/i/${svgToken}?download=1`)
+  } as any);
   assert.equal(response.status, 415);
   assert.notEqual(response.headers.get('Content-Type'), 'image/svg+xml');
-  assert.notEqual(response.headers.get('Content-Disposition'), 'inline');
+  assert.equal(response.headers.get('Content-Disposition'), null);
+}
+
+async function testImageDownloadResponse(): Promise<void> {
+  const { d1 } = await seedSource();
+  d1.db.prepare("UPDATE assets SET visibility = 'private' WHERE id = 'asset-temp'").run();
+  const inlineResponse = await getImageByToken({
+    params: { token: inlineToken },
+    request: new Request(`https://target.example/i/${inlineToken}`)
+  } as any);
+  assert.equal(inlineResponse.status, 200);
+  assert.equal(inlineResponse.headers.get('Content-Disposition'), 'inline');
+
+  const downloadResponse = await getImageByToken({
+    params: { token: inlineToken },
+    request: new Request(`https://target.example/i/${inlineToken}?download=1`)
+  } as any);
+  assert.equal(downloadResponse.status, 200);
+  assert.equal(
+    downloadResponse.headers.get('Content-Disposition'),
+    'attachment; filename="inline.png"; filename*=UTF-8\'\'inline.png'
+  );
+  assert.equal(downloadResponse.headers.get('Content-Type'), 'image/png');
+  assert.equal(downloadResponse.headers.get('Content-Length'), String(pngBytes.byteLength));
+  assert.equal(downloadResponse.headers.get('ETag'), '"r2-inline"');
+  assert.equal(downloadResponse.headers.get('X-Content-Type-Options'), 'nosniff');
+  assert.equal(downloadResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable');
+  assert.deepEqual(new Uint8Array(await downloadResponse.arrayBuffer()), pngBytes);
+
+  const privateDownloadResponse = await getImageByToken({
+    params: { token: tempToken },
+    request: new Request(`https://target.example/i/${tempToken}?download=1`)
+  } as any);
+  assert.equal(privateDownloadResponse.status, 404);
+  assert.equal(privateDownloadResponse.headers.get('Content-Disposition'), null);
+  assert.equal(privateDownloadResponse.headers.get('Cache-Control'), 'no-store');
+
+  const adminSessionToken = 'download-test-session-token';
+  const adminSessionHash = await hashSessionToken(adminSessionToken, 'local-test-session-secret-value-000000');
+  d1.db.prepare(
+    `INSERT INTO sessions (id, user_id, token_hash, user_agent, ip_hash, expires_at, created_at, revoked_at)
+     VALUES ('download-session', 'env_admin', ?, NULL, NULL, '2999-01-01T00:00:00.000Z', ?, NULL)`
+  ).run(adminSessionHash, now);
+  const adminDownloadResponse = await getImageByToken({
+    params: { token: tempToken },
+    request: new Request(`https://target.example/i/${tempToken}?download=1`, {
+      headers: {
+        cookie: `${SESSION_COOKIE_NAME}=${adminSessionToken}`
+      }
+    })
+  } as any);
+  assert.equal(adminDownloadResponse.status, 200);
+  assert.equal(
+    adminDownloadResponse.headers.get('Content-Disposition'),
+    'attachment; filename="temp.png"; filename*=UTF-8\'\'temp.png'
+  );
+  assert.equal(adminDownloadResponse.headers.get('Cache-Control'), 'private, no-store');
+  assert.deepEqual(new Uint8Array(await adminDownloadResponse.arrayBuffer()), pngBytes);
 }
 
 async function writeFixtures(jsonBytes: Uint8Array, zipBytes: Uint8Array): Promise<void> {
@@ -915,6 +988,7 @@ async function main(): Promise<void> {
   await testImportZipWithMedia(zipBytes);
   await testReuseAndConflicts(zipBytes, inlineSha);
   await testFailures(jsonBytes, zipBytes);
+  await testImageDownloadResponse();
   await testSvgImportAndServingRejected();
   await writeFixtures(jsonBytes, zipBytes);
   await verifyFixtures();
