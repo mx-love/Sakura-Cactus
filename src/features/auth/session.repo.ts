@@ -121,6 +121,7 @@ export async function findActiveSessionByTokenHash(
 export async function findActiveSessionRecordByTokenHash(
   db: D1Database,
   tokenHash: string,
+  expectedUserId: string,
   now = nowIso()
 ): Promise<SessionRow | null> {
   return db
@@ -128,11 +129,12 @@ export async function findActiveSessionRecordByTokenHash(
       `SELECT id, user_id, token_hash, user_agent, ip_hash, expires_at, created_at, revoked_at
        FROM sessions
        WHERE token_hash = ?
+         AND user_id = ?
          AND revoked_at IS NULL
          AND expires_at > ?
        LIMIT 1`
     )
-    .bind(tokenHash, now)
+    .bind(tokenHash, expectedUserId, now)
     .first<SessionRow>();
 }
 

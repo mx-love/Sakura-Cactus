@@ -275,13 +275,14 @@ export async function getCurrentAdminUser(context: APIContext): Promise<PublicAd
 
   const db = getDb(context);
   const tokenHash = await hashSessionToken(token, getSessionSecret());
-  const session = await findActiveSessionRecordByTokenHash(db, tokenHash);
+  const environmentAdmin = getEnvironmentAdminUser();
+  const session = await findActiveSessionRecordByTokenHash(db, tokenHash, environmentAdmin.id);
 
   if (!session) {
     return null;
   }
 
-  return getEnvironmentAdminUser();
+  return environmentAdmin;
 }
 
 export async function logoutAdmin(context: APIContext): Promise<void> {

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   copyFileSync,
   mkdirSync,
@@ -24,6 +25,11 @@ const wranglerCli = path.join(repoRoot, 'node_modules', 'wrangler', 'bin', 'wran
 const databaseName = 'sakura_blog_prod';
 const testPort = 8796;
 const testOrigin = `http://127.0.0.1:${testPort}`;
+const testSessionSecret = 'session-boundary-test-secret'.padEnd(48, '-');
+const environmentAdminSessionToken = 'environment-admin-session-token';
+const foreignSessionToken = 'foreign-user-session-token';
+const revokedSessionToken = 'revoked-environment-admin-session-token';
+const expiredSessionToken = 'expired-environment-admin-session-token';
 const wranglerEnv = {
   ...process.env,
   CI: '1',
@@ -101,9 +107,106 @@ function findSqliteFiles(root) {
 }
 
 function openPersistedD1(persistPath) {
-  const sqliteFiles = findSqliteFiles(persistPath);
+  const sqliteFiles = findSqliteFiles(persistPath).filter((filePath) =>
+    filePath.includes(`${path.sep}d1${path.sep}`)
+  );
   assert.equal(sqliteFiles.length, 1, `Expected one persisted D1 database, found ${sqliteFiles.length}.`);
   return new DatabaseSync(sqliteFiles[0]);
+}
+
+function hashSessionToken(token) {
+  return createHash('sha256').update(`${testSessionSecret}.${token}`).digest('base64url');
+}
+
+function sessionCookie(token) {
+  return `sakura_session=${encodeURIComponent(token)}`;
+}
+
+function seedSessionBoundaryFixtures(persistPath) {
+  const db = openPersistedD1(persistPath);
+  const now = new Date();
+  const insertSession = db.prepare(
+    `INSERT OR REPLACE INTO sessions (
+      id, user_id, token_hash, user_agent, ip_hash, expires_at, created_at, revoked_at
+    ) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)`
+  );
+
+  try {
+    db.prepare(
+      `INSERT INTO users (
+        id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
+      ) VALUES (?, NULL, ?, ?, ?, 'admin', 'active', ?, ?, NULL)
+      ON CONFLICT(id) DO UPDATE SET
+        username = excluded.username,
+        display_name = excluded.display_name,
+        password_hash = excluded.password_hash,
+        role = 'admin',
+        status = 'active',
+        updated_at = excluded.updated_at`
+    ).run(
+      'env_admin',
+      '__env_admin__',
+      'Environment administrator',
+      '__environment_password__',
+      now.toISOString(),
+      now.toISOString()
+    );
+    insertSession.run(
+      'auth-boundary-environment-session',
+      'env_admin',
+      hashSessionToken(environmentAdminSessionToken),
+      new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+      now.toISOString(),
+      null
+    );
+    insertSession.run(
+      'auth-boundary-foreign-session',
+      'fixture-user',
+      hashSessionToken(foreignSessionToken),
+      new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+      now.toISOString(),
+      null
+    );
+    insertSession.run(
+      'auth-boundary-revoked-session',
+      'env_admin',
+      hashSessionToken(revokedSessionToken),
+      new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+      now.toISOString(),
+      now.toISOString()
+    );
+    insertSession.run(
+      'auth-boundary-expired-session',
+      'env_admin',
+      hashSessionToken(expiredSessionToken),
+      new Date(now.getTime() - 60 * 60 * 1000).toISOString(),
+      new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+      null
+    );
+  } finally {
+    db.close();
+  }
+
+  return {
+    environmentAdmin: sessionCookie(environmentAdminSessionToken),
+    foreign: sessionCookie(foreignSessionToken),
+    revoked: sessionCookie(revokedSessionToken),
+    expired: sessionCookie(expiredSessionToken)
+  };
+}
+
+function assertLoggedOutEnvironmentAdminSession(persistPath, tokenHash) {
+  const db = openPersistedD1(persistPath);
+
+  try {
+    const session = db
+      .prepare('SELECT user_id, revoked_at FROM sessions WHERE token_hash = ?')
+      .get(tokenHash);
+    assert.equal(session?.user_id, 'env_admin');
+    assert.ok(session?.revoked_at, 'Logout should revoke the environment administrator session.');
+  } finally {
+    db.close();
+  }
 }
 
 function plain(value) {
@@ -258,7 +361,7 @@ INSERT INTO post_view_counts (post_id, count, updated_at) VALUES
   );
 }
 
-async function waitForServer(child, output) {
+async function waitForServer(child, output, origin = testOrigin) {
   const deadline = Date.now() + 30_000;
 
   while (Date.now() < deadline) {
@@ -267,7 +370,7 @@ async function waitForServer(child, output) {
     }
 
     try {
-      const response = await fetch(`${testOrigin}/?fresh=1`, {
+      const response = await fetch(`${origin}/?fresh=1`, {
         signal: AbortSignal.timeout(5_000)
       });
 
@@ -328,7 +431,14 @@ async function login() {
   assert.equal(response.status, 200);
   const setCookie = response.headers.get('set-cookie');
   assert.ok(setCookie);
-  return setCookie.split(';', 1)[0];
+  assert.match(setCookie, /(?:^|;)\s*Path=\//i);
+  assert.match(setCookie, /(?:^|;)\s*Max-Age=604800(?:;|$)/i);
+  assert.match(setCookie, /(?:^|;)\s*HttpOnly(?:;|$)/i);
+  assert.match(setCookie, /(?:^|;)\s*Secure(?:;|$)/i);
+  assert.match(setCookie, /(?:^|;)\s*SameSite=Lax(?:;|$)/i);
+  const cookie = setCookie.split(';', 1)[0];
+  const token = decodeURIComponent(cookie.slice(cookie.indexOf('=') + 1));
+  return { cookie, tokenHash: hashSessionToken(token) };
 }
 
 async function inspectAndImport(file, cookie, media) {
@@ -375,6 +485,7 @@ async function inspectAndImport(file, cookie, media) {
 
 async function runHttpSmoke(persistPath, { testZip }) {
   const output = [];
+  const sessionFixtures = seedSessionBoundaryFixtures(persistPath);
   const child = spawn(
     process.execPath,
     [
@@ -399,6 +510,8 @@ async function runHttpSmoke(persistPath, { testZip }) {
       '--var',
       'ADMIN_PASSWORD:smoke-password',
       '--var',
+      `SESSION_SECRET:${testSessionSecret}`,
+      '--var',
       `SITE_URL:${testOrigin}`
     ],
     {
@@ -414,6 +527,32 @@ async function runHttpSmoke(persistPath, { testZip }) {
   try {
     await waitForServer(child, output);
 
+    console.log('  HTTP: strict environment administrator session boundary');
+    const environmentAdminApiResponse = await request('/api/admin/data-portability/summary', {
+      headers: { Cookie: sessionFixtures.environmentAdmin }
+    });
+    assert.equal(environmentAdminApiResponse.status, 200);
+    const environmentAdminPageResponse = await request('/settings/data', {
+      headers: { Cookie: sessionFixtures.environmentAdmin }
+    });
+    assert.equal(environmentAdminPageResponse.status, 200);
+    const foreignApiResponse = await request('/api/admin/data-portability/summary', {
+      headers: { Cookie: sessionFixtures.foreign }
+    });
+    assert.equal(foreignApiResponse.status, 401);
+    const foreignPageResponse = await request('/settings/data', {
+      headers: { Cookie: sessionFixtures.foreign },
+      redirect: 'manual'
+    });
+    assert.equal(foreignPageResponse.status, 302);
+    assert.match(foreignPageResponse.headers.get('location') ?? '', /^\/admin\/login\?next=/);
+    for (const cookie of [sessionFixtures.revoked, sessionFixtures.expired, 'sakura_session=invalid-session-token']) {
+      const rejectedResponse = await request('/api/admin/data-portability/summary', {
+        headers: { Cookie: cookie }
+      });
+      assert.equal(rejectedResponse.status, 401);
+    }
+
     console.log('  HTTP: public pages and login page');
     for (const pathname of ['/?fresh=1', '/about?fresh=1', '/posts/live?fresh=1', '/admin/login']) {
       const response = await request(pathname);
@@ -421,7 +560,11 @@ async function runHttpSmoke(persistPath, { testZip }) {
     }
 
     console.log('  HTTP: admin login and data page');
-    const cookie = await login();
+    const { cookie, tokenHash } = await login();
+    const currentAdminResponse = await request('/api/auth/me', {
+      headers: { Cookie: cookie }
+    });
+    assert.equal(currentAdminResponse.status, 200);
     const dataPage = await request('/settings/data', {
       headers: { Cookie: cookie }
     });
@@ -514,7 +657,108 @@ async function runHttpSmoke(persistPath, { testZip }) {
       await inspectAndImport(zipFile, cookie, true);
     }
 
+    console.log('  HTTP: logout revokes the environment administrator session');
+    const logoutResponse = await request('/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        Origin: testOrigin
+      }
+    });
+    assert.equal(logoutResponse.status, 200);
+    const expiredCookie = logoutResponse.headers.get('set-cookie') ?? '';
+    assert.match(expiredCookie, /(?:^|;)\s*Max-Age=0(?:;|$)/i);
+    assert.match(expiredCookie, /(?:^|;)\s*HttpOnly(?:;|$)/i);
+    assert.match(expiredCookie, /(?:^|;)\s*Secure(?:;|$)/i);
+    assert.match(expiredCookie, /(?:^|;)\s*SameSite=Lax(?:;|$)/i);
+    const loggedOutApiResponse = await request('/api/admin/data-portability/summary', {
+      headers: { Cookie: cookie }
+    });
+    assert.equal(loggedOutApiResponse.status, 401);
+    const loggedOutPageResponse = await request('/settings/data', {
+      headers: { Cookie: cookie },
+      redirect: 'manual'
+    });
+    assert.equal(loggedOutPageResponse.status, 302);
+
+    if (testZip) {
+      console.log('  HTTP: login rate limit remains enforced');
+      for (let attempt = 1; attempt <= 11; attempt += 1) {
+        const response = await request('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Origin: testOrigin
+          },
+          body: JSON.stringify({ username: 'invalid-admin', password: 'invalid-password' })
+        });
+        assert.equal(response.status, attempt <= 10 ? 401 : 429);
+      }
+    }
+
     assert.doesNotMatch(output.join(''), /BEGIN TRANSACTION|SAVEPOINT statements/i);
+    return tokenHash;
+  } finally {
+    await stopServer(child);
+  }
+}
+
+async function runMissingAuthConfigurationSmoke(persistPath) {
+  const port = testPort + 1;
+  const origin = `http://127.0.0.1:${port}`;
+  const output = [];
+  const child = spawn(
+    process.execPath,
+    [
+      wranglerCli,
+      'dev',
+      '--local',
+      '--config',
+      path.join(repoRoot, 'dist', 'server', 'wrangler.json'),
+      '--persist-to',
+      persistPath,
+      '--ip',
+      '127.0.0.1',
+      '--port',
+      String(port),
+      '--inspector-port',
+      String(port + 1000),
+      '--show-interactive-dev-session=false',
+      '--log-level',
+      'error',
+      '--var',
+      'ADMIN_USERNAME:',
+      '--var',
+      'ADMIN_PASSWORD:smoke-password',
+      '--var',
+      `SESSION_SECRET:${testSessionSecret}`,
+      '--var',
+      `SITE_URL:${origin}`
+    ],
+    {
+      cwd: repoRoot,
+      env: wranglerEnv,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    }
+  );
+  child.stdout.on('data', (chunk) => output.push(chunk.toString()));
+  child.stderr.on('data', (chunk) => output.push(chunk.toString()));
+
+  try {
+    await waitForServer(child, output, origin);
+    const response = await fetch(`${origin}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: origin
+      },
+      body: JSON.stringify({ username: 'not-configured', password: 'not-configured' }),
+      signal: AbortSignal.timeout(20_000)
+    });
+    assert.equal(response.status, 503);
+    const payload = await response.json();
+    assert.equal(payload.error?.code, 'AUTH_UNAVAILABLE');
   } finally {
     await stopServer(child);
   }
@@ -544,7 +788,8 @@ let beforeHttp;
 }
 
 console.log('Wrangler HTTP path B: serving the 0009 database without runtime migration.');
-await runHttpSmoke(upgradePersistPath, { testZip: false });
+const preMigrationLoginTokenHash = await runHttpSmoke(upgradePersistPath, { testZip: false });
+assertLoggedOutEnvironmentAdminSession(upgradePersistPath, preMigrationLoginTokenHash);
 {
   const db = openPersistedD1(upgradePersistPath);
   assertDatabaseHealthy(db);
@@ -612,6 +857,10 @@ writeFileSync(
 executeFile(v9ConfigPath, upgradePersistPath, postMigrationHttpSetupPath);
 
 console.log('Wrangler HTTP path B: serving the migrated 0010 database.');
-await runHttpSmoke(upgradePersistPath, { testZip: true });
+const migratedLoginTokenHash = await runHttpSmoke(upgradePersistPath, { testZip: true });
+assertLoggedOutEnvironmentAdminSession(upgradePersistPath, migratedLoginTokenHash);
+
+console.log('Wrangler auth configuration path: missing administrator username fails closed.');
+await runMissingAuthConfigurationSmoke(upgradePersistPath);
 
 console.log('Wrangler local D1 migration and HTTP checks passed.');
