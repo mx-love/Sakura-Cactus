@@ -1,16 +1,7 @@
-export const ARTICLE_IMAGE_VIEWER_MIN_ZOOM = 0.5;
-export const ARTICLE_IMAGE_VIEWER_FIT_ZOOM = 1;
+export const ARTICLE_IMAGE_VIEWER_MIN_ZOOM = 1;
 export const ARTICLE_IMAGE_VIEWER_MAX_ZOOM = 4;
 export type ArticleImageViewerTransform = { zoom: number; panX: number; panY: number };
 export type ArticleImageViewerBounds = { imageWidth: number; imageHeight: number; stageWidth: number; stageHeight: number };
-export type ArticleImageViewerPoint = { x: number; y: number };
-export type ArticleImageViewerPinch = {
-  initialDistance: number;
-  initialZoom: number;
-  initialMidpoint: ArticleImageViewerPoint;
-  initialPanX: number;
-  initialPanY: number;
-};
 type ViewerElements = {
   dialog: HTMLDialogElement; shell: HTMLElement; stage: HTMLElement; image: HTMLImageElement;
   close: HTMLButtonElement; zoomOut: HTMLButtonElement; fit: HTMLButtonElement;
@@ -28,7 +19,7 @@ function clamp(value: number, minimum: number, maximum: number): number {
 }
 
 export function resetArticleImageViewerTransform(): ArticleImageViewerTransform {
-  return { zoom: ARTICLE_IMAGE_VIEWER_FIT_ZOOM, panX: 0, panY: 0 };
+  return { zoom: ARTICLE_IMAGE_VIEWER_MIN_ZOOM, panX: 0, panY: 0 };
 }
 
 export function constrainArticleImageViewerTransform(
@@ -36,13 +27,13 @@ export function constrainArticleImageViewerTransform(
   bounds: ArticleImageViewerBounds
 ): ArticleImageViewerTransform {
   const zoom = clamp(
-    finiteOrZero(transform.zoom) || ARTICLE_IMAGE_VIEWER_FIT_ZOOM,
+    finiteOrZero(transform.zoom) || ARTICLE_IMAGE_VIEWER_MIN_ZOOM,
     ARTICLE_IMAGE_VIEWER_MIN_ZOOM,
     ARTICLE_IMAGE_VIEWER_MAX_ZOOM
   );
 
-  if (zoom <= ARTICLE_IMAGE_VIEWER_FIT_ZOOM) {
-    return { zoom, panX: 0, panY: 0 };
+  if (zoom === ARTICLE_IMAGE_VIEWER_MIN_ZOOM) {
+    return resetArticleImageViewerTransform();
   }
 
   const imageWidth = Math.max(0, finiteOrZero(bounds.imageWidth));
@@ -57,93 +48,6 @@ export function constrainArticleImageViewerTransform(
     panX: clamp(finiteOrZero(transform.panX), -maximumX, maximumX),
     panY: clamp(finiteOrZero(transform.panY), -maximumY, maximumY)
   };
-}
-
-function articleImageViewerDistance(first: ArticleImageViewerPoint, second: ArticleImageViewerPoint): number {
-  return Math.hypot(second.x - first.x, second.y - first.y);
-}
-
-function articleImageViewerMidpoint(first: ArticleImageViewerPoint, second: ArticleImageViewerPoint): ArticleImageViewerPoint {
-  return {
-    x: (first.x + second.x) / 2,
-    y: (first.y + second.y) / 2
-  };
-}
-
-export function beginArticleImageViewerPinch(
-  first: ArticleImageViewerPoint,
-  second: ArticleImageViewerPoint,
-  transform: ArticleImageViewerTransform
-): ArticleImageViewerPinch | null {
-  const initialDistance = articleImageViewerDistance(first, second);
-
-  if (!Number.isFinite(initialDistance) || initialDistance <= 0) {
-    return null;
-  }
-
-  return {
-    initialDistance,
-    initialZoom: transform.zoom,
-    initialMidpoint: articleImageViewerMidpoint(first, second),
-    initialPanX: transform.panX,
-    initialPanY: transform.panY
-  };
-}
-
-export function updateArticleImageViewerPinch(
-  pinch: ArticleImageViewerPinch,
-  first: ArticleImageViewerPoint,
-  second: ArticleImageViewerPoint,
-  bounds: ArticleImageViewerBounds
-): ArticleImageViewerTransform {
-  const currentDistance = articleImageViewerDistance(first, second);
-
-  if (!Number.isFinite(currentDistance) || currentDistance <= 0 || pinch.initialZoom <= 0) {
-    return constrainArticleImageViewerTransform(
-      { zoom: pinch.initialZoom, panX: pinch.initialPanX, panY: pinch.initialPanY },
-      bounds
-    );
-  }
-
-  const zoom = clamp(
-    pinch.initialZoom * (currentDistance / pinch.initialDistance),
-    ARTICLE_IMAGE_VIEWER_MIN_ZOOM,
-    ARTICLE_IMAGE_VIEWER_MAX_ZOOM
-  );
-  const scale = zoom / pinch.initialZoom;
-  const midpoint = articleImageViewerMidpoint(first, second);
-
-  // Points are stage-centered; preserve the image-space point beneath the gesture midpoint.
-  return constrainArticleImageViewerTransform(
-    {
-      zoom,
-      panX: midpoint.x - (pinch.initialMidpoint.x - pinch.initialPanX) * scale,
-      panY: midpoint.y - (pinch.initialMidpoint.y - pinch.initialPanY) * scale
-    },
-    bounds
-  );
-}
-
-export function panArticleImageViewerTransform(
-  transform: ArticleImageViewerTransform,
-  deltaX: number,
-  deltaY: number,
-  bounds: ArticleImageViewerBounds
-): ArticleImageViewerTransform {
-  const constrained = constrainArticleImageViewerTransform(transform, bounds);
-
-  if (constrained.zoom <= ARTICLE_IMAGE_VIEWER_FIT_ZOOM) {
-    return constrained;
-  }
-
-  return constrainArticleImageViewerTransform(
-    {
-      ...constrained,
-      panX: constrained.panX + finiteOrZero(deltaX),
-      panY: constrained.panY + finiteOrZero(deltaY)
-    },
-    bounds
-  );
 }
 
 function getElements(root: ParentNode): ViewerElements | null {
@@ -194,11 +98,9 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   );
   let transform = resetArticleImageViewerTransform();
   let activeImage: HTMLImageElement | null = null;
-  const activePointers = new Map<number, ArticleImageViewerPoint>();
-  let dragPointerId: number | null = null;
-  let dragX = 0;
-  let dragY = 0;
-  let pinch: ArticleImageViewerPinch | null = null;
+  let activePointerId: number | null = null;
+  let pointerX = 0;
+  let pointerY = 0;
   let scrollLock: ScrollLock | null = null;
   let openRequest = 0;
   let openFrame = 0;
@@ -218,11 +120,10 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     transform = constrainArticleImageViewerTransform(transform, bounds());
     image.style.transform =
       `translate3d(${transform.panX}px, ${transform.panY}px, 0) scale(${transform.zoom})`;
-    if (transform.zoom <= ARTICLE_IMAGE_VIEWER_FIT_ZOOM) stopDrag();
-    const zoomed = transform.zoom > ARTICLE_IMAGE_VIEWER_FIT_ZOOM;
+    const zoomed = transform.zoom > ARTICLE_IMAGE_VIEWER_MIN_ZOOM;
     stage.classList.toggle('sc-image-viewer-stage-zoomed', zoomed);
-    zoomOut.disabled = transform.zoom <= ARTICLE_IMAGE_VIEWER_MIN_ZOOM;
-    fit.disabled = transform.zoom === ARTICLE_IMAGE_VIEWER_FIT_ZOOM && transform.panX === 0 && transform.panY === 0;
+    zoomOut.disabled = !zoomed;
+    fit.disabled = !zoomed && transform.panX === 0 && transform.panY === 0;
     zoomIn.disabled = transform.zoom >= ARTICLE_IMAGE_VIEWER_MAX_ZOOM;
   }
 
@@ -262,80 +163,19 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     window.scrollTo(saved.x, saved.y);
   }
 
-  function stopDrag(): void {
-    dragPointerId = null;
+  function endDrag(event?: PointerEvent): void {
+    if (event && activePointerId !== event.pointerId) return;
+    if (activePointerId !== null && image.hasPointerCapture(activePointerId)) {
+      image.releasePointerCapture(activePointerId);
+    }
+    activePointerId = null;
     stage.classList.remove('sc-image-viewer-stage-dragging');
-  }
-
-  function pointInStage(point: ArticleImageViewerPoint): ArticleImageViewerPoint {
-    const rect = stage.getBoundingClientRect();
-    return {
-      x: point.x - (rect.left + rect.width / 2),
-      y: point.y - (rect.top + rect.height / 2)
-    };
-  }
-
-  function activePointerPair(): [ArticleImageViewerPoint, ArticleImageViewerPoint] | null {
-    if (activePointers.size !== 2) return null;
-    const [first, second] = [...activePointers.values()];
-    return [pointInStage(first), pointInStage(second)];
-  }
-
-  function startDrag(pointerId: number, point: ArticleImageViewerPoint): void {
-    pinch = null;
-
-    if (transform.zoom <= ARTICLE_IMAGE_VIEWER_FIT_ZOOM) {
-      stopDrag();
-      return;
-    }
-
-    dragPointerId = pointerId;
-    dragX = point.x;
-    dragY = point.y;
-    stage.classList.add('sc-image-viewer-stage-dragging');
-  }
-
-  function startPinch(): void {
-    const pair = activePointerPair();
-    stopDrag();
-    pinch = pair ? beginArticleImageViewerPinch(pair[0], pair[1], transform) : null;
-  }
-
-  function rebasePointerInteraction(): void {
-    pinch = null;
-    stopDrag();
-
-    if (activePointers.size === 2) {
-      startPinch();
-      return;
-    }
-
-    const remaining = activePointers.entries().next().value as [number, ArticleImageViewerPoint] | undefined;
-    if (remaining) startDrag(remaining[0], remaining[1]);
-  }
-
-  function releasePointer(pointerId: number): void {
-    if (image.hasPointerCapture(pointerId)) image.releasePointerCapture(pointerId);
-  }
-
-  function removePointer(pointerId: number): void {
-    if (!activePointers.has(pointerId)) return;
-    releasePointer(pointerId);
-    activePointers.delete(pointerId);
-    rebasePointerInteraction();
-  }
-
-  function clearPointerState(): void {
-    for (const pointerId of activePointers.keys()) releasePointer(pointerId);
-    activePointers.clear();
-    pinch = null;
-    stopDrag();
   }
 
   function clearViewer(restoreFocus: boolean): void {
     cancelFrames();
     openRequest += 1;
-    clearPointerState();
+    endDrag();
     resetTransform();
     unlockScroll();
     const trigger = activeImage;
@@ -367,7 +207,6 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     const source = sourceForImage(trigger);
     if (!source) return;
 
-    clearPointerState();
     openRequest += 1;
     const request = openRequest;
     activeImage = trigger;
@@ -391,7 +230,6 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   function closeViewer(): void {
     cancelFrames();
     openRequest += 1;
-    clearPointerState();
     if (dialog.open) dialog.close();
   }
 
@@ -430,10 +268,7 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
 
   close.addEventListener('click', closeViewer, { signal });
   zoomOut.addEventListener('click', () => setZoom(transform.zoom - 0.5), { signal });
-  fit.addEventListener('click', () => {
-    clearPointerState();
-    resetTransform();
-  }, { signal });
+  fit.addEventListener('click', resetTransform, { signal });
   zoomIn.addEventListener('click', () => setZoom(transform.zoom + 0.5), { signal });
   dialog.addEventListener('cancel', (event) => {
     event.preventDefault();
@@ -452,65 +287,39 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
 
   stage.addEventListener('pointerdown', (event) => {
     if (
-      (event.target !== image && activePointers.size === 0) ||
-      activePointers.has(event.pointerId) ||
-      activePointers.size >= 2 ||
+      transform.zoom <= ARTICLE_IMAGE_VIEWER_MIN_ZOOM ||
+      event.target !== image ||
+      activePointerId !== null ||
       (event.pointerType === 'mouse' && event.button !== 0)
     ) return;
-
-    const point = { x: event.clientX, y: event.clientY };
-    activePointers.set(event.pointerId, point);
+    activePointerId = event.pointerId;
+    pointerX = event.clientX;
+    pointerY = event.clientY;
     image.setPointerCapture(event.pointerId);
-
-    if (activePointers.size === 2) startPinch();
-    else startDrag(event.pointerId, point);
-
+    stage.classList.add('sc-image-viewer-stage-dragging');
     event.preventDefault();
   }, { signal });
 
   stage.addEventListener('pointermove', (event) => {
-    if (!activePointers.has(event.pointerId)) return;
-    const point = { x: event.clientX, y: event.clientY };
-    activePointers.set(event.pointerId, point);
-
-    if (activePointers.size === 2) {
-      if (!pinch) startPinch();
-      const pair = activePointerPair();
-
-      if (pinch && pair) {
-        transform = updateArticleImageViewerPinch(pinch, pair[0], pair[1], bounds());
-        applyTransform();
-      }
-
-      event.preventDefault();
-      return;
-    }
-
-    if (dragPointerId === event.pointerId && transform.zoom > ARTICLE_IMAGE_VIEWER_FIT_ZOOM) {
-      transform = panArticleImageViewerTransform(
-        transform,
-        point.x - dragX,
-        point.y - dragY,
-        bounds()
-      );
-      dragX = point.x;
-      dragY = point.y;
-      applyTransform();
-    }
-
+    if (event.pointerId !== activePointerId) return;
+    transform = {
+      ...transform,
+      panX: transform.panX + event.clientX - pointerX,
+      panY: transform.panY + event.clientY - pointerY
+    };
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    applyTransform();
     event.preventDefault();
   }, { signal });
-  stage.addEventListener('pointerup', (event) => removePointer(event.pointerId), { signal });
-  stage.addEventListener('pointercancel', (event) => removePointer(event.pointerId), { signal });
+  stage.addEventListener('pointerup', (event) => endDrag(event), { signal });
+  stage.addEventListener('pointercancel', (event) => endDrag(event), { signal });
 
   function scheduleResize(): void {
     if (!dialog.open || resizeFrame) return;
     resizeFrame = window.requestAnimationFrame(() => {
       resizeFrame = 0;
-      if (dialog.open) {
-        applyTransform();
-        rebasePointerInteraction();
-      }
+      if (dialog.open) applyTransform();
     });
   }
 
