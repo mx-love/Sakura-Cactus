@@ -1,0 +1,153 @@
+.sc-article-image-viewer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  background: rgb(9 10 14 / 92%);
+  color: #fff;
+  padding: 0;
+}
+
+.sc-article-image-viewer::backdrop {
+  background: transparent;
+}
+
+.sc-article-image-viewer[open] {
+  display: block;
+  animation: sc-image-viewer-fade-in 140ms ease-out both;
+}
+
+.sc-article-image-viewer-shell {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.sc-article-image-viewer-stage {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 56px);
+  right: calc(env(safe-area-inset-right, 0px) + 16px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+  left: calc(env(safe-area-inset-left, 0px) + 16px);
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+  cursor: zoom-in;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sc-article-image-viewer-stage.sc-image-viewer-stage-zoomed {
+  cursor: grab;
+}
+
+.sc-article-image-viewer-stage.sc-image-viewer-stage-dragging {
+  cursor: grabbing;
+}
+
+.sc-article-image-viewer-image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  transform-origin: center center;
+  cursor: inherit;
+  -webkit-user-drag: none;
+  will-change: transform;
+}
+
+.sc-article-image-viewer-close,
+.sc-article-image-viewer-control {
+  display: inline-grid;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: inherit;
+  cursor: pointer;
+}
+
+.sc-article-image-viewer-close {
+  position: absolute;
+  z-index: 1;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(28, 28, 34, 0.76);
+}
+
+.sc-article-image-viewer-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-md, 12px);
+  background: rgba(28, 28, 34, 0.84);
+}
+
+.sc-article-image-viewer-control {
+  border-color: transparent;
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  padding: 0;
+  text-decoration: none;
+}
+
+.sc-article-image-viewer-close svg,
+.sc-article-image-viewer-control svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.sc-article-image-viewer-close:hover,
+.sc-article-image-viewer-control:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sc-article-image-viewer-close:focus-visible,
+.sc-article-image-viewer-control:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.88);
+  outline-offset: 2px;
+}
+
+.sc-article-image-viewer-control:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+[data-article-image-viewer-root] img[role="button"] {
+  cursor: zoom-in;
+}
+
+@keyframes sc-image-viewer-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-article-image-viewer[open] {
+    animation: none;
+  }
+}
