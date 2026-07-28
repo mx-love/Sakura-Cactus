@@ -571,6 +571,18 @@ test('removes the mobile gesture hint and updates zoom button boundary states', 
   assert.match(viewerCss, /\.sc-article-image-viewer\.sc-viewer-is-zoomed \.sc-article-image-viewer-fit \{\s*display: inline-grid/);
 });
 
+test('keeps navigation feedback visible without sticky touch hover', () => {
+  assert.match(viewerCss, /\.sc-article-image-viewer-nav\s*\{[\s\S]*?background:\s*rgb\(28 28 34 \/ 72%\)/);
+  assert.match(viewerCss, /@media \(hover: hover\) and \(pointer: fine\)\s*\{\s*\.sc-article-image-viewer-nav:not\(:disabled\):hover\s*\{\s*background:\s*rgb\(44 44 52 \/ 90%\)/);
+  assert.doesNotMatch(viewerCss, /(?:^|\})\s*\.sc-article-image-viewer-nav:hover\s*\{/m);
+  assert.doesNotMatch(viewerCss, /\.sc-article-image-viewer-(?:prev|next)(?::(?:hover|active|focus|focus-visible))?\s*\{[^}]*background:/);
+  assert.match(viewerCss, /\.sc-article-image-viewer-nav:not\(:disabled\):active\s*\{\s*background:\s*rgb\(48 48 56 \/ 94%\);\s*\}/);
+  assert.match(viewerCss, /\.sc-article-image-viewer-nav:focus-visible\s*\{[\s\S]*?outline:\s*3px solid/);
+  assert.doesNotMatch(viewerCss, /\.sc-article-image-viewer-nav:focus(?!-visible)[^{]*\{[^}]*background:/);
+  assert.match(viewerCss, /\.sc-article-image-viewer-nav:disabled,[\s\S]*?opacity:\s*0\.3/);
+  assert.match(viewerCss, /@media \(max-width: 639px\), \(pointer: coarse\)[\s\S]*?\.sc-article-image-viewer-nav\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*48px/);
+});
+
 test('binds the complete pointer lifecycle and explicit close paths', () => {
   assert.match(viewerSource, /new Map<number, ArticleImageViewerPoint>\(\)/);
   for (const eventName of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {

@@ -236,9 +236,18 @@
 }
 
 .sc-article-image-viewer-close:hover,
-.sc-article-image-viewer-control:hover,
-.sc-article-image-viewer-nav:hover {
+.sc-article-image-viewer-control:hover {
   background: rgb(255 255 255 / 10%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sc-article-image-viewer-nav:not(:disabled):hover {
+    background: rgb(44 44 52 / 90%);
+  }
+}
+
+.sc-article-image-viewer-nav:not(:disabled):active {
+  background: rgb(48 48 56 / 94%);
 }
 
 .sc-article-image-viewer-close:focus-visible,
