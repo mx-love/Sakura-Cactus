@@ -1,6 +1,7 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
+import ArticleImageViewer from '@/components/posts/ArticleImageViewer.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminAboutPost, getPublicAboutPost } from '@/features/posts/post.service';
 import { ROBOTS_INDEX_FOLLOW, ROBOTS_NOINDEX_NOFOLLOW, absoluteSiteUrl } from '@/lib/seo';
@@ -66,7 +67,12 @@ const canonicalUrl = absoluteSiteUrl('/about');
               {aboutPost.excerpt ? <p>{aboutPost.excerpt}</p> : null}
               {adminStatusNote ? <p class="sc-about-admin-note">{adminStatusNote}</p> : null}
             </header>
-            <div class="sc-prose prose-content sc-article-inner" set:html={aboutPost.contentHtml} />
+            <div
+              class="sc-prose prose-content sc-article-inner"
+              data-article-image-viewer-root={isPublicAbout ? true : undefined}
+              set:html={aboutPost.contentHtml}
+            />
+            {isPublicAbout ? <ArticleImageViewer /> : null}
           </article>
         ) : (
           <>

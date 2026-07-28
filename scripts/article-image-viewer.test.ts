@@ -34,6 +34,8 @@ const viewerSource = readFileSync(new URL('../src/lib/article-image-viewer.ts', 
 const viewerCss = readFileSync(new URL('../src/styles/article-image-viewer.css', import.meta.url), 'utf8');
 const componentSource = readFileSync(new URL('../src/components/posts/ArticleImageViewer.astro', import.meta.url), 'utf8');
 const pageSource = readFileSync(new URL('../src/pages/posts/[slug].astro', import.meta.url), 'utf8');
+const aboutPageSource = readFileSync(new URL('../src/pages/about.astro', import.meta.url), 'utf8');
+const siteLayoutSource = readFileSync(new URL('../src/components/layout/SiteLayout.astro', import.meta.url), 'utf8');
 const packageSource = readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 
 let testCount = 0;
@@ -545,6 +547,15 @@ test('allows a later image request to recover after an earlier error', () => {
 test('mounts the viewer only on public article pages', () => {
   assert.match(pageSource, /data-article-image-viewer-root/);
   assert.match(pageSource, /\{publicPost \? <ArticleImageViewer \/> : null\}/);
+});
+
+test('mounts the existing viewer only for the public about page body', () => {
+  assert.match(aboutPageSource, /import ArticleImageViewer from '@\/components\/posts\/ArticleImageViewer\.astro';/);
+  assert.match(aboutPageSource, /class="sc-prose prose-content sc-article-inner"\s+data-article-image-viewer-root=\{isPublicAbout \? true : undefined\}\s+set:html=\{aboutPost\.contentHtml\}/);
+  assert.match(aboutPageSource, /\{isPublicAbout \? <ArticleImageViewer \/> : null\}/);
+  assert.equal(aboutPageSource.match(/<ArticleImageViewer \/>/g)?.length, 1);
+  assert.doesNotMatch(siteLayoutSource, /ArticleImageViewer|data-article-image-viewer-root/);
+  assert.doesNotMatch(aboutPageSource, /bindArticleImageViewer|pointer(?:down|move|up)|touch-action/);
 });
 
 test('uses native dialog markup with an explicit backdrop and concise controls', () => {
