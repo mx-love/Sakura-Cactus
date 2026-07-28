@@ -9,11 +9,13 @@ import {
   beginArticleImageViewerPinch,
   captureArticleImageViewerAttributes,
   constrainArticleImageViewerTransform,
+  createArticleImageViewerGeometry,
   getArticleImageViewerAccessibleLabel,
   getArticleImageViewerNavigationState,
   getArticleImageViewerPanBounds,
   getArticleImageViewerRebasedGestureMode,
   getArticleImageViewerSwipeDirection,
+  getArticleImageViewerTransformBounds,
   normalizeArticleImageViewerWheelDelta,
   panArticleImageViewerTransform,
   resetArticleImageViewerTransform,
@@ -52,6 +54,23 @@ function closeTo(actual: number, expected: number, message?: string): void {
 const wideBounds = { imageWidth: 800, imageHeight: 400, stageWidth: 800, stageHeight: 600 };
 const gestureBounds = { imageWidth: 800, imageHeight: 600, stageWidth: 400, stageHeight: 300 };
 
+function assertGeometryFits(
+  naturalWidth: number,
+  naturalHeight: number,
+  stageWidth: number,
+  stageHeight: number
+): ReturnType<typeof createArticleImageViewerGeometry> {
+  const geometry = createArticleImageViewerGeometry(naturalWidth, naturalHeight, stageWidth, stageHeight);
+  assert.ok(geometry.baseWidth <= stageWidth);
+  assert.ok(geometry.baseHeight <= stageHeight);
+  closeTo(geometry.baseWidth / geometry.baseHeight, naturalWidth / naturalHeight);
+  assert.deepEqual(
+    getArticleImageViewerPanBounds(1, getArticleImageViewerTransformBounds(geometry)),
+    { maximumX: 0, maximumY: 0 }
+  );
+  return geometry;
+}
+
 test('uses the fit, secondary, and continuous zoom model', () => {
   assert.equal(ARTICLE_IMAGE_VIEWER_FIT_ZOOM, 1);
   assert.equal(ARTICLE_IMAGE_VIEWER_MIN_ZOOM, 1);
@@ -61,6 +80,90 @@ test('uses the fit, secondary, and continuous zoom model', () => {
 
 test('resets to a fit transform', () => {
   assert.deepEqual(resetArticleImageViewerTransform(), { zoom: 1, panX: 0, panY: 0 });
+});
+
+test('fits a portrait image completely at logical 1x', () => {
+  const geometry = assertGeometryFits(1080, 1920, 1600, 700);
+  closeTo(geometry.baseWidth, 393.75);
+  closeTo(geometry.baseHeight, 700);
+});
+
+test('fits the reported 1297 by 1729 portrait without changing its ratio', () => {
+  const geometry = assertGeometryFits(1297, 1729, 1600, 700);
+  closeTo(geometry.baseWidth, 1297 * 700 / 1729);
+  closeTo(geometry.baseHeight, 700);
+});
+
+test('fits a landscape image completely at logical 1x', () => {
+  const geometry = assertGeometryFits(1920, 1080, 1000, 700);
+  closeTo(geometry.baseWidth, 1000);
+  closeTo(geometry.baseHeight, 562.5);
+});
+
+test('fits an ultra-tall image and reaches its top and bottom after zoom', () => {
+  const geometry = assertGeometryFits(800, 4000, 1600, 700);
+  const bounds = getArticleImageViewerTransformBounds(geometry);
+  const panBounds = getArticleImageViewerPanBounds(2.5, bounds);
+  assert.deepEqual(panBounds, { maximumX: 0, maximumY: 525 });
+  closeTo(panBounds.maximumY - geometry.baseHeight * 2.5 / 2, -geometry.stageHeight / 2);
+  closeTo(-panBounds.maximumY + geometry.baseHeight * 2.5 / 2, geometry.stageHeight / 2);
+});
+
+test('fits an ultra-wide image and reaches its left and right edges after zoom', () => {
+  const geometry = assertGeometryFits(4000, 800, 1000, 700);
+  const bounds = getArticleImageViewerTransformBounds(geometry);
+  const panBounds = getArticleImageViewerPanBounds(2.5, bounds);
+  assert.deepEqual(panBounds, { maximumX: 750, maximumY: 0 });
+  closeTo(panBounds.maximumX - geometry.baseWidth * 2.5 / 2, -geometry.stageWidth / 2);
+  closeTo(-panBounds.maximumX + geometry.baseWidth * 2.5 / 2, geometry.stageWidth / 2);
+});
+
+test('does not automatically enlarge a small image at logical 1x', () => {
+  const geometry = assertGeometryFits(320, 240, 1400, 800);
+  assert.equal(geometry.baseWidth, 320);
+  assert.equal(geometry.baseHeight, 240);
+});
+
+test('allows all four edges and corners at 2.5x without overscrolling', () => {
+  const geometry = assertGeometryFits(1080, 1920, 600, 700);
+  const bounds = getArticleImageViewerTransformBounds(geometry);
+  const scaledWidth = geometry.baseWidth * 2.5;
+  const scaledHeight = geometry.baseHeight * 2.5;
+  const panBounds = getArticleImageViewerPanBounds(2.5, bounds);
+  closeTo(panBounds.maximumX, (scaledWidth - geometry.stageWidth) / 2);
+  closeTo(panBounds.maximumY, (scaledHeight - geometry.stageHeight) / 2);
+  closeTo(panBounds.maximumX - scaledWidth / 2, -geometry.stageWidth / 2);
+  closeTo(-panBounds.maximumX + scaledWidth / 2, geometry.stageWidth / 2);
+  closeTo(panBounds.maximumY - scaledHeight / 2, -geometry.stageHeight / 2);
+  closeTo(-panBounds.maximumY + scaledHeight / 2, geometry.stageHeight / 2);
+  assert.deepEqual(
+    constrainArticleImageViewerTransform({ zoom: 2.5, panX: 1e6, panY: -1e6 }, bounds),
+    { zoom: 2.5, panX: panBounds.maximumX, panY: -panBounds.maximumY }
+  );
+});
+
+test('creates fresh base dimensions when switching between aspect ratios', () => {
+  const landscape = createArticleImageViewerGeometry(1920, 1080, 1000, 700);
+  const portrait = createArticleImageViewerGeometry(1080, 1920, 1000, 700);
+  assert.deepEqual([landscape.baseWidth, landscape.baseHeight], [1000, 562.5]);
+  assert.deepEqual([portrait.baseWidth, portrait.baseHeight], [393.75, 700]);
+  const landscapeAgain = createArticleImageViewerGeometry(1920, 1080, 1000, 700);
+  assert.deepEqual(landscapeAgain, landscape);
+});
+
+test('recomputes fitted dimensions and pan bounds across desktop and mobile resize', () => {
+  const desktop = createArticleImageViewerGeometry(1297, 1729, 1600, 700);
+  const portraitPhone = createArticleImageViewerGeometry(1297, 1729, 304, 650);
+  const landscapePhone = createArticleImageViewerGeometry(1297, 1729, 700, 240);
+  closeTo(desktop.baseHeight, 700);
+  closeTo(portraitPhone.baseWidth, 304);
+  closeTo(landscapePhone.baseHeight, 240);
+  for (const geometry of [desktop, portraitPhone, landscapePhone]) {
+    assert.deepEqual(
+      getArticleImageViewerPanBounds(1, getArticleImageViewerTransformBounds(geometry)),
+      { maximumX: 0, maximumY: 0 }
+    );
+  }
 });
 
 test('zooms from fit at the stage center', () => {
@@ -448,10 +551,24 @@ test('uses native dialog markup with an explicit backdrop and concise controls',
   assert.match(componentSource, /<dialog[^>]+aria-label="文章图片查看器"/);
   for (const marker of [
     'data-viewer-backdrop', 'data-viewer-stage', 'data-viewer-close', 'data-viewer-prev',
-    'data-viewer-next', 'data-viewer-count', 'data-viewer-zoom', 'data-viewer-original',
+    'data-viewer-next', 'data-viewer-count', 'data-viewer-zoom-out', 'data-viewer-fit',
+    'data-viewer-zoom-in', 'data-viewer-original',
     'data-viewer-caption', 'data-viewer-status'
   ]) assert.match(componentSource, new RegExp(marker));
-  assert.doesNotMatch(componentSource, /data-viewer-(?:zoom-out|zoom-in|fit)/);
+  assert.match(componentSource, /data-viewer-zoom-out aria-label="缩小图片" disabled/);
+  assert.match(componentSource, /data-viewer-fit aria-label="恢复适合屏幕" disabled/);
+  assert.match(componentSource, /data-viewer-zoom-in aria-label="放大图片" disabled/);
+});
+
+test('removes the mobile gesture hint and updates zoom button boundary states', () => {
+  for (const source of [componentSource, viewerSource, viewerCss]) {
+    assert.doesNotMatch(source, /双指缩放 · 双击放大|data-viewer-hint|viewer-hint|hintTimer|hintShown|showHintOnce|hideHint/);
+  }
+  assert.match(viewerSource, /zoomOut\.disabled = !ready \|\| transform\.zoom <= ARTICLE_IMAGE_VIEWER_MIN_ZOOM/);
+  assert.match(viewerSource, /fit\.disabled = !ready \|\| !zoomed/);
+  assert.match(viewerSource, /zoomIn\.disabled = !ready \|\| transform\.zoom >= ARTICLE_IMAGE_VIEWER_MAX_ZOOM/);
+  assert.match(viewerCss, /@media \(max-width: 639px\), \(pointer: coarse\)[\s\S]*?\.sc-article-image-viewer-zoom-out,[\s\S]*?\.sc-article-image-viewer-zoom-in \{\s*display: none/);
+  assert.match(viewerCss, /\.sc-article-image-viewer\.sc-viewer-is-zoomed \.sc-article-image-viewer-fit \{\s*display: inline-grid/);
 });
 
 test('binds the complete pointer lifecycle and explicit close paths', () => {
@@ -475,8 +592,17 @@ test('coalesces pointer, wheel, and resize rendering and cleans lifecycle state'
   assert.doesNotMatch(viewerSource, /body\.getAttribute\('style'\)|body\.setAttribute\('style'/);
 });
 
+test('derives runtime fit geometry from natural dimensions instead of DOM offsets', () => {
+  assert.doesNotMatch(viewerSource, /image\.(?:offsetWidth|offsetHeight|clientWidth|clientHeight)/);
+  assert.match(viewerSource, /createArticleImageViewerGeometry\(\s*image\.naturalWidth,\s*image\.naturalHeight,\s*stageRect\.width,\s*stageRect\.height/);
+  assert.match(viewerSource, /image\.style\.width = `\$\{geometry\.baseWidth\}px`/);
+  assert.match(viewerSource, /image\.style\.height = `\$\{geometry\.baseHeight\}px`/);
+  assert.match(viewerSource, /cancelFrames\(\);\s*cancelLoad\(\);[\s\S]*?activeRequest = token;[\s\S]*?clearImageGeometry\(\);[\s\S]*?setLoadState\('loading'\)/);
+  assert.match(viewerSource, /if \(!requestTracker\.isCurrent\(token, currentIndex\) \|\| !dialog\.open \|\| disposed\) return/);
+});
+
 test('synchronously clears BFCache runtime state without permanent teardown', () => {
-  assert.match(viewerSource, /function clearViewerRuntimeState[\s\S]*?cancelFrames\(\)[\s\S]*?cancelLoad\(\)[\s\S]*?hideHint\(\)[\s\S]*?requestTracker\.invalidate\(\)[\s\S]*?stopPointerInteraction\(\)[\s\S]*?resetTransientInteractionState\(\)[\s\S]*?restorePageScroll\(\)/);
+  assert.match(viewerSource, /function clearViewerRuntimeState[\s\S]*?cancelFrames\(\)[\s\S]*?cancelLoad\(\)[\s\S]*?requestTracker\.invalidate\(\)[\s\S]*?stopPointerInteraction\(\)[\s\S]*?resetTransientInteractionState\(\)[\s\S]*?clearImageGeometry\(true\)[\s\S]*?restorePageScroll\(\)/);
   assert.match(viewerSource, /window\.addEventListener\('pagehide', \(event\) => \{\s*if \(event\.persisted\) \{\s*clearViewerRuntimeState\(false\);\s*return;\s*\}\s*teardown\(\);/);
   assert.doesNotMatch(viewerSource, /window\.addEventListener\('pageshow'/);
 });

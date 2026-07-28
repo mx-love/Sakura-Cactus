@@ -30,12 +30,19 @@ import '@/styles/article-image-viewer.css';
     <p class="sc-article-image-viewer-caption" data-viewer-caption></p>
 
     <div class="sc-article-image-viewer-toolbar" role="toolbar" aria-label="图片查看工具">
-      <button class="sc-article-image-viewer-control sc-article-image-viewer-zoom" type="button" data-viewer-zoom aria-label="放大图片">
-        <svg class="sc-viewer-icon-zoom-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5M10.5 7.5v6M7.5 10.5h6" />
+      <button class="sc-article-image-viewer-control sc-article-image-viewer-zoom-out" type="button" data-viewer-zoom-out aria-label="缩小图片" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5M7.5 10.5h6" />
         </svg>
-        <svg class="sc-viewer-icon-fit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      </button>
+      <button class="sc-article-image-viewer-control sc-article-image-viewer-fit" type="button" data-viewer-fit aria-label="恢复适合屏幕" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+        </svg>
+      </button>
+      <button class="sc-article-image-viewer-control sc-article-image-viewer-zoom-in" type="button" data-viewer-zoom-in aria-label="放大图片" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5M10.5 7.5v6M7.5 10.5h6" />
         </svg>
       </button>
       <a class="sc-article-image-viewer-control sc-article-image-viewer-original" data-viewer-original target="_blank" rel="noopener noreferrer" aria-label="在新标签页打开原图">
@@ -43,8 +50,6 @@ import '@/styles/article-image-viewer.css';
         <span>查看原图</span>
       </a>
     </div>
-
-    <p class="sc-article-image-viewer-hint" data-viewer-hint>双指缩放 · 双击放大</p>
   </div>
 </dialog>
 

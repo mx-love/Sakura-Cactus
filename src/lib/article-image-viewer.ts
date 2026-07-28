@@ -11,6 +11,14 @@ export type ArticleImageViewerBounds = {
   stageWidth: number;
   stageHeight: number;
 };
+export type ArticleImageViewerGeometry = {
+  naturalWidth: number;
+  naturalHeight: number;
+  baseWidth: number;
+  baseHeight: number;
+  stageWidth: number;
+  stageHeight: number;
+};
 export type ArticleImageViewerPanBounds = { maximumX: number; maximumY: number };
 export type ArticleImageViewerPinch = {
   initialDistance: number;
@@ -73,10 +81,11 @@ type ViewerElements = {
   previous: HTMLButtonElement;
   next: HTMLButtonElement;
   count: HTMLOutputElement;
-  zoom: HTMLButtonElement;
+  zoomOut: HTMLButtonElement;
+  fit: HTMLButtonElement;
+  zoomIn: HTMLButtonElement;
   original: HTMLAnchorElement;
   caption: HTMLElement;
-  hint: HTMLElement;
 };
 type StyleSnapshot = { value: string; priority: string; appliedValue: string };
 type ScrollLock = {
@@ -121,6 +130,41 @@ export function getArticleImageViewerCenter(
 
 export function resetArticleImageViewerTransform(): ArticleImageViewerTransform {
   return { zoom: ARTICLE_IMAGE_VIEWER_FIT_ZOOM, panX: 0, panY: 0 };
+}
+
+export function createArticleImageViewerGeometry(
+  naturalWidth: number,
+  naturalHeight: number,
+  stageWidth: number,
+  stageHeight: number
+): ArticleImageViewerGeometry {
+  const safeNaturalWidth = Math.max(0, finiteOrZero(naturalWidth));
+  const safeNaturalHeight = Math.max(0, finiteOrZero(naturalHeight));
+  const safeStageWidth = Math.max(0, finiteOrZero(stageWidth));
+  const safeStageHeight = Math.max(0, finiteOrZero(stageHeight));
+  const fitScale = safeNaturalWidth > 0 && safeNaturalHeight > 0 && safeStageWidth > 0 && safeStageHeight > 0
+    ? Math.min(1, safeStageWidth / safeNaturalWidth, safeStageHeight / safeNaturalHeight)
+    : 0;
+
+  return {
+    naturalWidth: safeNaturalWidth,
+    naturalHeight: safeNaturalHeight,
+    baseWidth: Math.min(safeStageWidth, safeNaturalWidth * fitScale),
+    baseHeight: Math.min(safeStageHeight, safeNaturalHeight * fitScale),
+    stageWidth: safeStageWidth,
+    stageHeight: safeStageHeight
+  };
+}
+
+export function getArticleImageViewerTransformBounds(
+  geometry: ArticleImageViewerGeometry
+): ArticleImageViewerBounds {
+  return {
+    imageWidth: geometry.baseWidth,
+    imageHeight: geometry.baseHeight,
+    stageWidth: geometry.stageWidth,
+    stageHeight: geometry.stageHeight
+  };
 }
 
 export function getArticleImageViewerPanBounds(
@@ -526,15 +570,16 @@ function getElements(root: ParentNode): ViewerElements | null {
   const previous = dialog.querySelector<HTMLButtonElement>('[data-viewer-prev]');
   const next = dialog.querySelector<HTMLButtonElement>('[data-viewer-next]');
   const count = dialog.querySelector<HTMLOutputElement>('[data-viewer-count]');
-  const zoom = dialog.querySelector<HTMLButtonElement>('[data-viewer-zoom]');
+  const zoomOut = dialog.querySelector<HTMLButtonElement>('[data-viewer-zoom-out]');
+  const fit = dialog.querySelector<HTMLButtonElement>('[data-viewer-fit]');
+  const zoomIn = dialog.querySelector<HTMLButtonElement>('[data-viewer-zoom-in]');
   const original = dialog.querySelector<HTMLAnchorElement>('[data-viewer-original]');
   const caption = dialog.querySelector<HTMLElement>('[data-viewer-caption]');
-  const hint = dialog.querySelector<HTMLElement>('[data-viewer-hint]');
 
-  if (!backdrop || !stage || !image || !status || !close || !previous || !next || !count || !zoom || !original || !caption || !hint) {
+  if (!backdrop || !stage || !image || !status || !close || !previous || !next || !count || !zoomOut || !fit || !zoomIn || !original || !caption) {
     return null;
   }
-  return { dialog, backdrop, stage, image, status, close, previous, next, count, zoom, original, caption, hint };
+  return { dialog, backdrop, stage, image, status, close, previous, next, count, zoomOut, fit, zoomIn, original, caption };
 }
 
 function setLockedStyle(body: HTMLElement, lock: ScrollLock, property: string, value: string): void {
@@ -554,7 +599,7 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   const elements = getElements(root);
   if (!(article instanceof HTMLElement) || !elements) return () => undefined;
 
-  const { dialog, backdrop, stage, image, status, close, previous, next, count, zoom, original, caption, hint } = elements;
+  const { dialog, backdrop, stage, image, status, close, previous, next, count, zoomOut, fit, zoomIn, original, caption } = elements;
   const controller = new AbortController();
   const { signal } = controller;
   const items = collectViewerImages(article);
@@ -563,8 +608,10 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   const requestTracker = new ArticleImageViewerRequestTracker();
 
   let transform = resetArticleImageViewerTransform();
-  let geometry: ArticleImageViewerBounds = { imageWidth: 0, imageHeight: 0, stageWidth: 0, stageHeight: 0 };
+  let geometry = createArticleImageViewerGeometry(0, 0, 0, 0);
+  let transformBounds = getArticleImageViewerTransformBounds(geometry);
   let stageRect = { left: 0, top: 0, width: 0, height: 0 };
+  let activeRequest: LoadToken | null = null;
   let currentIndex = -1;
   let opener: HTMLImageElement | null = null;
   let gestureMode: ArticleImageViewerGestureMode = 'idle';
@@ -585,21 +632,41 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   let wheelFrame = 0;
   let pendingWheelLog = 0;
   let wheelPoint: ArticleImageViewerPoint = { x: 0, y: 0 };
-  let hintTimer = 0;
-  let hintShown = false;
   let loadTimer = 0;
   let loadCleanup: (() => void) | null = null;
   let disposed = false;
 
-  function refreshGeometry(): void {
+  function measureStage(): void {
     const rect = stage.getBoundingClientRect();
     stageRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-    geometry = {
-      imageWidth: image.offsetWidth,
-      imageHeight: image.offsetHeight,
-      stageWidth: rect.width,
-      stageHeight: rect.height
-    };
+  }
+
+  function clearImageGeometry(resetStage = false): void {
+    if (resetStage) stageRect = { left: 0, top: 0, width: 0, height: 0 };
+    geometry = createArticleImageViewerGeometry(0, 0, stageRect.width, stageRect.height);
+    transformBounds = getArticleImageViewerTransformBounds(geometry);
+    image.style.removeProperty('width');
+    image.style.removeProperty('height');
+  }
+
+  function refreshGeometry(): boolean {
+    measureStage();
+    const nextGeometry = createArticleImageViewerGeometry(
+      image.naturalWidth,
+      image.naturalHeight,
+      stageRect.width,
+      stageRect.height
+    );
+    if (nextGeometry.baseWidth <= 0 || nextGeometry.baseHeight <= 0) {
+      clearImageGeometry();
+      return false;
+    }
+
+    geometry = nextGeometry;
+    transformBounds = getArticleImageViewerTransformBounds(geometry);
+    image.style.width = `${geometry.baseWidth}px`;
+    image.style.height = `${geometry.baseHeight}px`;
+    return true;
   }
 
   function pointInStage(point: ArticleImageViewerPoint): ArticleImageViewerPoint {
@@ -611,12 +678,16 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
 
   function renderTransform(): void {
     renderFrame = 0;
-    transform = constrainArticleImageViewerTransform(transform, geometry);
+    if (disposed || !dialog.open || !activeRequest || !requestTracker.isCurrent(activeRequest, currentIndex)) return;
+    transform = constrainArticleImageViewerTransform(transform, transformBounds);
     image.style.transform = `translate3d(${transform.panX}px, ${transform.panY}px, 0) scale(${transform.zoom})`;
     const zoomed = transform.zoom > ARTICLE_IMAGE_VIEWER_FIT_ZOOM;
     dialog.classList.toggle('sc-viewer-is-zoomed', zoomed);
     stage.classList.toggle('sc-image-viewer-stage-zoomed', zoomed);
-    zoom.setAttribute('aria-label', zoomed ? '恢复适合屏幕' : '放大图片');
+    const ready = dialog.dataset.viewerState === 'ready' && geometry.baseWidth > 0 && geometry.baseHeight > 0;
+    zoomOut.disabled = !ready || transform.zoom <= ARTICLE_IMAGE_VIEWER_MIN_ZOOM;
+    fit.disabled = !ready || !zoomed;
+    zoomIn.disabled = !ready || transform.zoom >= ARTICLE_IMAGE_VIEWER_MAX_ZOOM;
   }
 
   function scheduleRender(): void {
@@ -624,13 +695,16 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   }
 
   function updateTransform(next: ArticleImageViewerTransform): void {
-    transform = constrainArticleImageViewerTransform(next, geometry);
+    transform = constrainArticleImageViewerTransform(next, transformBounds);
     scheduleRender();
   }
 
-  function resetTransform(): void {
+  function fitCurrentImage(): void {
+    if (dialog.dataset.viewerState !== 'ready' || !refreshGeometry()) return;
+    if (renderFrame) window.cancelAnimationFrame(renderFrame);
+    renderFrame = 0;
     transform = resetArticleImageViewerTransform();
-    scheduleRender();
+    renderTransform();
   }
 
   function updateNavigation(): void {
@@ -642,19 +716,6 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     count.hidden = navigation.hidden;
     count.value = navigation.hidden ? '' : `${currentIndex + 1} / ${items.length}`;
     count.textContent = count.value;
-  }
-
-  function hideHint(): void {
-    if (hintTimer) window.clearTimeout(hintTimer);
-    hintTimer = 0;
-    hint.classList.remove('sc-viewer-hint-visible');
-  }
-
-  function showHintOnce(): void {
-    if (hintShown) return;
-    hintShown = true;
-    hint.classList.add('sc-viewer-hint-visible');
-    hintTimer = window.setTimeout(hideHint, 2600);
   }
 
   function markClickSuppressed(point?: ArticleImageViewerPoint): void {
@@ -748,11 +809,10 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   }
 
   function toggleZoomAt(point: ArticleImageViewerPoint): void {
-    hideHint();
     const target = transform.zoom > ARTICLE_IMAGE_VIEWER_FIT_ZOOM
       ? ARTICLE_IMAGE_VIEWER_FIT_ZOOM
       : ARTICLE_IMAGE_VIEWER_SECONDARY_ZOOM;
-    updateTransform(zoomArticleImageViewerAtPoint(transform, target, pointInStage(point), geometry));
+    updateTransform(zoomArticleImageViewerAtPoint(transform, target, pointInStage(point), transformBounds));
   }
 
   function registerTouchTap(point: ArticleImageViewerPoint): void {
@@ -821,6 +881,7 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   function setLoadState(state: 'loading' | 'ready' | 'error'): void {
     dialog.dataset.viewerState = state;
     status.textContent = state === 'loading' ? '图片加载中…' : state === 'error' ? '图片加载失败' : '';
+    renderTransform();
   }
 
   function preloadAdjacentImages(): void {
@@ -837,20 +898,24 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     const item = items[index];
     if (!item || !dialog.open || disposed) return;
 
+    cancelFrames();
     cancelLoad();
     stopPointerInteraction();
     pendingWheelLog = 0;
     resetTransientInteractionState();
     currentIndex = index;
     const token = requestTracker.begin(index);
-    resetTransform();
+    activeRequest = token;
     updateNavigation();
     caption.textContent = item.caption;
     dialog.classList.toggle('sc-viewer-has-caption', Boolean(item.caption));
     original.href = item.source;
     image.alt = item.alt;
-    setLoadState('loading');
     image.removeAttribute('src');
+    measureStage();
+    clearImageGeometry();
+    transform = resetArticleImageViewerTransform();
+    setLoadState('loading');
 
     let settled = false;
     const finish = async (loaded: boolean): Promise<void> => {
@@ -872,8 +937,12 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
         return;
       }
 
-      refreshGeometry();
-      resetTransform();
+      if (!refreshGeometry()) {
+        setLoadState('error');
+        return;
+      }
+      transform = resetArticleImageViewerTransform();
+      renderTransform();
       setLoadState('ready');
       preloadAdjacentImages();
     };
@@ -942,16 +1011,21 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     if (dialog.open) dialog.close();
     cancelFrames();
     cancelLoad();
-    hideHint();
     requestTracker.invalidate();
+    activeRequest = null;
     stopPointerInteraction();
     resetTransientInteractionState();
     transform = resetArticleImageViewerTransform();
     image.style.removeProperty('transform');
+    clearImageGeometry(true);
     image.removeAttribute('src');
     image.alt = '';
     image.style.removeProperty('will-change');
     dialog.classList.remove('sc-viewer-is-zoomed');
+    stage.classList.remove('sc-image-viewer-stage-zoomed', 'sc-image-viewer-stage-dragging');
+    zoomOut.disabled = true;
+    fit.disabled = true;
+    zoomIn.disabled = true;
     dialog.removeAttribute('data-viewer-state');
     original.removeAttribute('href');
     caption.textContent = '';
@@ -981,10 +1055,8 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     }
 
     lockPageScroll();
-    refreshGeometry();
     showImage(index);
     close.focus({ preventScroll: true });
-    showHintOnce();
   }
 
   function closeViewer(): void {
@@ -998,10 +1070,15 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     if (!dialog.open || resizeFrame) return;
     resizeFrame = window.requestAnimationFrame(() => {
       resizeFrame = 0;
-      if (!dialog.open) return;
-      const previousGeometry = geometry;
-      refreshGeometry();
-      transform = resizeArticleImageViewerTransform(transform, previousGeometry, geometry);
+      if (disposed || !dialog.open || !activeRequest || !requestTracker.isCurrent(activeRequest, currentIndex)) return;
+      if (dialog.dataset.viewerState !== 'ready') {
+        measureStage();
+        clearImageGeometry();
+        return;
+      }
+      const previousBounds = transformBounds;
+      if (!refreshGeometry()) return;
+      transform = resizeArticleImageViewerTransform(transform, previousBounds, transformBounds);
       rebasePointerInteraction();
       scheduleRender();
     });
@@ -1013,7 +1090,7 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
     const change = clampArticleImageViewerValue(pendingWheelLog, -0.22, 0.22);
     pendingWheelLog -= change;
     const previousZoom = transform.zoom;
-    updateTransform(zoomArticleImageViewerAtPoint(transform, transform.zoom * Math.exp(change), wheelPoint, geometry));
+    updateTransform(zoomArticleImageViewerAtPoint(transform, transform.zoom * Math.exp(change), wheelPoint, transformBounds));
 
     if (
       (transform.zoom === ARTICLE_IMAGE_VIEWER_MIN_ZOOM && change < 0) ||
@@ -1061,10 +1138,19 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   close.addEventListener('click', closeViewer, { signal });
   previous.addEventListener('click', () => navigate(-1), { signal });
   next.addEventListener('click', () => navigate(1), { signal });
-  zoom.addEventListener('click', () => toggleZoomAt({
-    x: stageRect.left + stageRect.width / 2,
-    y: stageRect.top + stageRect.height / 2
-  }), { signal });
+  zoomOut.addEventListener('click', () => updateTransform(zoomArticleImageViewerAtPoint(
+    transform,
+    transform.zoom - 0.5,
+    { x: 0, y: 0 },
+    transformBounds
+  )), { signal });
+  fit.addEventListener('click', fitCurrentImage, { signal });
+  zoomIn.addEventListener('click', () => updateTransform(zoomArticleImageViewerAtPoint(
+    transform,
+    transform.zoom + 0.5,
+    { x: 0, y: 0 },
+    transformBounds
+  )), { signal });
   backdrop.addEventListener('click', (event) => {
     if (!isBackdropClickSuppressed(event)) closeViewer();
   }, { signal });
@@ -1082,13 +1168,13 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
       closeViewer();
     } else if (event.key === '+' || event.key === '=') {
       event.preventDefault();
-      updateTransform(zoomArticleImageViewerAtPoint(transform, transform.zoom + 0.5, { x: 0, y: 0 }, geometry));
+      updateTransform(zoomArticleImageViewerAtPoint(transform, transform.zoom + 0.5, { x: 0, y: 0 }, transformBounds));
     } else if (event.key === '-') {
       event.preventDefault();
-      updateTransform(zoomArticleImageViewerAtPoint(transform, transform.zoom - 0.5, { x: 0, y: 0 }, geometry));
+      updateTransform(zoomArticleImageViewerAtPoint(transform, transform.zoom - 0.5, { x: 0, y: 0 }, transformBounds));
     } else if (event.key === '0' || event.key === '1') {
       event.preventDefault();
-      resetTransform();
+      fitCurrentImage();
     } else if (event.key === 'ArrowLeft') {
       event.preventDefault();
       navigate(-1);
@@ -1101,7 +1187,6 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
   stage.addEventListener('wheel', (event) => {
     if (!dialog.open) return;
     event.preventDefault();
-    hideHint();
     lastTap = null;
     const delta = normalizeArticleImageViewerWheelDelta(event.deltaY, event.deltaMode, stageRect.height);
     const sensitivity = event.ctrlKey ? 0.006 : 0.0015;
@@ -1119,7 +1204,6 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
 
   stage.addEventListener('pointerdown', (event) => {
     if ((event.pointerType === 'mouse' && event.button !== 0) || activePointers.has(event.pointerId)) return;
-    hideHint();
     const point = { x: event.clientX, y: event.clientY };
     activePointers.set(event.pointerId, point);
     stage.setPointerCapture(event.pointerId);
@@ -1151,7 +1235,7 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
           pinch,
           pointInStage(first),
           pointInStage(second),
-          geometry
+          transformBounds
         ));
       }
       event.preventDefault();
@@ -1171,7 +1255,7 @@ export function bindArticleImageViewer(root: ParentNode = document): () => void 
           transform,
           point.x - previousPoint.x,
           point.y - previousPoint.y,
-          geometry
+          transformBounds
         ));
       } else {
         gestureMode = 'swiping';
