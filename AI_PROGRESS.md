@@ -23,7 +23,7 @@ Project maintenance: dependency verification is complete; current work is roadma
 - [x] Verified local D1 migration execution.
 - [x] Verified the expected local tables exist.
 - [x] Implemented PBKDF2 password hashing.
-- [x] Implemented create-admin script.
+- [x] Implemented the initial D1 administrator bootstrap (later retired in favor of environment-only credentials).
 - [x] Implemented D1 sessions read/write.
 - [x] Implemented `/api/auth/login`.
 - [x] Implemented `/api/auth/logout`.
@@ -41,7 +41,7 @@ Project maintenance: dependency verification is complete; current work is roadma
 - [x] Setup requires server-side `SETUP_TOKEN`.
 - [x] Login page now uses `account + password`.
 - [x] Login supports username or email.
-- [x] Kept `scripts/create-admin.ts` as a backup maintenance tool and added optional email support.
+- [x] Retired the backup D1 administrator maintenance path after environment-only authentication became authoritative.
 - [x] Documented Cloudflare Access as an outer protection layer.
 - [x] Implemented `src/features/posts` repo/service/schema/types/renderer.
 - [x] Implemented admin post APIs:
@@ -144,10 +144,10 @@ Project maintenance: dependency verification is complete; current work is roadma
   - `XDG_CONFIG_HOME=D:\code\Sakura-Cactus\.wrangler-config`
 - Wrangler D1/R2 IDs are placeholders and must be replaced before remote deployment.
 - Local migration verification depends on Wrangler accepting the placeholder D1 database configuration; production requires replacing IDs first.
-- Login now only requires `ADMIN_USERNAME` and `ADMIN_PASSWORD` for standard deployment; `ADMIN_PASSWORD_HASH` remains an advanced optional override.
+- Login now uses only `ADMIN_USERNAME` and `ADMIN_PASSWORD`; the old hash override has been removed.
 - Git-based Cloudflare deployment now runs `scripts/prepare-cloudflare-config.mjs` to generate `DB` and `MEDIA_BUCKET` bindings from Cloudflare Variables, avoiding committed personal D1 IDs.
 - The web setup flow is retired: `/admin/setup` redirects to login and the setup API returns 404. Standard deployment continues to use `ADMIN_USERNAME` and `ADMIN_PASSWORD` from Cloudflare Variables/Secrets.
-- `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migration/create-admin against that config or use `pnpm dev`.
+- `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migrations against that config or use `pnpm dev`.
 - `@astrojs/check`, Node types, and binding-only Cloudflare declarations are installed/generated. `pnpm check` and `pnpm exec tsc --noEmit` pass after the 2026-07-15 security audit.
 - The remaining dependency audit item is one low-severity Babel source-map advisory whose declared patched Babel 7 version is not yet published. See `SECURITY_AUDIT_REPORT.md`.
 
@@ -209,10 +209,6 @@ users
 
 ```powershell
 $env:ASTRO_TELEMETRY_DISABLED='1'; $env:XDG_CONFIG_HOME='D:\code\Sakura Cactus\.wrangler-config'; pnpm.cmd build
-```
-
-```powershell
-pnpm.cmd admin:create -- --help
 ```
 
 Manual local auth verification with Wrangler preview confirmed:

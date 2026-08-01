@@ -77,6 +77,8 @@ interface Env {
   SITE_URL?: string;
   PUBLIC_COMMENTS_SERVER_URL?: string;
   ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD?: string;
+  SESSION_SECRET?: string;
 }
 
 declare namespace Cloudflare {
@@ -88,6 +90,8 @@ declare namespace Cloudflare {
     SITE_URL?: string;
     PUBLIC_COMMENTS_SERVER_URL?: string;
     ADMIN_USERNAME?: string;
+    ADMIN_PASSWORD?: string;
+    SESSION_SECRET?: string;
   }
 }
 

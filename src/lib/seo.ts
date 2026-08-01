@@ -1,30 +1,14 @@
 import { env } from 'cloudflare:workers';
+import { resolveSiteOrigin } from './site-url';
 
-const DEFAULT_SITE_URL = 'https://fymi.link';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
 export const ROBOTS_INDEX_FOLLOW = 'index,follow';
 export const ROBOTS_NOINDEX_FOLLOW = 'noindex,follow';
 export const ROBOTS_NOINDEX_NOFOLLOW = 'noindex,nofollow';
 
-function normalizeSiteOrigin(value: string | undefined): string {
-  const candidate = value?.trim() || DEFAULT_SITE_URL;
-
-  try {
-    const url = new URL(candidate);
-
-    if (url.protocol === 'http:' || url.protocol === 'https:') {
-      return url.origin;
-    }
-  } catch {
-    return DEFAULT_SITE_URL;
-  }
-
-  return DEFAULT_SITE_URL;
-}
-
 export function getSiteOrigin(): string {
-  return normalizeSiteOrigin(env.SITE_URL);
+  return resolveSiteOrigin(env.SITE_URL, import.meta.env.DEV);
 }
 
 export function absoluteSiteUrl(path: string): string {
@@ -32,10 +16,14 @@ export function absoluteSiteUrl(path: string): string {
 }
 
 export function getCanonicalRedirectUrl(url: URL): string | null {
+  if (LOCAL_HOSTS.has(url.hostname)) {
+    return null;
+  }
+
   const siteOrigin = getSiteOrigin();
   const targetOrigin = new URL(siteOrigin);
 
-  if (LOCAL_HOSTS.has(url.hostname) || url.origin === targetOrigin.origin) {
+  if (url.origin === targetOrigin.origin) {
     return null;
   }
 

@@ -1,6 +1,6 @@
 # Sakura Cactus
 
-Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统，适合用于文章、笔记、随笔和长期记录。项目使用 Cloudflare D1 保存已发表内容与设置，使用 Cloudflare R2 保存图片和媒体文件。
+Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统，适合用于文章、笔记、随笔和长期记录。后台只供博客所有者本人登录，不提供访客注册或多管理员体系。项目使用 Cloudflare D1 保存已发表内容与设置，使用 Cloudflare R2 保存图片和媒体文件。
 
 ## 核心功能
 
@@ -8,12 +8,12 @@ Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统
 - 未发表内容只保存在当前浏览器 localStorage；服务端只保存 `published` 文章，不提供服务端草稿、撤回或归档状态
 - `/settings/data` 提供博客数据文件导入导出：已发表文章与标签、用户选择的文章图片、approved 友链
 - 公开博客页面，包含首页、文章列表、文章详情、标签、时间轴、搜索、关于页和友人帐
-- Cloudflare D1 存储文章、标签、设置、友链和会话数据
+- Cloudflare D1 存储文章、标签、设置、友链、限流和会话等博客数据
 - 私有 Cloudflare R2 管理图片和媒体文件，支持上传、粘贴、拖拽和复用，并通过 `/i/:token` 代理读取
 - 站点设置、友链申请、友链健康检查、访问量开关和 favicon 外链
 - [Waline](https://waline.js.org/) 评论入口，开启评论并配置外部 Waline 服务后显示，评论数据由外部 Waline 服务保存
 - 支持 RSS、sitemap、robots、canonical、Open Graph 和结构化数据。
-- CSRF 风格同源校验、登录/上传/友链/浏览计数限流、SSRF 防护、安全响应头和私有响应 `no-store`
+- 后台写请求严格同源校验、登录/上传/友链/浏览计数限流、SSRF 防护、安全响应头和私有响应 `no-store`
 - 直接依赖已固定为精确版本，并与 `pnpm-lock.yaml` 保持一致
 - 适配 Cloudflare Workers SSR 部署
 
@@ -39,8 +39,8 @@ Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统
 3. 创建 R2 Bucket，名称固定为 `sakura-blog-media-prod`。
 4. 在 Cloudflare Workers 中连接 GitHub。
 5. 填写构建命令、部署命令和 Build variables。
-6. 首次部署后添加后台账号密码和站点变量。
-7. 配置 `SITE_URL`，按需绑定自定义域名。
+6. 首次部署后，在 Cloudflare Dashboard 配置后台账号、密码和生产 `SITE_URL`。
+7. 按需绑定自定义域名，并确认 `SITE_URL` 是最终的完整 HTTPS 地址。
 8. 重新部署并访问 `/admin/login`。
 
 Build command：
@@ -74,14 +74,25 @@ Cloudflare 中的变量值都会以字符串形式提供给 Worker。普通配�
 | --- | --- | --- | --- | --- |
 | `SAKURA_D1_DATABASE_ID` | Git 构建设置中的 Build variables | 是 | 文本（Text） | D1 Database ID，用于构建时生成绑定 |
 | `SAKURA_R2_BUCKET_NAME` | Git 构建设置中的 Build variables | 是 | 文本（Text） | R2 Bucket 名称，固定填写 `sakura-blog-media-prod` |
-| `ADMIN_USERNAME` | Worker → 设置 → 变量和密钥 | 是 | 文本（Text） | 后台登录用户名 |
-| `ADMIN_PASSWORD` | Worker → 设置 → 变量和密钥 | 是 | 密钥（Secret） | 后台登录密码 |
-| `SITE_URL` | Worker → 设置 → 变量和密钥 | 生产建议填写 | 文本（Text） | 站点地址，包含协议，例如 `https://blog.example.com`，末尾不加 `/`；使用自定义域名时填写自定义域名，只使用 `workers.dev` 时填写自己的 Worker 地址 |
+| `ADMIN_USERNAME` | Worker → 设置 → 变量和密钥 | 是 | 文本（Text） | 博客所有者的唯一管理员登录账号 |
+| `ADMIN_PASSWORD` | Worker → 设置 → 变量和密钥 | 是 | 密钥（Secret） | 博客所有者的唯一管理员登录密码 |
+| `SESSION_SECRET` | Worker → 设置 → 变量和密钥 | 否 | 密钥（Secret） | 可选高级配置；至少 32 字符，用于将会话密钥与登录密码分离 |
+| `SITE_URL` | Worker → 设置 → 变量和密钥 | 生产必填 | 文本（Text） | 完整 HTTPS 站点地址，例如 `https://blog.example.com`；路径、查询参数和片段会被丢弃，只使用 origin |
 | `SITE_NAME` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点名称 |
 | `SITE_TAGLINE` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 首页标语 |
 | `SITE_DESCRIPTION` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点描述 |
 | `SITE_AVATAR_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 登录后 Header 头像地址 |
 | `PUBLIC_COMMENTS_SERVER_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 自己部署的 Waline 服务端地址 |
+
+## 唯一管理员登录
+
+`ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 是唯一管理员凭据来源。推荐直接在 Cloudflare Dashboard 中将前者保存为 Text、后者保存为 Secret；命令行不是必需步骤。博客所有者在 `/admin/login` 输入的就是自己在 Dashboard 设置的同一组账号和密码，不需要手动生成密码哈希，也不需要在 D1 中创建管理员账号。
+
+登录成功后，Worker 会确保 D1 中存在固定的 `env_admin` 技术占位记录，再创建 D1 会话。该记录只用于满足 `sessions.user_id` 与 `users.id` 的关系，不保存真实管理员账号、密码或可用于登录的凭据，也不是第二套登录来源。D1 仍负责文章、标签、设置、友链、限流、会话及其他现有博客数据；不要删除 D1、`users`/`sessions` 表或 migrations。
+
+`SESSION_SECRET` 是可选高级配置。有效且至少 32 字符时会优先用于保护会话；未配置时，程序会继续从 `ADMIN_PASSWORD` 派生会话密钥，不影响正常登录。
+
+生产环境必须配置 `SITE_URL`，而且必须是完整的 HTTPS 绝对地址。配置值会规范化为 origin；缺失、相对地址、无法解析的地址、非 HTTPS 生产地址或不支持的协议会触发清晰的配置错误。本地开发未配置时使用 `http://localhost:4321`；开发模式可以显式使用其他本地 HTTP 地址。
 
 ## 本地开发
 
@@ -121,7 +132,9 @@ pnpm.cmd build
 
 - 不提交 `.env` 和 `.dev.vars`
 - 不提交密码、Token 或密钥
-- 后台密码使用 Cloudflare“密钥”
+- 博客所有者的唯一管理员登录密码使用 Cloudflare“密钥（Secret）”
+- 博客所有者的唯一管理员登录账号使用 Cloudflare“文本（Text）”
+- 生产 `SITE_URL` 必须使用完整 HTTPS 地址
 - R2 Bucket 保持私有
 - D1/R2 生产资源、缓存规则、备份和 Secret 状态需要在 Cloudflare 控制台确认
 - 当前生产依赖审计保留 1 个已知低危 Babel 传递依赖告警，等待上游发布可用修复版本

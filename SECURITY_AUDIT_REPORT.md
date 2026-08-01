@@ -51,7 +51,7 @@
 - 受影响文件：`src/features/auth/auth.service.ts`、`src/pages/api/auth/login.ts`、`src/features/rate-limit/rate-limit.service.ts`、`migrations/0008_security_hardening.sql`。
 - 证据：原登录路径没有共享限流；账号不匹配时可提前结束，不执行同等密码验证路径。
 - 触发条件：攻击者持续提交登录请求或进行账号枚举/计时观察。
-- 影响：提高凭据猜测和账号侧信道风险，并可消耗 PBKDF2/Worker 资源。
+- 影响：提高凭据猜测和账号侧信道风险，并可消耗 Worker 资源。
 - 修复：新增 D1 固定窗口限流表，对客户端 IP 和 IP+账号分别限制；仅使用 Cloudflare `CF-Connecting-IP` 或 `unknown` 作为客户端维度，键值经规范化后以服务端秘密绑定哈希保存；取消用户名短路并统一凭据失败响应；限制账号/密码最大长度；429 返回合法秒数 `Retry-After`；成功登录后尽力清理对应失败窗口。D1 限流不可用时调用方失败关闭，不静默放行。
 - 验证：安全测试覆盖窗口边界、并发消费不超过限额、分批清理过期记录和成功清理；本地运行时同源无效登录返回 401，跨源登录返回 403；D1 0008 迁移成功。
 
@@ -62,8 +62,8 @@
 - 证据：原实现主要依赖 `SameSite=Lax` cookie，管理、认证、友链申请、浏览计数等写接口未统一检查 `Origin`/Fetch Metadata。
 - 触发条件：受害者浏览器携带可用管理 cookie 访问攻击者页面，或浏览器/代理行为削弱 SameSite 保护。
 - 影响：可能产生跨站状态修改；公开写接口也可能被第三方站点滥用。
-- 修复：middleware 对相关 POST/PUT/PATCH/DELETE 请求拒绝不匹配 `Origin` 和 `Sec-Fetch-Site: cross-site`；SameSite cookie 继续作为第二层保护。GET/HEAD 不承担管理写操作。
-- 验证：运行时跨源登录 POST 返回 403；纯测试覆盖同源、跨源和 Fetch Metadata。
+- 修复：middleware 对管理员与认证 POST/PUT/PATCH/DELETE 请求要求存在可解析、非 `null` 且完全匹配的 `Origin`，并拒绝 `Sec-Fetch-Site: cross-site`；公开友链申请与浏览计数保留原兼容语义。SameSite cookie 继续作为第二层保护。GET/HEAD 不承担管理写操作。
+- 验证：运行时缺少 Origin 和跨源登录 POST 均返回 403；纯测试覆盖同源、跨源、缺失、`null`、无效 Origin 和 Fetch Metadata，并确认原宽松函数行为不变。
 
 ### SEC-004：图片上传只信任声明类型，缺少频率限制和失败回滚
 
@@ -162,7 +162,7 @@
 6. **生产配置确认（运维）**：必须在 Cloudflare 控制台确认 R2 私有、无公开开发 URL/自定义域，管理凭据为 Secret，D1/R2 的 preview/production 隔离，缓存规则不覆盖私有路径，以及备份/日志访问策略。
 7. **结构债务（维护性）**：`PostEditor.tsx`、renderer、post repo、若干 Astro 页面和全局样式体积较大。四个遗留内联 DOM 脚本暂以 `@ts-nocheck` 标注并记录，避免在安全修复中引入 UI 回归；应作为独立前端重构提取并补浏览器测试。
 8. **D1/R2 跨资源一致性（低）**：两者没有共同事务。上传路径已补偿删除；删除/清理仍应通过幂等操作、重试和观测处理极少数部分失败。
-9. **旧本地管理员脚本（低）**：`scripts/create-admin.ts` 仍兼容 `--password` 参数和普通 readline 输入，前者可能出现在本机进程列表，后者不是隐藏输入。当前运行时管理员已由 Cloudflare 环境变量控制，该脚本不参与网页登录；如仍需使用，应优先通过临时 `SAKURA_ADMIN_PASSWORD` 环境变量并避免 shell 历史，后续可在独立清理中删除明文参数或实现真正的 masked prompt。不要对生产使用其 `--remote` 选项，除非经过单独审批和备份。
+9. **管理员凭据边界（已收敛）**：旧 D1 管理员维护工具及其密码哈希服务已删除。运行时只接受 Cloudflare Dashboard 中的唯一管理员账号与密码；D1 `env_admin` 仅保留固定技术占位值并承载现有会话外键。
 
 ## 结构与复杂度审计
 

@@ -24,6 +24,26 @@ export function isSameOriginBrowserRequest(request: Request, url: URL): boolean 
   }
 }
 
+export function isStrictSameOriginBrowserRequest(request: Request, url: URL): boolean {
+  const fetchSite = request.headers.get('sec-fetch-site')?.toLowerCase();
+
+  if (fetchSite === 'cross-site') {
+    return false;
+  }
+
+  const origin = request.headers.get('origin');
+
+  if (!origin || origin === 'null') {
+    return false;
+  }
+
+  try {
+    return new URL(origin).origin === url.origin;
+  } catch {
+    return false;
+  }
+}
+
 export function normalizeInternalRedirect(value: string | null | undefined, fallback = '/write'): string {
   if (!value || value.length > 2_048) {
     return fallback;

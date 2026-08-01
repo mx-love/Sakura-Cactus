@@ -1,19 +1,17 @@
 import type { APIContext } from 'astro';
 import { env } from 'cloudflare:workers';
-import type { UserRow } from '@/lib/database.types';
 import { getDb } from '@/lib/db';
 import { clearRateLimit, consumeRateLimit } from '@/features/rate-limit/rate-limit.service';
 import { reportError } from '@/lib/logging';
 import { getClientAddress } from '@/lib/security/request';
 import { SESSION_COOKIE_NAME, SESSION_TOKEN_BYTES, SESSION_TTL_SECONDS } from './auth.constants';
 import { constantTimeEqual, createRandomToken, sha256Base64Url } from './crypto.service';
-import { verifyPassword } from './password.service';
 import { cleanupStaleSessions, createSession, findActiveSessionRecordByTokenHash, revokeSessionByTokenHash } from './session.repo';
 import { ensureEnvironmentAdminUser, ENV_ADMIN_USER_ID, updateLastLogin } from './user.repo';
 
 const TEXT_ENCODER = new TextEncoder();
 
-function readOptionalRuntimeEnv(name: string): string | undefined {
+function readOptionalSecret(name: 'ADMIN_PASSWORD' | 'SESSION_SECRET'): string | undefined {
   const value = (env as unknown as Record<string, string | undefined>)[name];
   return typeof value === 'string' ? value : undefined;
 }
@@ -48,38 +46,24 @@ export interface LoginResult {
   cookie: string;
 }
 
-export function toPublicAdminUser(user: UserRow): PublicAdminUser {
-  return {
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    displayName: user.display_name,
-    role: 'admin'
-  };
-}
-
 export function getEnvironmentAdminUsername(): string {
   const username = env.ADMIN_USERNAME?.trim();
 
   if (!username) {
-    throw new AuthConfigurationError('MISSING_ADMIN_USERNAME', 'ADMIN_USERNAME must be set.');
+    throw new AuthConfigurationError('MISSING_ADMIN_USERNAME', 'ADMIN_USERNAME must be configured.');
   }
 
   return username;
 }
 
 export function getEnvironmentAdminPassword(): string {
-  const password = readOptionalRuntimeEnv('ADMIN_PASSWORD');
+  const password = readOptionalSecret('ADMIN_PASSWORD');
 
   if (!password) {
-    throw new AuthConfigurationError('MISSING_ADMIN_PASSWORD', 'ADMIN_PASSWORD or ADMIN_PASSWORD_HASH must be set.');
+    throw new AuthConfigurationError('MISSING_ADMIN_PASSWORD', 'ADMIN_PASSWORD must be configured.');
   }
 
   return password;
-}
-
-function getEnvironmentAdminPasswordHash(): string | undefined {
-  return readOptionalRuntimeEnv('ADMIN_PASSWORD_HASH');
 }
 
 async function constantTimePasswordEqual(actual: string, expected: string): Promise<boolean> {
@@ -89,12 +73,6 @@ async function constantTimePasswordEqual(actual: string, expected: string): Prom
 }
 
 export async function verifyEnvironmentAdminPassword(password: string): Promise<boolean> {
-  const passwordHash = getEnvironmentAdminPasswordHash();
-
-  if (passwordHash) {
-    return verifyPassword(password, passwordHash);
-  }
-
   return constantTimePasswordEqual(password, getEnvironmentAdminPassword());
 }
 
@@ -111,25 +89,13 @@ export function getEnvironmentAdminUser(): PublicAdminUser {
 }
 
 export function getSessionSecret(): string {
-  const secret = readOptionalRuntimeEnv('SESSION_SECRET');
+  const secret = readOptionalSecret('SESSION_SECRET');
 
   if (secret && secret.length >= 32) {
     return secret;
   }
 
-  const passwordHash = getEnvironmentAdminPasswordHash();
-
-  if (passwordHash) {
-    return `admin-password-hash:${passwordHash}`;
-  }
-
-  const plainAdminPassword = readOptionalRuntimeEnv('ADMIN_PASSWORD');
-
-  if (plainAdminPassword) {
-    return `${import.meta.env.DEV ? 'dev' : 'plain'}-admin-password:${plainAdminPassword}`;
-  }
-
-  throw new AuthConfigurationError('MISSING_SESSION_SECRET_SOURCE', 'ADMIN_PASSWORD or ADMIN_PASSWORD_HASH must be set, or set SESSION_SECRET explicitly.');
+  return `${import.meta.env.DEV ? 'dev' : 'plain'}-admin-password:${getEnvironmentAdminPassword()}`;
 }
 
 export function getCookieValue(request: Request, name: string): string | null {

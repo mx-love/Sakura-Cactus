@@ -1,46 +1,9 @@
 import type { UserRow } from '@/lib/database.types';
 import { nowIso } from '@/lib/db';
-import { createRandomId } from './crypto.service';
 
 export const ENV_ADMIN_USER_ID = 'env_admin';
 const ENV_ADMIN_DB_USERNAME = '__env_admin__';
 const ENV_ADMIN_PASSWORD_MARKER = '__environment_password__';
-
-export interface CreateUserInput {
-  email: string | null;
-  username: string;
-  displayName: string | null;
-  passwordHash: string;
-}
-
-export async function countUsers(db: D1Database): Promise<number> {
-  const row = await db.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>();
-  return row?.count ?? 0;
-}
-
-export async function findUserByUsername(db: D1Database, username: string): Promise<UserRow | null> {
-  return db
-    .prepare(
-      `SELECT id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
-       FROM users
-       WHERE username = ?
-       LIMIT 1`
-    )
-    .bind(username)
-    .first<UserRow>();
-}
-
-export async function findUserByAccount(db: D1Database, account: string): Promise<UserRow | null> {
-  return db
-    .prepare(
-      `SELECT id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
-       FROM users
-       WHERE username = ? OR email = ?
-       LIMIT 1`
-    )
-    .bind(account, account.toLowerCase())
-    .first<UserRow>();
-}
 
 export async function findUserById(db: D1Database, id: string): Promise<UserRow | null> {
   return db
@@ -52,44 +15,6 @@ export async function findUserById(db: D1Database, id: string): Promise<UserRow 
     )
     .bind(id)
     .first<UserRow>();
-}
-
-export async function createAdminUser(db: D1Database, input: CreateUserInput): Promise<UserRow> {
-  const now = nowIso();
-  const user: UserRow = {
-    id: createRandomId('u'),
-    email: input.email,
-    username: input.username,
-    display_name: input.displayName,
-    password_hash: input.passwordHash,
-    role: 'admin',
-    status: 'active',
-    created_at: now,
-    updated_at: now,
-    last_login_at: null
-  };
-
-  await db
-    .prepare(
-      `INSERT INTO users (
-        id, email, username, display_name, password_hash, role, status, created_at, updated_at, last_login_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      user.id,
-      user.email,
-      user.username,
-      user.display_name,
-      user.password_hash,
-      user.role,
-      user.status,
-      user.created_at,
-      user.updated_at,
-      user.last_login_at
-    )
-    .run();
-
-  return user;
 }
 
 export async function ensureEnvironmentAdminUser(db: D1Database): Promise<UserRow> {

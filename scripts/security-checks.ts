@@ -7,7 +7,13 @@ import {
   normalizePublicHttpUrl,
   UnsafeExternalUrlError
 } from '../src/lib/security/external-url.ts';
-import { getClientAddress, isSameOriginBrowserRequest, normalizeInternalRedirect } from '../src/lib/security/request.ts';
+import {
+  getClientAddress,
+  isSameOriginBrowserRequest,
+  isStrictSameOriginBrowserRequest,
+  normalizeInternalRedirect
+} from '../src/lib/security/request.ts';
+import { resolveSiteOrigin, SiteUrlConfigurationError } from '../src/lib/site-url.ts';
 
 type RateLimitRow = {
   scope: string;
@@ -361,8 +367,69 @@ function testRequests(): void {
     true
   );
 
+  const adminUrl = new URL('https://blog.example/api/admin/posts');
+  assert.equal(
+    isStrictSameOriginBrowserRequest(
+      new Request(adminUrl, { method: 'POST', headers: { Origin: 'https://blog.example' } }),
+      adminUrl
+    ),
+    true
+  );
+  assert.equal(
+    isStrictSameOriginBrowserRequest(
+      new Request(adminUrl, { method: 'POST', headers: { Origin: 'https://evil.example' } }),
+      adminUrl
+    ),
+    false
+  );
+  assert.equal(isStrictSameOriginBrowserRequest(new Request(adminUrl, { method: 'POST' }), adminUrl), false);
+  assert.equal(
+    isStrictSameOriginBrowserRequest(new Request(adminUrl, { method: 'POST', headers: { Origin: 'null' } }), adminUrl),
+    false
+  );
+  assert.equal(
+    isStrictSameOriginBrowserRequest(new Request(adminUrl, { method: 'POST', headers: { Origin: 'not a url' } }), adminUrl),
+    false
+  );
+  assert.equal(
+    isStrictSameOriginBrowserRequest(
+      new Request(adminUrl, {
+        method: 'POST',
+        headers: { Origin: 'https://blog.example', 'Sec-Fetch-Site': 'cross-site' }
+      }),
+      adminUrl
+    ),
+    false
+  );
+  assert.equal(
+    isStrictSameOriginBrowserRequest(
+      new Request(adminUrl, {
+        method: 'POST',
+        headers: { Origin: 'https://blog.example', 'Sec-Fetch-Site': 'same-origin' }
+      }),
+      adminUrl
+    ),
+    true
+  );
+
   assert.equal(getClientAddress(new Request('https://blog.example/', { headers: { 'X-Forwarded-For': '8.8.8.8' } })), 'unknown');
   assert.equal(getClientAddress(new Request('https://blog.example/', { headers: { 'CF-Connecting-IP': '2001:DB8::1' } })), '2001:db8::1');
+}
+
+function testSiteUrl(): void {
+  assert.equal(resolveSiteOrigin(undefined, true), 'http://localhost:4321');
+  assert.throws(
+    () => resolveSiteOrigin(undefined, false),
+    (error) => error instanceof SiteUrlConfigurationError && error.message === 'SITE_URL must be configured in production.'
+  );
+  assert.throws(() => resolveSiteOrigin('not a url', false), /SITE_URL must be a valid absolute URL/);
+  assert.throws(() => resolveSiteOrigin('/relative', false), /SITE_URL must be a valid absolute URL/);
+  assert.throws(() => resolveSiteOrigin('http://blog.example', false), /SITE_URL must use https: in production/);
+  assert.throws(() => resolveSiteOrigin('ftp://blog.example', false), /SITE_URL must use http: or https:/);
+  assert.equal(resolveSiteOrigin('https://blog.example', false), 'https://blog.example');
+  assert.equal(resolveSiteOrigin('https://blog.example/path?a=1#test', false), 'https://blog.example');
+  assert.equal(resolveSiteOrigin('http://127.0.0.1:8787/path', true), 'http://127.0.0.1:8787');
+  assert.throws(() => resolveSiteOrigin('http://127.0.0.1:8787', false), /SITE_URL must use https: in production/);
 }
 
 function testUploads(): void {
@@ -445,6 +512,7 @@ function testMarkdown(): void {
 await testRateLimit();
 await testExternalUrls();
 testRequests();
+testSiteUrl();
 testUploads();
 testMarkdown();
 

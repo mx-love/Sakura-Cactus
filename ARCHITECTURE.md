@@ -27,9 +27,9 @@ The middleware centrally protects:
 - `/settings` and `/settings/*`;
 - `/api/admin` and every `/api/admin/*` route, for every HTTP method.
 
-The browser never receives `ADMIN_PASSWORD`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`, the D1 binding, or the R2 binding. Authentication compares the submitted account and password on the server. A successful login creates a 32-byte random token, stores only a secret-bound SHA-256 token hash in D1, and sends the raw token in an `HttpOnly; Secure; SameSite=Lax; Path=/` cookie.
+The browser never receives `ADMIN_PASSWORD`, `SESSION_SECRET`, the D1 binding, or the R2 binding. `ADMIN_USERNAME` and `ADMIN_PASSWORD` are the only login credential source and are compared on the server with digest-based constant-time checks. D1 is never queried for a login password. A successful login ensures the fixed, non-login `env_admin` placeholder exists, creates a 32-byte random token, stores only a secret-bound SHA-256 token hash in D1, and sends the raw token in an `HttpOnly; Secure; SameSite=Lax; Path=/` cookie. A valid optional `SESSION_SECRET` separates session protection from the login password; otherwise the session key is derived from `ADMIN_PASSWORD`.
 
-Mutating admin/auth endpoints also reject a conflicting `Origin` or `Sec-Fetch-Site: cross-site` request. SameSite cookies remain a second browser-enforced layer. D1-backed fixed-window limits protect login, uploads, friend applications, and view counting across Worker isolates; no in-memory `Map` is used.
+Mutating admin/auth endpoints require a parseable, non-null `Origin` that exactly matches the request origin and reject `Sec-Fetch-Site: cross-site`. The compatibility behavior for public friend applications and view counting remains unchanged. SameSite cookies remain a second browser-enforced layer. D1-backed fixed-window limits protect login, uploads, friend applications, and view counting across Worker isolates; no in-memory `Map` is used.
 
 ## Data ownership
 
@@ -85,7 +85,7 @@ There is no dynamic Plugin Registry today. Sakura Cactus does not support upload
 
 Any future extension context must be capability-based and must not expose:
 
-- `ADMIN_PASSWORD`, `ADMIN_PASSWORD_HASH`, or `SESSION_SECRET`;
+- `ADMIN_PASSWORD` or `SESSION_SECRET`;
 - the complete Cloudflare `env` object;
 - session records, raw cookies, or session tokens;
 - raw D1 or R2 bindings;

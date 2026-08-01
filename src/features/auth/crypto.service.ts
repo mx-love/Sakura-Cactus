@@ -17,18 +17,6 @@ export function bytesToBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 }
 
-export function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
-  const padded = value.replaceAll('-', '+').replaceAll('_', '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
-  const binary = atob(padded);
-  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
-
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return bytes;
-}
-
 export function createRandomId(prefix: string): string {
   return `${prefix}_${bytesToBase64Url(randomBytes(16))}`;
 }

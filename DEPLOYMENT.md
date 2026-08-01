@@ -13,32 +13,26 @@ Sakura Cactus is deployed as a Cloudflare Workers SSR application. Workers handl
 - Optionally set `SAKURA_R2_BUCKET_NAME`; it defaults to `sakura-blog-media-prod`.
 - The generated Wrangler config includes the private R2 bucket binding as `MEDIA_BUCKET`.
 - Keep `keep_vars: true` in `wrangler.jsonc` so Wrangler deploys do not remove Dashboard-managed Variables and Secrets.
-- Configure administrator credentials with Cloudflare Workers Secrets.
+- In the Cloudflare Dashboard, configure the owner's administrator username as Text and password as Secret.
+- Configure the production `SITE_URL` as a complete HTTPS URL.
 - Configure public site identity with Cloudflare Workers environment variables if you do not want the defaults.
 
-## Required Production Secrets
+## Required Production Configuration
 
-Set these with `wrangler secret put` or in the Cloudflare dashboard. Do not commit real values to Git.
+Use Cloudflare Dashboard → Worker → Settings → Variables and Secrets. This is the recommended configuration path; no administrator account command or D1 user creation step is required. Do not commit real values to Git.
 
-```bash
-wrangler secret put ADMIN_USERNAME
-wrangler secret put ADMIN_PASSWORD
-```
+| Name | Cloudflare type | Requirement | Meaning |
+| --- | --- | --- | --- |
+| `ADMIN_USERNAME` | Text | Required | The blog owner's only administrator login username |
+| `ADMIN_PASSWORD` | Secret | Required | The blog owner's only administrator login password |
+| `SITE_URL` | Text | Required in production | Complete HTTPS site URL, such as `https://blog.example.com` |
+| `SESSION_SECRET` | Secret | Optional advanced setting | Independent session key, at least 32 characters |
 
-Recommended production variables:
+The owner enters the same `ADMIN_USERNAME` and `ADMIN_PASSWORD` on `/admin/login`. The project has no visitor registration or multi-administrator account system. It does not require a generated password hash, a D1 administrator record, or a command-line account setup step.
 
-```txt
-ADMIN_USERNAME=your-name
-ADMIN_PASSWORD=your-password
-```
+When a valid `SESSION_SECRET` is present, it protects session hashes independently. When it is omitted, the Worker derives the session key from `ADMIN_PASSWORD`, so a third secret is not required for normal deployment.
 
-Advanced users may use `ADMIN_PASSWORD_HASH` instead of `ADMIN_PASSWORD`. If both are configured, `ADMIN_PASSWORD_HASH` takes priority. Generate it locally:
-
-```bash
-node -e 'const crypto=require("crypto"); const p=process.argv[1]; const salt=crypto.randomBytes(16); const iter=210000; const hash=crypto.pbkdf2Sync(p,salt,iter,32,"sha256"); console.log(["pbkdf2_sha256",iter,salt.toString("base64url"),hash.toString("base64url")].join("$"))' "your-password"
-```
-
-RSS, sitemap, robots metadata, canonical redirects, and absolute SEO URLs use the configured `SITE_URL` origin through `src/lib/seo.ts`. Set `SITE_URL` to the final production origin, such as `https://blog.example.com`, before routing production traffic. If it is missing or invalid, the code falls back to the project default origin.
+RSS, sitemap, robots metadata, canonical redirects, and absolute SEO URLs use the configured `SITE_URL` origin through `src/lib/seo.ts`. Production fails clearly when `SITE_URL` is missing, relative, invalid, non-HTTPS, or uses an unsupported protocol. Paths, queries, and fragments are discarded. Local development may omit it and use `http://localhost:4321`; development mode may also use another explicit local HTTP address.
 
 ## Public Site Identity Variables
 
@@ -73,6 +67,7 @@ Use `.dev.vars` locally. Do not commit `.dev.vars`.
 ```txt
 ADMIN_USERNAME=sakura
 ADMIN_PASSWORD=change-me
+SITE_URL=http://localhost:4321
 SITE_NAME=Sakura Cactus
 SITE_TAGLINE=温柔地写，安静地收录。
 SITE_DESCRIPTION=一些文章、笔记，以及慢慢整理的想法。
@@ -114,13 +109,12 @@ The committed file contains binding names and generated TypeScript declarations 
 
 ## Administrator Login
 
-Sakura Cactus no longer uses `SETUP_TOKEN`, `/admin/setup`, or a web-based first-admin creation flow.
+Sakura Cactus has one administrator: the blog owner. It has no visitor registration, user application, or multi-administrator flow. `/admin/setup` remains a retired redirect and its API returns 404.
 
-Administrator login is controlled by environment variables:
+The only login credential source is the Cloudflare Worker environment:
 
-- `ADMIN_USERNAME`
-- `ADMIN_PASSWORD`
-- `ADMIN_PASSWORD_HASH` as an advanced optional override
+- `ADMIN_USERNAME`: the blog owner's only administrator login username, stored as Text.
+- `ADMIN_PASSWORD`: the blog owner's only administrator login password, stored as Secret.
 
 The login page is:
 
@@ -128,7 +122,9 @@ The login page is:
 /admin/login
 ```
 
-Successful login creates an HttpOnly, Secure, SameSite=Lax session cookie. Session records in D1 store only token hashes.
+The login page compares submitted credentials with these values inside the Worker using digest-based constant-time comparison. It never queries a D1 password. Successful login ensures the fixed D1 `env_admin` technical placeholder exists and then creates an HttpOnly, Secure, SameSite=Lax session cookie. D1 stores only secret-bound session token hashes and normal session metadata.
+
+`env_admin` exists only to satisfy the D1 user/session relationship. It contains fixed, non-login placeholder values and never receives the real administrator username, password, or password hash. D1 remains required for posts, tags, settings, friend links, rate limits, sessions, and the project's other blog data; keep all existing migrations.
 
 ## Cloudflare Access Outer Protection
 
@@ -155,7 +151,8 @@ Cloudflare Access should be treated as perimeter protection. Sakura Cactus still
 Before routing production traffic:
 
 - Confirm the R2 bucket is private, its public development URL is disabled, and no public custom domain is attached.
-- Confirm administrator credentials (and optional `SESSION_SECRET`) are Cloudflare Secrets, not repository variables.
+- Confirm `ADMIN_USERNAME` is Dashboard Text, while `ADMIN_PASSWORD` and optional `SESSION_SECRET` are Dashboard Secrets.
+- Confirm production `SITE_URL` is a complete HTTPS URL for the final Worker/custom-domain origin.
 - Confirm preview and production use separate D1/R2 resources and secrets where appropriate.
 - Confirm Cache Rules never publicly cache `/admin*`, `/api/admin*`, `/api/auth*`, `/write*`, `/settings*`, or private media responses.
 - Verify D1 backups or point-in-time recovery, observability retention/access, and least-privilege account access.

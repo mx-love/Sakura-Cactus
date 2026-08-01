@@ -17,6 +17,8 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[CODE]` the prepare script logs binding names only and keeps `keep_vars: true`; it does not log IDs or bucket values.
 - [x] `[CODE]` browser code is not passed the raw Cloudflare `env` object.
 - [ ] `[CONSOLE]` `ADMIN_PASSWORD` is stored as a Cloudflare Secret, not plain text.
+- [ ] `[CONSOLE]` `ADMIN_USERNAME` is the blog owner's only administrator login username and is stored as Cloudflare Text.
+- [ ] `[CONSOLE]` production `SITE_URL` is a complete HTTPS URL.
 - [ ] `[CONSOLE]` preview and production use separate D1/R2 resources and secrets where appropriate.
 - [ ] `[CONSOLE]` `SITE_URL` exactly matches the intended production origin.
 
@@ -27,7 +29,8 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[CODE]` every `/api/admin/*` method passes through centralized authorization.
 - [x] `[TEST]` unauthenticated `/api/admin/health` returns 401.
 - [x] `[CODE]` retired setup API returns 404 and the setup page redirects to login.
-- [x] `[CODE]` credentials are read from `ADMIN_USERNAME` and `ADMIN_PASSWORD` (or the existing optional hash override), not D1 or repository files.
+- [x] `[CODE]` the blog owner's only administrator credentials are read exclusively from `ADMIN_USERNAME` and `ADMIN_PASSWORD`, not D1 or repository files.
+- [x] `[CODE]` D1 `env_admin` contains fixed non-login placeholders only and exists solely for the user/session relationship.
 - [x] `[CODE]` account and password comparisons run without the prior username short-circuit.
 - [x] `[CODE]` login failures return one generic credential error.
 - [x] `[CODE]` D1-backed IP/account login limits work across isolates, expire their own rows, delete old rows in bounded batches, and clear the matching failure windows after successful login.
@@ -42,13 +45,14 @@ Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 
 - [x] `[CODE]` expired/revoked sessions are rejected by the D1 lookup.
 - [x] `[CODE]` logout revokes the server-side row before deleting the cookie with matching attributes.
 - [x] `[CODE]` login always issues a fresh token; no caller-provided session identifier is reused.
+- [x] `[CODE]` an optional valid `SESSION_SECRET` is preferred; otherwise the session key is derived from `ADMIN_PASSWORD`.
 - [x] `[CODE]` cron and successful login remove expired/old-revoked session rows.
 - [x] `[CODE]` malformed percent-encoding in a cookie is treated as unauthenticated instead of causing a 500.
 
 ## CSRF, redirects, and request limits
 
-- [x] `[CODE]` mutating admin/auth/friend/view endpoints reject a mismatched `Origin` or `Sec-Fetch-Site: cross-site`.
-- [x] `[TEST]` a cross-site login POST returns 403.
+- [x] `[CODE]` mutating administrator and authentication endpoints require a valid matching `Origin` and reject `Sec-Fetch-Site: cross-site`; public friend/view compatibility behavior is unchanged.
+- [x] `[TEST]` strict-origin tests cover matching, mismatched, missing, null and invalid Origin values plus Fetch Metadata; runtime login tests reject missing and cross-site Origin values.
 - [x] `[CODE]` rate-limit identity trusts Cloudflare `CF-Connecting-IP`; user-controlled `X-Forwarded-For` is not used as a fallback.
 - [x] `[CODE]` GET and HEAD handlers do not change admin state.
 - [x] `[CODE]` API request content length is capped at 256 KiB by default, with explicit larger allowances for the 5 MiB upload endpoint and bounded blog-data JSON/ZIP import endpoints.

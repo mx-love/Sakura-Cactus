@@ -3,7 +3,12 @@ import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { matchPublicCache, maybeStorePublicCache, withNoStore, withServerTiming } from '@/lib/cache';
 import { jsonError } from '@/lib/response';
 import { ROBOTS_NOINDEX_NOFOLLOW, getCanonicalRedirectUrl } from '@/lib/seo';
-import { applySecurityHeaders, isMutatingRequest, isSameOriginBrowserRequest } from '@/lib/security/request';
+import {
+  applySecurityHeaders,
+  isMutatingRequest,
+  isSameOriginBrowserRequest,
+  isStrictSameOriginBrowserRequest
+} from '@/lib/security/request';
 import { DATA_PORTABILITY_LIMITS } from '@/features/data-portability/data-portability.constants';
 
 function isAdminPage(pathname: string): boolean {
@@ -36,14 +41,17 @@ function isProtectedHtmlPage(pathname: string): boolean {
   return isPrivateHtmlPage(pathname) && !isAdminLoginPage(pathname) && !isAdminSetupPage(pathname);
 }
 
-function requiresSameOriginMutation(pathname: string): boolean {
+function requiresStrictSameOriginMutation(pathname: string): boolean {
   return (
     isAdminApi(pathname) ||
     pathname === '/api/auth/login' ||
     pathname === '/api/auth/logout' ||
-    pathname === '/api/friends/apply' ||
-    pathname.startsWith('/api/views/')
+    pathname === '/api/auth/setup'
   );
+}
+
+function requiresCompatibleSameOriginMutation(pathname: string): boolean {
+  return pathname === '/api/friends/apply' || pathname.startsWith('/api/views/');
 }
 
 function exceedsRequestSizeLimit(request: Request, pathname: string): boolean {
@@ -102,8 +110,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return finalize(cached);
   }
 
-  if (isMutatingRequest(context.request) && requiresSameOriginMutation(pathname) && !isSameOriginBrowserRequest(context.request, context.url)) {
-    return finalize(jsonError('CROSS_SITE_REQUEST_REJECTED', 'Cross-site request rejected.', { status: 403 }), true);
+  if (isMutatingRequest(context.request)) {
+    const sameOriginAllowed = requiresStrictSameOriginMutation(pathname)
+      ? isStrictSameOriginBrowserRequest(context.request, context.url)
+      : !requiresCompatibleSameOriginMutation(pathname) || isSameOriginBrowserRequest(context.request, context.url);
+
+    if (!sameOriginAllowed) {
+      return finalize(jsonError('CROSS_SITE_REQUEST_REJECTED', 'Cross-site request rejected.', { status: 403 }), true);
+    }
   }
 
   if (exceedsRequestSizeLimit(context.request, pathname)) {

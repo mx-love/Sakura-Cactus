@@ -10,11 +10,12 @@ import {
   writeFileSync
 } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const tempRoot = path.join(repoRoot, '.tmp', 'd1-runtime-migration');
+const tempRoot = path.join(tmpdir(), 'sakura-cactus-d1-runtime-migration');
 const fullPersistPath = path.join(tempRoot, 'empty-to-0010');
 const upgradePersistPath = path.join(tempRoot, 'upgrade-0009-to-0010');
 const v9MigrationsPath = path.join(tempRoot, 'migrations-v9');
@@ -25,6 +26,7 @@ const wranglerCli = path.join(repoRoot, 'node_modules', 'wrangler', 'bin', 'wran
 const databaseName = 'sakura_blog_prod';
 const testPort = 8796;
 const testOrigin = `http://127.0.0.1:${testPort}`;
+const configuredSiteOrigin = 'https://blog.example.test';
 const testSessionSecret = 'session-boundary-test-secret'.padEnd(48, '-');
 const environmentAdminSessionToken = 'environment-admin-session-token';
 const foreignSessionToken = 'foreign-user-session-token';
@@ -37,7 +39,7 @@ const wranglerEnv = {
   XDG_CONFIG_HOME: path.join(tempRoot, 'xdg-config')
 };
 
-assert.ok(tempRoot.startsWith(path.join(repoRoot, '.tmp') + path.sep));
+assert.ok(path.resolve(tempRoot).startsWith(path.resolve(tmpdir()) + path.sep));
 rmSync(tempRoot, { recursive: true, force: true });
 mkdirSync(v9MigrationsPath, { recursive: true });
 
@@ -410,25 +412,58 @@ async function stopServer(child) {
 }
 
 async function request(pathname, init = {}) {
-  return fetch(`${testOrigin}${pathname}`, {
-    ...init,
-    signal: init.signal ?? AbortSignal.timeout(20_000)
-  });
+  const method = (init.method ?? 'GET').toUpperCase();
+  const attempts = !init.signal && (method === 'GET' || method === 'HEAD') ? 2 : 1;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetch(`${testOrigin}${pathname}`, {
+        ...init,
+        signal: init.signal ?? AbortSignal.timeout(20_000)
+      });
+    } catch (error) {
+      if (attempt === attempts || !(error instanceof DOMException) || error.name !== 'TimeoutError') {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
+
+  throw new Error('Unreachable request retry state.');
 }
 
 async function login() {
-  const response = await request('/api/auth/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Origin: testOrigin
-    },
-    body: JSON.stringify({
-      username: 'smoke-admin',
-      password: 'smoke-password'
-    })
-  });
-  assert.equal(response.status, 200);
+  let response;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    response = await request('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: testOrigin
+      },
+      body: JSON.stringify({
+        username: 'smoke-admin',
+        password: 'smoke-password'
+      })
+    });
+
+    if (response.status === 200) {
+      break;
+    }
+
+    const body = await response.text();
+
+    if (attempt === 1 && response.status === 503 && body.includes('worker restarted mid-request')) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      continue;
+    }
+
+    throw new Error(`Login returned ${response.status}: ${body}`);
+  }
+
+  assert.ok(response && response.status === 200);
   const setCookie = response.headers.get('set-cookie');
   assert.ok(setCookie);
   assert.match(setCookie, /(?:^|;)\s*Path=\//i);
@@ -512,7 +547,7 @@ async function runHttpSmoke(persistPath, { testZip }) {
       '--var',
       `SESSION_SECRET:${testSessionSecret}`,
       '--var',
-      `SITE_URL:${testOrigin}`
+      `SITE_URL:${configuredSiteOrigin}`
     ],
     {
       cwd: repoRoot,
@@ -559,8 +594,34 @@ async function runHttpSmoke(persistPath, { testZip }) {
       assert.equal(response.status, 200, `${pathname} should return 200.`);
     }
 
+    console.log('  HTTP: strict Origin is required for administrator login');
+    const missingOriginLogin = await request('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'smoke-admin', password: 'smoke-password' })
+    });
+    assert.equal(missingOriginLogin.status, 403);
+    const crossOriginLogin = await request('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'https://evil.example'
+      },
+      body: JSON.stringify({ username: 'smoke-admin', password: 'smoke-password' })
+    });
+    assert.equal(crossOriginLogin.status, 403);
+
     console.log('  HTTP: admin login and data page');
-    const { cookie, tokenHash } = await login();
+    let loginResult;
+
+    try {
+      loginResult = await login();
+    } catch (error) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      throw new Error(`Administrator login smoke failed.\n${output.join('')}`, { cause: error });
+    }
+
+    const { cookie, tokenHash } = loginResult;
     const currentAdminResponse = await request('/api/auth/me', {
       headers: { Cookie: cookie }
     });
@@ -733,7 +794,7 @@ async function runMissingAuthConfigurationSmoke(persistPath) {
       '--var',
       `SESSION_SECRET:${testSessionSecret}`,
       '--var',
-      `SITE_URL:${origin}`
+      `SITE_URL:${configuredSiteOrigin}`
     ],
     {
       cwd: repoRoot,
