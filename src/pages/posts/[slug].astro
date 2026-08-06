@@ -322,6 +322,7 @@ function formatDate(date: Date | null) {
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             const mobileTocTrigger = document.querySelector('[data-mobile-toc-trigger]');
             const mobileTocOverlay = document.querySelector('[data-mobile-toc-overlay]');
+            const siteFooter = document.querySelector('.sc-site-footer');
             const mobileTocCloseControls = Array.from(document.querySelectorAll('[data-mobile-toc-close]'));
             let activeHeadingId = '';
             let tocFrame = 0;
@@ -440,7 +441,8 @@ function formatDate(date: Date | null) {
               }
 
               mobileTocTrigger.hidden = false;
-              mobileTocTrigger.classList.toggle('sc-mobile-toc-trigger-visible', window.scrollY > 240);
+              const footerIsVisible = siteFooter instanceof HTMLElement && siteFooter.getBoundingClientRect().top < window.innerHeight;
+              mobileTocTrigger.classList.toggle('sc-mobile-toc-trigger-visible', window.scrollY > 240 && !footerIsVisible);
             }
 
             tocLinks.forEach((link) => {

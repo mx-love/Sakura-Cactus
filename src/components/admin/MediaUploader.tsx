@@ -48,7 +48,7 @@ export function MediaUploader() {
 
   return (
     <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" onSubmit={handleSubmit}>
-      <label className="group flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-[28px] border border-dashed border-[var(--color-border-strong)] bg-white/58 px-5 py-6 text-center transition hover:border-[var(--color-primary)] hover:bg-white/72">
+      <label className="sc-media-dropzone group flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-[28px] border border-dashed border-[var(--color-border-strong)] px-5 py-6 text-center transition hover:border-[var(--color-primary)]">
         <span className="text-2xl font-light text-[var(--color-primary)]">+</span>
         <span className="mt-3 block text-sm font-black">Choose an image to upload</span>
         <span className="mt-1 block text-xs leading-5 text-[var(--color-muted)]">

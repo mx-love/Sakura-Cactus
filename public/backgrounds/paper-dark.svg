@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <filter id="paper" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.66" numOctaves="2" seed="31" stitchTiles="stitch" />
+    <feColorMatrix type="matrix" values="0.08 0 0 0 0.28  0 0.08 0 0 0.29  0 0 0.08 0 0.275  0 0 0 1 0" />
+  </filter>
+  <rect width="512" height="512" fill="#151815" fill-opacity="0.025" />
+  <rect width="512" height="512" filter="url(#paper)" opacity="0.022" />
+</svg>

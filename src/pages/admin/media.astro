@@ -53,8 +53,8 @@ function formatUsage(count: number): string {
         ) : (
           <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {assets.map((asset) => (
-              <article class="sc-card group overflow-hidden transition hover:-translate-y-1 hover:bg-white/90">
-                <div class="aspect-[4/3] overflow-hidden bg-white">
+              <article class="sc-card group overflow-hidden transition hover:-translate-y-1 hover:bg-[var(--color-control)]">
+                <div class="aspect-[4/3] overflow-hidden bg-[var(--color-control-bg)]">
                   <img
                     alt={asset.original_filename ?? asset.id}
                     class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"

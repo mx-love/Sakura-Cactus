@@ -69,6 +69,103 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     <meta charset="UTF-8" />
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline>
+      (() => {
+        const storageKey = 'sc-theme';
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const validPreferences = new Set(['light', 'system', 'dark']);
+
+        function normalizePreference(value) {
+          return validPreferences.has(value) ? value : 'system';
+        }
+
+        function getStoredPreference() {
+          try {
+            const value = window.localStorage.getItem(storageKey);
+            return normalizePreference(value);
+          } catch {
+            return 'system';
+          }
+        }
+
+        function resolveTheme(preference) {
+          return preference === 'system' ? (media.matches ? 'dark' : 'light') : preference;
+        }
+
+        function syncThemeControls() {
+          const preference = normalizePreference(document.documentElement.dataset.themePreference);
+
+          document.querySelectorAll('[data-theme-value]').forEach((control) => {
+            const isSelected = control.getAttribute('data-theme-value') === preference;
+            control.setAttribute('aria-pressed', String(isSelected));
+          });
+        }
+
+        function applyPreference(value, persist = false) {
+          const preference = normalizePreference(value);
+          const root = document.documentElement;
+          root.dataset.themePreference = preference;
+          root.dataset.theme = resolveTheme(preference);
+
+          if (persist) {
+            try {
+              window.localStorage.setItem(storageKey, preference);
+            } catch {
+              // Storage can be unavailable in private browsing or hardened environments.
+            }
+          }
+
+          syncThemeControls();
+        }
+
+        function initializeTheme() {
+          applyPreference(getStoredPreference());
+        }
+
+        if (window.__scThemeController) {
+          window.__scThemeController.initialize();
+          return;
+        }
+
+        const controller = {
+          initialize: initializeTheme,
+          apply: applyPreference,
+          sync: syncThemeControls
+        };
+        window.__scThemeController = controller;
+
+        initializeTheme();
+
+        document.addEventListener('DOMContentLoaded', syncThemeControls, { once: true });
+        document.addEventListener('click', (event) => {
+          const target = event.target;
+          const control = target instanceof Element ? target.closest('[data-theme-value]') : null;
+
+          if (!(control instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          applyPreference(control.dataset.themeValue, true);
+        });
+
+        media.addEventListener('change', () => {
+          if (document.documentElement.dataset.themePreference === 'system') {
+            applyPreference('system');
+          }
+        });
+
+        document.addEventListener('astro:before-swap', (event) => {
+          if (event.newDocument?.documentElement) {
+            const preference = normalizePreference(document.documentElement.dataset.themePreference);
+            event.newDocument.documentElement.dataset.themePreference = preference;
+            event.newDocument.documentElement.dataset.theme = resolveTheme(preference);
+          }
+        });
+        document.addEventListener('astro:page-load', initializeTheme);
+        document.addEventListener('astro:after-swap', syncThemeControls);
+      })();
+    </script>
     {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
     {robots ? <meta name="robots" content={robots} /> : null}
     <meta property="og:title" content={title} />
@@ -88,28 +185,49 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     </main>
     {showFooter ? (
       <footer class="sc-site-footer">
-        <div class="sc-site-footer-inner">
-          <span>{siteName} © {new Date().getFullYear()}</span>
-          <div class="sc-footer-links" aria-label="外部链接">
-            {footerLinks.map((link) => (
-              <a class="sc-footer-icon-link" href={link.href} target="_blank" rel="noreferrer" aria-label={link.label} title={link.label}>
-                {link.icon === 'cf' ? (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                    <path d="M8.4 16.5h8.8a3.2 3.2 0 0 0 .5-6.35A5.2 5.2 0 0 0 7.5 9.1a3.75 3.75 0 0 0 .9 7.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-                    <path d="M6.7 13.4h10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  </svg>
-                ) : link.icon === 'github' ? (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
-                    <path fill-rule="evenodd" d="M12 2.25a9.75 9.75 0 0 0-3.08 19c.49.09.67-.21.67-.47v-1.69c-2.73.59-3.3-1.17-3.3-1.17-.45-1.13-1.09-1.43-1.09-1.43-.89-.61.07-.6.07-.6.98.07 1.5 1.01 1.5 1.01.87 1.49 2.28 1.06 2.84.81.09-.63.34-1.06.62-1.31-2.18-.25-4.47-1.09-4.47-4.85 0-1.07.38-1.94 1.01-2.63-.1-.25-.44-1.25.1-2.59 0 0 .83-.27 2.69 1a9.32 9.32 0 0 1 4.9 0c1.86-1.27 2.68-1 2.68-1 .54 1.34.2 2.34.1 2.59.63.69 1.01 1.56 1.01 2.63 0 3.77-2.29 4.59-4.48 4.84.35.31.67.9.67 1.82v2.7c0 .26.18.57.68.47A9.75 9.75 0 0 0 12 2.25Z" clip-rule="evenodd" />
-                  </svg>
-                ) : (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                    <rect x="4" y="7" width="16" height="12" rx="3" stroke="currentColor" stroke-width="1.8" />
-                    <path d="m9 4 2 3M15 4l-2 3M9 12v2M15 12v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  </svg>
-                )}
-              </a>
-            ))}
+        <div class="sc-footer-inner">
+          <div class="sc-footer-meta-row">
+            <span class="sc-footer-copyright">{siteName} © {new Date().getFullYear()}</span>
+            <div class="sc-theme-switcher" role="group" aria-label="外观主题">
+              <button class="sc-theme-option" type="button" data-theme-value="light" aria-label="白昼纸页" title="白昼纸页" aria-pressed="false">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
+                </svg>
+              </button>
+              <button class="sc-theme-option" type="button" data-theme-value="system" aria-label="跟随系统" title="跟随系统" aria-pressed="true">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <path d="M8 21h8M12 17v4" />
+                </svg>
+              </button>
+              <button class="sc-theme-option" type="button" data-theme-value="dark" aria-label="夜间纸页" title="夜间纸页" aria-pressed="false">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                </svg>
+              </button>
+            </div>
+            <div class="sc-footer-links sc-footer-social" aria-label="外部链接">
+              {footerLinks.map((link) => (
+                <a class="sc-footer-icon-link" href={link.href} target="_blank" rel="noreferrer" aria-label={link.label} title={link.label}>
+                  {link.icon === 'cf' ? (
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                      <path d="M8.4 16.5h8.8a3.2 3.2 0 0 0 .5-6.35A5.2 5.2 0 0 0 7.5 9.1a3.75 3.75 0 0 0 .9 7.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                      <path d="M6.7 13.4h10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    </svg>
+                  ) : link.icon === 'github' ? (
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+                      <path fill-rule="evenodd" d="M12 2.25a9.75 9.75 0 0 0-3.08 19c.49.09.67-.21.67-.47v-1.69c-2.73.59-3.3-1.17-3.3-1.17-.45-1.13-1.09-1.43-1.09-1.43-.89-.61.07-.6.07-.6.98.07 1.5 1.01 1.5 1.01.87 1.49 2.28 1.06 2.84.81.09-.63.34-1.06.62-1.31-2.18-.25-4.47-1.09-4.47-4.85 0-1.07.38-1.94 1.01-2.63-.1-.25-.44-1.25.1-2.59 0 0 .83-.27 2.69 1a9.32 9.32 0 0 1 4.9 0c1.86-1.27 2.68-1 2.68-1 .54 1.34.2 2.34.1 2.59.63.69 1.01 1.56 1.01 2.63 0 3.77-2.29 4.59-4.48 4.84.35.31.67.9.67 1.82v2.7c0 .26.18.57.68.47A9.75 9.75 0 0 0 12 2.25Z" clip-rule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                      <rect x="4" y="7" width="16" height="12" rx="3" stroke="currentColor" stroke-width="1.8" />
+                      <path d="m9 4 2 3M15 4l-2 3M9 12v2M15 12v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    </svg>
+                  )}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </footer>

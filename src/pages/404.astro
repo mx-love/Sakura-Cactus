@@ -1,0 +1,29 @@
+---
+import SiteLayout from '@/components/layout/SiteLayout.astro';
+import { ROBOTS_NOINDEX_NOFOLLOW } from '@/lib/seo';
+
+Astro.response.status = 404;
+---
+
+<SiteLayout title="纸页未寻得 | Sakura Cactus" description="没有找到这张纸页。" robots={ROBOTS_NOINDEX_NOFOLLOW}>
+  <section class="sc-page">
+    <div class="sc-page-shell">
+      <nav class="sc-breadcrumb" aria-label="面包屑">
+        <a href="/">首页</a>
+        <span>/</span>
+        <span>404</span>
+      </nav>
+      <header class="sc-page-header">
+        <span class="sc-paper-kicker">纸页未寻得</span>
+        <h1>这里暂时没有文字</h1>
+        <p>可能是地址写错了，也可能这张纸页已经被收起。</p>
+      </header>
+      <div class="sc-empty">
+        <div class="sc-empty-links">
+          <a href="/">返回首页</a>
+          <a href="/articles">浏览文章</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</SiteLayout>

@@ -1,14 +1,21 @@
 .sc-admin-page {
+  --sc-admin-card-background: var(--color-content-bg);
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(255, 248, 250, 0.72), rgba(255, 253, 253, 0.98) 18rem),
-    var(--color-bg);
+  background: transparent;
   color: var(--color-text);
+}
+
+:root[data-theme="dark"] .sc-admin-page {
+  --sc-admin-card-background: var(--color-panel-bg);
+}
+
+.sc-admin-page :is(.sc-card, .sc-panel, .sc-card-polished) {
+  background: var(--sc-admin-card-background);
 }
 
 .sc-admin-bar {
   border-bottom: 1px solid var(--color-border);
-  background: rgba(255, 253, 253, 0.86);
+  background: var(--color-header-surface);
   backdrop-filter: blur(14px);
 }
 
@@ -32,12 +39,31 @@
 }
 
 .sc-writer-page {
+  --sc-writer-page-background:
+    radial-gradient(
+      circle at 20% 0%,
+      color-mix(in srgb, var(--color-sakura-accent) 5.5%, transparent),
+      transparent 26rem
+    ),
+    var(--color-workspace);
+  --sc-writer-canvas-background: var(--color-floating-surface);
+  --sc-writer-editor-background: transparent;
+  --sc-writer-panel-background: var(--color-floating-surface);
+  --sc-writer-control-background: var(--color-control-muted);
+  --sc-writer-control-focus-background: var(--color-control);
   min-height: 100vh;
   margin: -1.25rem -1rem -2rem;
   padding: 0 1rem;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(217, 111, 145, 0.055), transparent 26rem),
-    #f7f7f8;
+  background: var(--sc-writer-page-background);
+}
+
+:root[data-theme="dark"] .sc-writer-page {
+  --sc-writer-page-background: var(--color-page-bg);
+  --sc-writer-canvas-background: #0c0f0e;
+  --sc-writer-editor-background: #0c0f0e;
+  --sc-writer-panel-background: var(--color-panel-bg);
+  --sc-writer-control-background: var(--color-control-bg);
+  --sc-writer-control-focus-background: var(--color-control-bg);
 }
 
 .sc-writer {
@@ -52,7 +78,7 @@
   z-index: 20;
   margin-bottom: 1rem;
   padding: 0.65rem 0;
-  background: rgba(247, 247, 248, 0.86);
+  background: color-mix(in srgb, var(--color-workspace) 86%, transparent);
   backdrop-filter: blur(14px);
 }
 
@@ -104,7 +130,7 @@
   align-items: center;
   gap: 0.45rem;
   margin: 0;
-  color: #437765;
+  color: var(--color-success);
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.5;
@@ -128,15 +154,19 @@
 .sc-writer-canvas,
 .sc-writer-card,
 .sc-writer-danger {
-  border: 1px solid rgba(228, 228, 231, 0.78);
+  border: 1px solid var(--color-border);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 45px rgba(47, 41, 44, 0.055);
+  box-shadow: var(--shadow-soft);
 }
 
 .sc-writer-canvas {
   min-height: 72vh;
   overflow: hidden;
+  background: var(--sc-writer-canvas-background);
+}
+
+.sc-writer-card {
+  background: var(--sc-writer-panel-background);
 }
 
 .sc-writer-tabs {
@@ -144,7 +174,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid rgba(238, 238, 241, 0.9);
+  border-bottom: 1px solid var(--color-border);
   padding: 0.85rem 1rem;
 }
 
@@ -152,7 +182,7 @@
   display: inline-flex;
   gap: 0.25rem;
   border-radius: 999px;
-  background: #f6f6f7;
+  background: var(--color-control-muted);
   padding: 0.25rem;
 }
 
@@ -198,7 +228,7 @@
   min-height: calc(72vh - 4.1rem);
   resize: vertical;
   border: 0;
-  background: transparent;
+  background: var(--sc-writer-editor-background);
   padding: clamp(1rem, 2vw, 1.5rem);
   color: var(--color-text);
   font-family: var(--font-mono);
@@ -230,7 +260,7 @@
 }
 
 .sc-writer-split .sc-writer-preview {
-  border-left: 1px solid rgba(238, 238, 241, 0.9);
+  border-left: 1px solid var(--color-border);
 }
 
 .sc-preview-top-button {
@@ -238,15 +268,15 @@
   right: 0.9rem;
   bottom: 0.9rem;
   z-index: 2;
-  border: 1px solid rgba(240, 227, 231, 0.9);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--sc-writer-panel-background);
   color: var(--color-muted);
   padding: 0.38rem 0.7rem;
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.2;
-  box-shadow: 0 10px 28px rgba(102, 66, 82, 0.08);
+  box-shadow: var(--shadow-card);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -295,9 +325,9 @@
   justify-content: space-between;
   gap: 0.55rem;
   margin: 0 0 1rem;
-  border: 1px solid rgba(240, 227, 231, 0.9);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
-  background: rgba(255, 250, 251, 0.78);
+  background: var(--color-card-translucent);
   padding: 0.65rem 0.75rem;
   color: var(--color-muted);
   font-size: 0.78rem;
@@ -348,7 +378,7 @@
 .sc-writer-control {
   border-color: transparent;
   border-radius: 14px;
-  background: #f7f7f8;
+  background: var(--sc-writer-control-background);
   font-size: 0.875rem;
 }
 
@@ -358,7 +388,7 @@
 }
 
 .sc-writer-control:focus {
-  background: white;
+  background: var(--sc-writer-control-focus-background);
 }
 
 .sc-writer-publish-actions {
@@ -380,9 +410,17 @@
 }
 
 .sc-writer-danger {
-  border-color: rgba(184, 91, 106, 0.18);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 12px 30px rgba(184, 91, 106, 0.035);
+  border-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
+  background: var(--color-card-translucent);
+  box-shadow: var(--shadow-card);
+}
+
+.sc-media-dropzone {
+  background: rgb(var(--color-surface-rgb) / 0.58);
+}
+
+.sc-media-dropzone:hover {
+  background: rgb(var(--color-surface-rgb) / 0.72);
 }
 
 .sc-writer-danger h2 {
@@ -443,7 +481,7 @@
   }
 
   .sc-writer-split .sc-writer-preview {
-    border-top: 1px solid rgba(238, 238, 241, 0.9);
+    border-top: 1px solid var(--color-border);
     border-left: 0;
   }
 
