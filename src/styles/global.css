@@ -3251,20 +3251,19 @@ summary {
   .sc-featured-paper-with-cover {
     overflow: visible;
     border: 0;
-    border-right: 1px solid rgba(240, 227, 231, 0.82);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    padding: 0 2rem 0 0;
+    padding: 0 calc(2rem + 1px) 0 0;
   }
 
   .sc-featured-paper::after {
     content: "";
     position: absolute;
-    top: 100%;
+    top: 0;
+    bottom: -0.875rem;
     right: 0;
     width: 1px;
-    height: 0.875rem;
     background: rgba(240, 227, 231, 0.82);
     pointer-events: none;
   }
