@@ -31,6 +31,17 @@ export interface PostListFilters {
   visibility?: PostVisibility;
 }
 
+export interface MonthlyPostStatsRange {
+  monthStart: string;
+  nextMonthStart: string;
+  currentTime: string;
+}
+
+export interface MonthlyPostStats {
+  postCount: number;
+  wordCount: number;
+}
+
 export interface PublicPostSummary {
   id: string;
   slug: string;

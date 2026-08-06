@@ -1,12 +1,20 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicPosts } from '@/features/posts/post.service';
+import { getPublicMonthlyPostStats, getPublicPosts } from '@/features/posts/post.service';
 import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
-const posts = await getPublicPosts({ limit: 12, excludeAbout: true, pinnedFirst: true });
+const now = new Date();
+const calendarYear = now.getFullYear();
+const calendarMonth = now.getMonth();
+const monthStart = new Date(calendarYear, calendarMonth, 1).toISOString();
+const nextMonthStart = new Date(calendarYear, calendarMonth + 1, 1).toISOString();
+const [posts, monthlyStats] = await Promise.all([
+  getPublicPosts({ limit: 12, excludeAbout: true, pinnedFirst: true }),
+  getPublicMonthlyPostStats({ monthStart, nextMonthStart, currentTime: now.toISOString() })
+]);
 const latestPosts = posts.slice(0, 5);
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地收录。';
@@ -42,9 +50,24 @@ const paperQuotes: PaperQuote[] = [
 ];
 const leadCoverOrigin = getExternalOrigin(leadPost?.coverImageUrl);
 const preconnectOrigins = leadCoverOrigin ? [leadCoverOrigin] : [];
-const now = new Date();
-const calendarYear = now.getFullYear();
-const calendarMonth = now.getMonth();
+const monthNames = [
+  'JANUARY',
+  'FEBRUARY',
+  'MARCH',
+  'APRIL',
+  'MAY',
+  'JUNE',
+  'JULY',
+  'AUGUST',
+  'SEPTEMBER',
+  'OCTOBER',
+  'NOVEMBER',
+  'DECEMBER'
+];
+const issueNumber = String(calendarMonth + 1).padStart(2, '0');
+const issueLabel = `${calendarYear} · ${monthNames[calendarMonth]} / ISSUE ${issueNumber}`;
+const formattedPostCount = String(monthlyStats.postCount).padStart(2, '0');
+const formattedWordCount = new Intl.NumberFormat('zh-CN').format(monthlyStats.wordCount);
 const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 const monthStartDay = new Date(calendarYear, calendarMonth, 1).getDay();
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -116,6 +139,17 @@ function getExternalOrigin(value: string | null | undefined): string | null {
             <h1>{siteName}</h1>
             <p class="sc-home-signature">{tagline}</p>
             <p class="sc-home-description">{siteDescription}</p>
+            <div class="sc-home-issue">
+              <p class="sc-home-issue-number">{issueLabel}</p>
+              {monthlyStats.postCount > 0 ? (
+                <p class="sc-home-issue-stats">
+                  本月落笔{' '}<strong>{formattedPostCount}</strong>{' '}篇{' '}
+                  <span aria-hidden="true">·</span>{' '}<strong>{formattedWordCount}</strong>{' '}字
+                </p>
+              ) : (
+                <p class="sc-home-issue-empty">本月留白，静候落笔。</p>
+              )}
+            </div>
           </div>
 
           <aside class="sc-calendar-note" aria-label="今日纸页">
@@ -288,18 +322,20 @@ function getExternalOrigin(value: string | null | undefined): string | null {
             ) : null}
 
             {notePosts.length > 0 ? (
-              <div class="sc-paper-strip-list">
-                {notePosts.map((post) => (
-                  <article class="sc-paper-strip">
-                    <div>
-                      <h3>
-                        <a href={`/posts/${post.slug}`}>{post.title}</a>
-                      </h3>
-                      {post.excerpt ? <p>{post.excerpt}</p> : null}
-                    </div>
-                    {post.publishedAt ? <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time> : null}
-                  </article>
-                ))}
+              <div class="sc-paper-strip-rail">
+                <div class="sc-paper-strip-list">
+                  {notePosts.map((post) => (
+                    <article class="sc-paper-strip">
+                      <div>
+                        <h3>
+                          <a href={`/posts/${post.slug}`}>{post.title}</a>
+                        </h3>
+                        {post.excerpt ? <p>{post.excerpt}</p> : null}
+                      </div>
+                      {post.publishedAt ? <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time> : null}
+                    </article>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>

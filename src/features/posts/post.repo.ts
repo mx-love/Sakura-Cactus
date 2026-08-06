@@ -3,7 +3,7 @@ import type { AssetRow, PostRow } from '@/lib/database.types';
 import { nowIso } from '@/lib/db';
 import { createRandomId } from '@/features/auth/crypto.service';
 import type { NormalizedPostInput } from './post.schema';
-import type { PostListFilters } from './post.types';
+import type { MonthlyPostStats, MonthlyPostStatsRange, PostListFilters } from './post.types';
 
 export interface PersistedPostInput extends NormalizedPostInput {
   contentHtml: string;
@@ -50,6 +50,11 @@ export interface AdjacentPublicPostRow {
 
 export interface PostCoverAssetProjection {
   cover_asset_token: string | null;
+}
+
+interface MonthlyPostStatsRow {
+  post_count: number | string | null;
+  word_count: number | string | null;
 }
 
 const POST_COLUMNS = `posts.id, posts.slug, posts.title, posts.excerpt, posts.content_markdown, posts.content_html,
@@ -164,6 +169,36 @@ export async function countPublicPosts(db: D1Database, options: PublicPostQueryO
     .first<{ count: number }>();
 
   return row?.count ?? 0;
+}
+
+export async function getMonthlyPublicPostStats(
+  db: D1Database,
+  range: MonthlyPostStatsRange
+): Promise<MonthlyPostStats> {
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS post_count, SUM(posts.word_count) AS word_count
+       FROM posts
+       WHERE posts.status = 'published'
+         AND posts.visibility = 'public'
+         AND posts.published_at IS NOT NULL
+         AND posts.published_at <= ?
+         AND posts.published_at >= ?
+         AND posts.published_at < ?
+         AND posts.slug != 'about'`
+    )
+    .bind(range.currentTime, range.monthStart, range.nextMonthStart)
+    .first<MonthlyPostStatsRow>();
+
+  return {
+    postCount: normalizeAggregateValue(row?.post_count),
+    wordCount: normalizeAggregateValue(row?.word_count)
+  };
+}
+
+function normalizeAggregateValue(value: number | string | null | undefined): number {
+  const normalized = Number(value ?? 0);
+  return Number.isFinite(normalized) ? Math.max(0, Math.trunc(normalized)) : 0;
 }
 
 export async function listPublicFeedPosts(db: D1Database, limit = 50): Promise<PublicPostFeedRow[]> {

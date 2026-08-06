@@ -12,6 +12,7 @@ import {
   findAdjacentPublicPosts,
   findPublicPostBySlug,
   getPostAssetReplacementPlan,
+  getMonthlyPublicPostStats,
   countPublicPosts,
   listPublicFeedPosts,
   listAdminPosts,
@@ -25,7 +26,15 @@ import {
   slugExists,
 } from './post.repo';
 import { normalizePostInput, PostValidationError } from './post.schema';
-import type { PostListFilters, PostRow, PublicPostDetail, PublicPostSummary, PublicPostTag } from './post.types';
+import type {
+  MonthlyPostStats,
+  MonthlyPostStatsRange,
+  PostListFilters,
+  PostRow,
+  PublicPostDetail,
+  PublicPostSummary,
+  PublicPostTag
+} from './post.types';
 import { toPublicPostDetail, toPublicPostSummary } from './post.types';
 
 export class PostConflictError extends Error {
@@ -292,6 +301,10 @@ export async function getPublicPosts(options: {
   const db = getDb();
   const posts = await listPublicPosts(db, options);
   return toPublicPostSummaries(db, posts);
+}
+
+export async function getPublicMonthlyPostStats(range: MonthlyPostStatsRange): Promise<MonthlyPostStats> {
+  return getMonthlyPublicPostStats(getDb(), range);
 }
 
 export async function getPublicPostsPage(page: number, pageSize: number): Promise<{ posts: PublicPostSummary[]; totalCount: number }> {
