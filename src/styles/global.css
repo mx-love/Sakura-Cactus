@@ -538,6 +538,12 @@ summary {
   padding-block: 0;
 }
 
+.sc-home-intro-copy,
+.sc-home-calendar-body {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .sc-home-intro h1 {
   margin: 0;
   color: var(--color-text);
@@ -3124,7 +3130,7 @@ summary {
 
 @media (min-width: 900px) {
   .sc-home-editorial {
-    margin-bottom: clamp(0.75rem, 1.5vw, 1.25rem);
+    margin-bottom: clamp(2.625rem, calc(1.5vw + 1.875rem), 3.125rem);
   }
 
   .sc-home-desk {
@@ -3140,17 +3146,19 @@ summary {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    padding: 34px 50px 38px 0;
+    padding: 34px 50px 1.375rem 0;
   }
 
   .sc-home-issue {
     margin-top: auto;
     margin-left: auto;
-    margin-bottom: 1.35rem;
-    padding-top: clamp(2.5rem, 5vw, 4.5rem);
     padding-right: 0.25rem;
-    padding-bottom: 0;
     text-align: right;
+  }
+
+  .sc-home-issue > :last-child,
+  .sc-home-calendar-meta > :last-child {
+    margin-bottom: 0;
   }
 
   .sc-home-issue-number {
@@ -3179,16 +3187,45 @@ summary {
     margin-top: 1.05rem;
   }
 
-  .sc-calendar-note {
-    align-self: start;
-    height: fit-content;
+  .sc-home-calendar {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    min-width: 0;
+    height: auto;
     border: 0;
-    border-left: 1px solid rgba(231, 207, 216, 0.8);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    padding: 24px 26px 22px 30px;
+    padding: 24px 26px 1.375rem 30px;
     transform: none;
+  }
+
+  .sc-home-calendar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    background: rgba(231, 207, 216, 0.8);
+    pointer-events: none;
+  }
+
+  .sc-home-calendar-body {
+    margin-bottom: 0.95rem;
+  }
+
+  .sc-home-calendar-meta {
+    margin-top: auto;
+    padding-bottom: 0;
+  }
+
+  .sc-home-issue-stats,
+  .sc-home-issue-empty,
+  .sc-home-calendar-meta span {
+    font-size: 0.82rem;
+    line-height: 1.7;
   }
 
   .sc-calendar-note strong {

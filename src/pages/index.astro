@@ -135,10 +135,12 @@ function getExternalOrigin(value: string | null | undefined): string | null {
       <header class="sc-home-editorial">
         <div class="sc-home-desk">
           <div class="sc-home-intro sc-paper-piece">
-            <span class="sc-paper-kicker">窗边纸页</span>
-            <h1>{siteName}</h1>
-            <p class="sc-home-signature">{tagline}</p>
-            <p class="sc-home-description">{siteDescription}</p>
+            <div class="sc-home-intro-copy">
+              <span class="sc-paper-kicker">窗边纸页</span>
+              <h1>{siteName}</h1>
+              <p class="sc-home-signature">{tagline}</p>
+              <p class="sc-home-description">{siteDescription}</p>
+            </div>
             <div class="sc-home-issue">
               <p class="sc-home-issue-number">{issueLabel}</p>
               {monthlyStats.postCount > 0 ? (
@@ -152,28 +154,30 @@ function getExternalOrigin(value: string | null | undefined): string | null {
             </div>
           </div>
 
-          <aside class="sc-calendar-note" aria-label="今日纸页">
-            <div class="sc-calendar-note-head">
-              <span>今日纸页</span>
-              <strong data-calendar-title>{calendarYear}年{calendarMonth + 1}月 · {weekdays[now.getDay()]}</strong>
+          <aside class="sc-calendar-note sc-home-calendar" aria-label="今日纸页">
+            <div class="sc-home-calendar-body">
+              <div class="sc-calendar-note-head">
+                <span>今日纸页</span>
+                <strong data-calendar-title>{calendarYear}年{calendarMonth + 1}月 · {weekdays[now.getDay()]}</strong>
+              </div>
+              <div class="sc-calendar-weekdays" aria-hidden="true">
+                {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+                  <span>{day}</span>
+                ))}
+              </div>
+              <div class="sc-calendar-grid" aria-hidden="true" data-calendar-grid>
+                {Array.from({ length: monthStartDay }).map(() => <span class="sc-calendar-empty"></span>)}
+                {Array.from({ length: daysInMonth }).map((_, index) => {
+                  const day = index + 1;
+                  return (
+                    <span class="sc-calendar-day" data-date={formatCalendarDate(calendarYear, calendarMonth, day)}>
+                      {day}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
-            <div class="sc-calendar-weekdays" aria-hidden="true">
-              {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
-                <span>{day}</span>
-              ))}
-            </div>
-            <div class="sc-calendar-grid" aria-hidden="true" data-calendar-grid>
-              {Array.from({ length: monthStartDay }).map(() => <span class="sc-calendar-empty"></span>)}
-              {Array.from({ length: daysInMonth }).map((_, index) => {
-                const day = index + 1;
-                return (
-                  <span class="sc-calendar-day" data-date={formatCalendarDate(calendarYear, calendarMonth, day)}>
-                    {day}
-                  </span>
-                );
-              })}
-            </div>
-            <div class="sc-calendar-note-foot">
+            <div class="sc-calendar-note-foot sc-home-calendar-meta">
               <span data-calendar-day-week>第{dayOfYear}天 第{isoWeek}周</span>
               <span data-calendar-ganzhi>{ganzhiYear}</span>
             </div>
