@@ -2647,6 +2647,48 @@ summary {
   padding-top: 1.5rem;
 }
 
+#sakura-comments {
+  color-scheme: light;
+  --waline-white: var(--color-control-bg);
+  --waline-theme-color: var(--color-primary);
+  --waline-active-color: var(--color-primary-hover);
+  --waline-color: var(--color-text);
+  --waline-light-grey: var(--color-subtle);
+  --waline-dark-grey: var(--color-muted);
+  --waline-bg-color: transparent;
+  --waline-bg-color-light: var(--color-content-bg);
+  --waline-bg-color-hover: var(--color-primary-soft);
+  --waline-border-color: var(--color-border);
+  --waline-disable-bg-color: var(--color-control-bg);
+  --waline-disable-color: var(--color-subtle);
+  --waline-bq-color: var(--color-content-bg);
+  --waline-code-bg-color: var(--color-code-block-surface);
+  --waline-info-bg-color: transparent;
+  --waline-info-color: var(--color-muted);
+  --waline-border: 1px solid var(--waline-border-color);
+  --waline-box-shadow: none;
+}
+
+html[data-theme="dark"] #sakura-comments {
+  color-scheme: dark;
+  --waline-white: var(--color-page-bg);
+  --waline-theme-color: var(--color-primary);
+  --waline-active-color: var(--color-primary-hover);
+  --waline-color: var(--color-text);
+  --waline-light-grey: var(--color-subtle);
+  --waline-dark-grey: var(--color-muted);
+  --waline-bg-color: transparent;
+  --waline-bg-color-light: var(--color-control-bg);
+  --waline-bg-color-hover: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  --waline-border-color: var(--color-border);
+  --waline-disable-bg-color: var(--color-panel-bg);
+  --waline-disable-color: var(--color-subtle);
+  --waline-bq-color: var(--color-panel-bg);
+  --waline-code-bg-color: var(--color-page-bg);
+  --waline-info-bg-color: transparent;
+  --waline-info-color: var(--color-subtle);
+}
+
 .sc-home-editorial {
   margin-bottom: clamp(2.25rem, 6vw, 4.5rem);
 }

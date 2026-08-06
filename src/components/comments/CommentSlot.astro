@@ -35,7 +35,8 @@ const shouldRender = enabled && safeServerURL;
               el: '#sakura-comments',
               serverURL,
               path,
-              lang: 'zh-CN'
+              lang: 'zh-CN',
+              dark: 'html[data-theme="dark"]'
             });
           } catch (error) {
             container.dataset.walineMounted = 'false';
