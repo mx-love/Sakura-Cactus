@@ -1,5 +1,6 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import '@/styles/prose.css';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
 import ArticleImageViewer from '@/components/posts/ArticleImageViewer.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
@@ -103,4 +104,10 @@ const canonicalUrl = absoluteSiteUrl('/about');
       </div>
     </div>
   </section>
+  <script>
+    import { bindCodeCopyControls } from '@/lib/prose-controls';
+
+    const content = document.querySelector('.sc-prose');
+    if (content) bindCodeCopyControls(content);
+  </script>
 </SiteLayout>

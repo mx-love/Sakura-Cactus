@@ -16,7 +16,7 @@ const settings = await getSiteSettings();
 const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
 ---
 
-<SiteLayout title="设置 | Sakura Cactus" description="Sakura Cactus 设置" robots={ROBOTS_NOINDEX_NOFOLLOW}>
+<SiteLayout title="设置 | Sakura Cactus" description="Sakura Cactus 设置" robots={ROBOTS_NOINDEX_NOFOLLOW} siteSettings={settings}>
   <section class="sc-settings-page">
     <div class="sc-page-shell">
       <header class="sc-settings-header">

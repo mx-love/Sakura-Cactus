@@ -1,0 +1,53 @@
+---
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<div class="sc-article-action-wrap" data-public-share data-share-title={title}>
+  <div class="sc-article-action-bar" aria-label="文章操作">
+    <button class="sc-article-icon-action" type="button" aria-label="分享" title="分享" data-share-button>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 12a3 3 0 1 1-1.1-2.32" />
+        <path d="M17 6a3 3 0 1 0-2.83 2" />
+        <path d="M17 18a3 3 0 1 0-2.83-2" />
+        <path d="M8.7 10.6 14.2 7.8" />
+        <path d="M8.7 13.4 14.2 16.2" />
+      </svg>
+    </button>
+  </div>
+  <span class="sc-article-action-message" role="status" aria-live="polite" data-share-status hidden></span>
+</div>
+
+<script>
+  import { shareArticle } from '@/lib/article-share';
+
+  document.querySelectorAll<HTMLElement>('[data-public-share]').forEach((root) => {
+    const button = root.querySelector('[data-share-button]');
+    const status = root.querySelector('[data-share-status]');
+    if (!(button instanceof HTMLButtonElement) || !(status instanceof HTMLElement)) return;
+
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      status.hidden = true;
+      status.textContent = '';
+      status.classList.remove('sc-article-action-error');
+
+      try {
+        const result = await shareArticle(root.dataset.shareTitle || document.title, window.location.href);
+        if (result === 'copied') {
+          status.textContent = '链接已复制';
+          status.hidden = false;
+        }
+      } catch {
+        status.textContent = '复制失败，请手动复制链接';
+        status.classList.add('sc-article-action-error');
+        status.hidden = false;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+</script>

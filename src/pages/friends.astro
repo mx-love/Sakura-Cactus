@@ -56,7 +56,7 @@ function formatCheckedAt(value: string | null): string {
 }
 ---
 
-<SiteLayout title="友人帐 | Sakura Cactus" description="枯叶落处各异，百花各自争鸣。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
+<SiteLayout siteSettings={settings} title="友人帐 | Sakura Cactus" description="枯叶落处各异，百花各自争鸣。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-shell sc-friends-shell sc-friends-paper-shell">
       <nav class="sc-breadcrumb" aria-label="Breadcrumb">
@@ -164,6 +164,8 @@ function formatCheckedAt(value: string | null): string {
       <script id="sc-friends-data" type="application/json" set:html={friendsJson} is:inline></script>
       <script>
         // @ts-nocheck -- legacy inline DOM script; tracked for extraction in SECURITY_AUDIT_REPORT.md.
+        import { createDialogFocus } from '@/lib/dialog-focus';
+
         const isFriendAdmin = Boolean(document.getElementById('friend-add-button'));
         const dataElement = document.getElementById('sc-friends-data');
         let friendLinks = dataElement ? JSON.parse(dataElement.textContent || '[]') : [];
@@ -185,6 +187,12 @@ function formatCheckedAt(value: string | null): string {
           description: document.getElementById('friend-description'),
           status: document.getElementById('friend-status')
         };
+        const modalPanel = modal?.querySelector('.sc-friend-modal-panel');
+        const modalFocus = modalPanel instanceof HTMLElement ? createDialogFocus(modalPanel, {
+          initialFocus: fields.name,
+          onEscape: closeModal
+        }) : null;
+        let previousOverflow = '';
 
         function getInitial(name) {
           return String(name || '友').trim().slice(0, 1).toUpperCase() || '友';
@@ -282,12 +290,22 @@ function formatCheckedAt(value: string | null): string {
             modalTitle.textContent = '编辑友人';
           }
 
+          if (modal.hidden) {
+            previousOverflow = document.documentElement.style.overflow;
+          }
           modal.hidden = false;
-          window.requestAnimationFrame(() => fields.name.focus());
+          document.documentElement.style.overflow = 'hidden';
+          modalFocus?.activate();
         }
 
         function closeModal() {
+          if (modal.hidden) return;
           modal.hidden = true;
+          document.documentElement.style.overflow = previousOverflow;
+          modalFocus?.deactivate();
+          if (modal.contains(document.activeElement)) {
+            (addButton || applyButton)?.focus({ preventScroll: true });
+          }
         }
 
         function renderFriends() {
@@ -390,12 +408,6 @@ function formatCheckedAt(value: string | null): string {
           const target = event.target;
 
           if (target instanceof HTMLElement && target.hasAttribute('data-close-modal')) {
-            closeModal();
-          }
-        });
-
-        document.addEventListener('keydown', (event) => {
-          if (event.key === 'Escape' && modal && !modal.hidden) {
             closeModal();
           }
         });

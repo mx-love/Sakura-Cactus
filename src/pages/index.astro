@@ -283,7 +283,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
       <section class="sc-section sc-home-articles">
         <div class="sc-section-heading">
           <h2>最近文章</h2>
-          <a href="/articles">所有文章 →</a>
+          <a href="/articles" data-astro-prefetch>所有文章 →</a>
         </div>
 
         {latestPosts.length === 0 ? (
@@ -296,7 +296,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
             {leadPost ? (
               <article class:list={['sc-featured-paper', leadPost.coverImageUrl && 'sc-featured-paper-with-cover']}>
                 {leadPost.coverImageUrl ? (
-                  <a class="sc-featured-cover" href={`/posts/${leadPost.slug}`} aria-label={leadPost.title}>
+                  <a class="sc-featured-cover" href={`/posts/${leadPost.slug}`} aria-label={leadPost.title} data-astro-prefetch>
                     <img
                       src={leadPost.coverImageUrl}
                       alt=""
@@ -310,7 +310,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                 ) : null}
                 <div class="sc-featured-paper-body">
                   <h3>
-                    <a href={`/posts/${leadPost.slug}`}>{leadPost.title}</a>
+                    <a href={`/posts/${leadPost.slug}`} data-astro-prefetch>{leadPost.title}</a>
                   </h3>
                   {leadPost.publishedAt ? <time datetime={leadPost.publishedAt}>{formatDate(leadPost.publishedAt)}</time> : null}
                   {leadPost.excerpt ? <p>{leadPost.excerpt}</p> : null}
@@ -332,7 +332,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                     <article class="sc-paper-strip">
                       <div>
                         <h3>
-                          <a href={`/posts/${post.slug}`}>{post.title}</a>
+                          <a href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
                         </h3>
                         {post.excerpt ? <p>{post.excerpt}</p> : null}
                       </div>
@@ -406,6 +406,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
               let fadeTimer = 0;
               let resizeTimer = 0;
               let paused = false;
+              let inView = !('IntersectionObserver' in window);
 
               function formatQuote(quote) {
                 return `${quote.text} —— ${quote.author}《${quote.work}》`;
@@ -421,7 +422,10 @@ function getExternalOrigin(value: string | null | undefined): string | null {
               function scheduleAdvance(delay) {
                 clearTimers();
 
-                if (paused) {
+                const shouldPause = paused || !inView || document.hidden;
+                quoteRoot.classList.toggle('is-paused', shouldPause);
+
+                if (shouldPause) {
                   return;
                 }
 
@@ -494,6 +498,18 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                 applyQuote(currentIndex);
               }
 
+              function syncPlayback() {
+                if (paused || !inView || document.hidden) {
+                  quoteRoot.classList.add('is-paused');
+                  quoteRoot.classList.remove('is-fading');
+                  clearTimers();
+                  return;
+                }
+
+                quoteRoot.classList.remove('is-paused');
+                applyQuote(currentIndex);
+              }
+
               function bindMediaChange(mediaQuery, handler) {
                 if ('addEventListener' in mediaQuery) {
                   mediaQuery.addEventListener('change', handler);
@@ -508,6 +524,22 @@ function getExternalOrigin(value: string | null | undefined): string | null {
 
               bindMediaChange(reducedMotionQuery, handleEnvironmentChange);
               bindMediaChange(hoverPauseQuery, handleEnvironmentChange);
+
+              document.addEventListener('visibilitychange', syncPlayback);
+
+              if ('IntersectionObserver' in window) {
+                const visibilityObserver = new IntersectionObserver(([entry]) => {
+                  inView = entry.isIntersecting;
+                  syncPlayback();
+                });
+                visibilityObserver.observe(quoteRoot);
+              }
+
+              window.addEventListener('pagehide', () => {
+                clearTimers();
+                window.clearTimeout(resizeTimer);
+              });
+              window.addEventListener('pageshow', syncPlayback);
 
               window.addEventListener('resize', () => {
                 window.clearTimeout(resizeTimer);

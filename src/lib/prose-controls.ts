@@ -60,12 +60,25 @@ function createCheckIcon() {
   return svg;
 }
 
-function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success') {
+function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success' | 'error') {
   const icon = button.querySelector('.sc-code-copy-icon');
-  const label = state === 'success' ? '已复制' : '复制代码';
+  const label = state === 'error' ? '复制失败，请手动选择代码复制' : state === 'success' ? '已复制' : '复制代码';
 
   button.classList.toggle('sc-code-copy-success', state === 'success');
+  button.classList.toggle('sc-code-copy-error', state === 'error');
   button.setAttribute('aria-label', label);
+  button.setAttribute('title', label);
+
+  const wrapper = button.closest('.sc-code-block');
+  let feedback = wrapper?.querySelector<HTMLElement>('.sc-code-copy-feedback');
+  if (!feedback && wrapper) {
+    feedback = document.createElement('span');
+    feedback.className = 'sc-code-copy-feedback';
+    feedback.setAttribute('role', 'status');
+    feedback.setAttribute('aria-live', 'polite');
+    wrapper.append(feedback);
+  }
+  if (feedback) feedback.textContent = state === 'idle' ? '' : state === 'success' ? '已复制' : '复制失败，请手动复制';
 
   if (state === 'success') {
     button.dataset.copied = 'true';
@@ -81,8 +94,8 @@ function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success') {
 const resetTimers = new WeakMap<HTMLButtonElement, number>();
 const boundCodeCopyRoots = new WeakSet<EventTarget>();
 
-function setTemporarySuccess(button: HTMLButtonElement) {
-  setButtonState(button, 'success');
+function setTemporaryState(button: HTMLButtonElement, state: 'success' | 'error') {
+  setButtonState(button, state);
 
   const existingTimer = resetTimers.get(button);
 
@@ -93,7 +106,7 @@ function setTemporarySuccess(button: HTMLButtonElement) {
   const timer = window.setTimeout(() => {
     setButtonState(button, 'idle');
     resetTimers.delete(button);
-  }, 1400);
+  }, state === 'error' ? 3500 : 1400);
 
   resetTimers.set(button, timer);
 }
@@ -113,11 +126,15 @@ async function handleCodeCopyClick(event: Event) {
     return;
   }
 
+  if (button.disabled) return;
+  button.disabled = true;
   try {
     await copyText(code.textContent ?? '');
-    setTemporarySuccess(button);
+    setTemporaryState(button, 'success');
   } catch {
-    setButtonState(button, 'idle');
+    setTemporaryState(button, 'error');
+  } finally {
+    button.disabled = false;
   }
 }
 

@@ -7,7 +7,7 @@ const canonicalUrl = absoluteSiteUrl('/search');
 ---
 
 <SiteLayout title="搜索 | Sakura Cactus" description="搜索公开文章。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
-  <section class="sc-page">
+  <section class="sc-page" data-site-search="page">
     <div class="sc-page-shell">
       <nav class="sc-breadcrumb" aria-label="面包屑">
         <a href="/">首页</a>
@@ -20,242 +20,22 @@ const canonicalUrl = absoluteSiteUrl('/search');
       </header>
 
       <div class="sc-search">
-        <input id="search-input" class="sc-search-input" type="search" placeholder="请输入关键字" autocomplete="off" aria-label="搜索公开文章" />
-        <p id="search-count" class="sc-search-count"></p>
+        <input id="search-input" class="sc-search-input" type="search" placeholder="请输入关键字" autocomplete="off" aria-label="搜索公开文章" aria-controls="search-results" data-search-input />
+        <p id="search-count" class="sc-search-count" role="status" aria-live="polite" aria-atomic="true" data-search-status></p>
+        <button class="sc-button sc-button-secondary sc-button-small" type="button" data-search-retry hidden>重新搜索</button>
       </div>
 
-      <div id="search-results" class="sc-post-list"></div>
+      <div id="search-results" class="sc-post-list" data-search-results></div>
 
-      <template id="search-empty-template">
+      <template id="search-empty-template" data-search-empty>
         <div class="sc-empty">
           <p>没有翻到相关纸页。</p>
         </div>
       </template>
 
-      <template id="search-error-template">
-        <div class="sc-empty">
-          <p>搜索暂时不可用，请稍后再试。</p>
-        </div>
-      </template>
-
-      <script is:inline>
-        const input = document.getElementById('search-input');
-        const results = document.getElementById('search-results');
-        const count = document.getElementById('search-count');
-        const emptyTemplate = document.getElementById('search-empty-template');
-        const errorTemplate = document.getElementById('search-error-template');
-        const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        });
-        let posts = [];
-        let hasSearchIndexError = false;
-        let searchIndexPromise = null;
-
-        function getSearchDateTerms(value) {
-          if (!value) {
-            return [];
-          }
-
-          const date = new Date(value);
-
-          if (Number.isNaN(date.getTime())) {
-            return [];
-          }
-
-          const year = date.getFullYear();
-          const month = date.getMonth() + 1;
-          const day = date.getDate();
-          const mm = String(month).padStart(2, '0');
-          const dd = String(day).padStart(2, '0');
-
-          return [
-            `${year}/${mm}/${dd}`,
-            `${year}-${mm}-${dd}`,
-            `${year}年${month}月${day}日`,
-            `${year}年${mm}月${dd}日`,
-            `${month}月${day}日`,
-            `${mm}/${dd}`,
-            `${month}/${day}`,
-            `${day}日`,
-            `${day}号`,
-            `${year}年${month}月`,
-            `${year}年${mm}月`,
-            `${year}/${mm}`,
-            `${year}-${month}`,
-            `${year}-${mm}`,
-            String(year)
-          ];
-        }
-
-        function normalizeSearchPost(post) {
-          const tags = Array.isArray(post.tags) ? post.tags : [];
-          const publishedAt = post.published_at || post.publishedAt || null;
-
-          return {
-            title: post.title || '',
-            excerpt: post.excerpt || '',
-            slug: post.slug || '',
-            publishedAt,
-            tags,
-            searchableText: [post.title || '', post.excerpt || '', ...tags, ...getSearchDateTerms(publishedAt)].join(' ').toLowerCase()
-          };
-        }
-
-        async function loadSearchIndex() {
-          if (searchIndexPromise) {
-            return searchIndexPromise;
-          }
-
-          searchIndexPromise = fetch('/api/search-index', {
-            headers: {
-              Accept: 'application/json'
-            }
-          })
-            .then(async (response) => {
-              if (!response.ok) {
-                throw new Error('Unable to load search index.');
-              }
-
-              const payload = await response.json();
-              posts = (payload?.data?.posts || []).map(normalizeSearchPost);
-              hasSearchIndexError = false;
-              return posts;
-            })
-            .catch(() => {
-              posts = [];
-              hasSearchIndexError = true;
-              return posts;
-            });
-
-          return searchIndexPromise;
-        }
-
-        function createCalendarIcon() {
-          const span = document.createElement('span');
-          span.className = 'sc-calendar-icon';
-          span.setAttribute('aria-hidden', 'true');
-          span.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4" /><path d="M16 2v4" /><path d="M3 10h18" /><rect x="3" y="4" width="18" height="18" rx="2" /></svg>';
-          return span;
-        }
-
-        function appendHighlightedText(parent, value, query) {
-          const text = String(value || '');
-
-          if (!query) {
-            parent.append(document.createTextNode(text));
-            return;
-          }
-
-          const normalizedText = text.toLowerCase();
-          let cursor = 0;
-          let index = normalizedText.indexOf(query, cursor);
-
-          while (index !== -1) {
-            if (index > cursor) {
-              parent.append(document.createTextNode(text.slice(cursor, index)));
-            }
-
-            const mark = document.createElement('mark');
-            mark.className = 'sc-search-highlight';
-            mark.textContent = text.slice(index, index + query.length);
-            parent.append(mark);
-            cursor = index + query.length;
-            index = normalizedText.indexOf(query, cursor);
-          }
-
-          if (cursor < text.length) {
-            parent.append(document.createTextNode(text.slice(cursor)));
-          }
-        }
-
-        function render(items) {
-          if (!results || !count || !emptyTemplate || !errorTemplate) return;
-
-          const query = input?.value.trim().toLowerCase() || '';
-          results.textContent = '';
-          count.textContent = items.length ? `${items.length} 篇文章` : '';
-
-          if (!query) {
-            count.textContent = '';
-            return;
-          }
-
-          if (hasSearchIndexError) {
-            results.append(errorTemplate.content.cloneNode(true));
-            count.textContent = '';
-            return;
-          }
-
-          if (items.length === 0) {
-            results.append(emptyTemplate.content.cloneNode(true));
-            return;
-          }
-
-          for (const post of items) {
-            const article = document.createElement('article');
-            article.className = 'sc-post-entry';
-
-            const title = document.createElement('h2');
-            const link = document.createElement('a');
-            link.href = `/posts/${post.slug}`;
-            appendHighlightedText(link, post.title, query);
-            title.append(link);
-            article.append(title);
-
-            if (post.publishedAt) {
-              const meta = document.createElement('p');
-              meta.className = 'sc-post-meta';
-              const time = document.createElement('time');
-              time.dateTime = post.publishedAt;
-              time.textContent = dateFormatter.format(new Date(post.publishedAt));
-              meta.append(createCalendarIcon(), time);
-              article.append(meta);
-            }
-
-            if (post.excerpt) {
-              const excerpt = document.createElement('p');
-              excerpt.className = 'sc-post-excerpt';
-              appendHighlightedText(excerpt, post.excerpt, query);
-              article.append(excerpt);
-            }
-
-            if (post.tags.length) {
-              const tagList = document.createElement('div');
-              tagList.className = 'sc-tag-list';
-              for (const tag of post.tags) {
-                const tagItem = document.createElement('span');
-                tagItem.className = 'sc-tag-link sc-tag-link-static';
-                appendHighlightedText(tagItem, tag, query);
-                tagList.append(tagItem);
-              }
-              article.append(tagList);
-            }
-
-            results.append(article);
-          }
-        }
-
-        async function search() {
-          const query = input?.value.trim().toLowerCase() || '';
-          if (!query) {
-            render([]);
-            return;
-          }
-
-          if (count) {
-            count.textContent = '正在翻找纸页……';
-          }
-          await loadSearchIndex();
-          render(posts.filter((post) => String(post.searchableText || '').includes(query)));
-        }
-
-        input?.addEventListener('input', search);
-        input?.addEventListener('focus', () => {
-          void loadSearchIndex();
-        }, { once: true });
-        render([]);
+      <script>
+        import { bindSiteSearch } from '@/lib/site-search';
+        bindSiteSearch();
       </script>
     </div>
   </section>

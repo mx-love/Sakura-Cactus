@@ -11,39 +11,16 @@ const shouldRender = enabled && safeServerURL;
 ---
 
 {shouldRender ? (
-  <section class="sc-comments sc-article-inner" aria-label="评论">
-    <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline.css" />
+  <section class="sc-comments sc-article-inner" aria-label="评论" data-waline-section>
+    <div data-waline-controls>
+      <p class="sc-field-hint" role="status" aria-live="polite" data-waline-status>评论将在接近此处时加载。</p>
+      <button class="sc-button sc-button-secondary sc-button-small" type="button" data-waline-load>加载评论</button>
+    </div>
     <div id="sakura-comments" data-server-url={safeServerURL} data-page-path={path}></div>
-    <script type="module" is:inline>
-      const container = document.getElementById('sakura-comments');
+    <script>
+      import { setupWalineComments } from '@/lib/comments-client';
 
-      if (container && container.dataset.walineMounted !== 'true') {
-        const serverURL = container.dataset.serverUrl || '';
-        const path = container.dataset.pagePath || window.location.pathname;
-
-        if (serverURL.startsWith('https://')) {
-          container.dataset.walineMounted = 'true';
-
-          try {
-            const { init } = await import('https://unpkg.com/@waline/client@v3/dist/waline.js');
-
-            if (typeof init !== 'function') {
-              throw new Error('Waline init is not available.');
-            }
-
-            init({
-              el: '#sakura-comments',
-              serverURL,
-              path,
-              lang: 'zh-CN',
-              dark: 'html[data-theme="dark"]'
-            });
-          } catch (error) {
-            container.dataset.walineMounted = 'false';
-            console.warn('Waline failed to initialize.', error);
-          }
-        }
-      }
+      setupWalineComments();
     </script>
   </section>
 ) : null}

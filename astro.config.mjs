@@ -12,6 +12,10 @@ export default defineConfig({
     driver: sessionDrivers.lruCache()
   },
   integrations: [react()],
+  prefetch: {
+    prefetchAll: false,
+    defaultStrategy: 'hover'
+  },
   vite: {
     plugins: [tailwindcss()]
   }

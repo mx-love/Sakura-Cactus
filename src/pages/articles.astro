@@ -53,7 +53,7 @@ function formatDate(value: string | null) {
           <div class="sc-post-list sc-compact-post-list sc-paper-index-list sc-article-card-list">
             {pagePosts.map((post) => (
               <article class:list={['sc-post-entry', 'sc-article-list-card', post.coverImageUrl && 'sc-article-list-card-with-cover']}>
-                <a class="sc-article-card-main" href={`/posts/${post.slug}`}>
+                <a class="sc-article-card-main" href={`/posts/${post.slug}`} data-astro-prefetch>
                   <h2>{post.title}</h2>
                   {post.publishedAt ? (
                     <p class="sc-post-meta">
@@ -78,7 +78,7 @@ function formatDate(value: string | null) {
                   ) : null}
                 </a>
                 {post.coverImageUrl ? (
-                  <a class="sc-article-card-cover" href={`/posts/${post.slug}`} aria-label={post.title}>
+                  <a class="sc-article-card-cover" href={`/posts/${post.slug}`} aria-label={post.title} data-astro-prefetch>
                     <img src={post.coverImageUrl} alt="" loading="lazy" />
                   </a>
                 ) : null}
@@ -88,13 +88,13 @@ function formatDate(value: string | null) {
 
           <nav class="sc-article-pagination" aria-label="文章分页">
             {currentPage > 1 ? (
-              <a href={`/articles?page=${currentPage - 1}`}>上一页</a>
+              <a href={`/articles?page=${currentPage - 1}`} data-astro-prefetch>上一页</a>
             ) : (
               <span class="sc-pagination-disabled">上一页</span>
             )}
             <span>第 {currentPage} / {totalPages} 页</span>
             {currentPage < totalPages ? (
-              <a href={`/articles?page=${currentPage + 1}`}>下一页</a>
+              <a href={`/articles?page=${currentPage + 1}`} data-astro-prefetch>下一页</a>
             ) : (
               <span class="sc-pagination-disabled">下一页</span>
             )}

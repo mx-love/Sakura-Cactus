@@ -56,7 +56,7 @@ function formatDate(value: string | null) {
           {posts.map((post) => (
             <article class="sc-post-entry">
               <h2>
-                <a href={`/posts/${post.slug}`}>{post.title}</a>
+                <a href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
               </h2>
               {post.publishedAt ? (
                 <p class="sc-post-meta">

@@ -6,6 +6,7 @@ const PUBLIC_CACHE_TTLS: Array<{ test: (pathname: string) => boolean; ttl: numbe
   { test: (pathname) => pathname.startsWith('/posts/'), ttl: 60 },
   { test: (pathname) => pathname === '/tags' || pathname === '/tags/' || pathname.startsWith('/tags/'), ttl: 300 },
   { test: (pathname) => pathname === '/timeline' || pathname === '/timeline/', ttl: 300 },
+  { test: (pathname) => pathname === '/about' || pathname === '/friends', ttl: 60 },
   { test: (pathname) => pathname === '/rss.xml', ttl: 600 },
   { test: (pathname) => pathname === '/sitemap.xml', ttl: 3600 },
   { test: (pathname) => pathname === '/robots.txt', ttl: 86400 },
@@ -58,6 +59,8 @@ function createCacheUrl(url: URL): URL | null {
     pathname === '/' ||
     pathname === '/articles' ||
     pathname === '/timeline' ||
+    pathname === '/about' ||
+    pathname === '/friends' ||
     pathname === '/tags' ||
     pathname.startsWith('/tags/') ||
     pathname.startsWith('/posts/') ||
@@ -155,7 +158,12 @@ export async function matchPublicCache(request: Request, url: URL): Promise<Resp
   }
 }
 
-export async function maybeStorePublicCache(request: Request, url: URL, response: Response): Promise<Response> {
+export async function maybeStorePublicCache(
+  request: Request,
+  url: URL,
+  response: Response,
+  waitUntil?: (task: Promise<unknown>) => void
+): Promise<Response> {
   if (shouldForceNoStore(request, url)) {
     return withNoStore(response);
   }
@@ -163,6 +171,10 @@ export async function maybeStorePublicCache(request: Request, url: URL, response
   const cacheContext = getPublicCacheContext(request, url);
 
   if (!cacheContext || response.status !== 200 || response.headers.has('Set-Cookie')) {
+    return response;
+  }
+
+  if (/\b(?:private|no-store)\b/i.test(response.headers.get('Cache-Control') ?? '')) {
     return response;
   }
 
@@ -182,7 +194,13 @@ export async function maybeStorePublicCache(request: Request, url: URL, response
 
   if (typeof caches !== 'undefined') {
     try {
-      await caches.default.put(cacheContext.cacheKey, responseForCache);
+      const cacheWrite = caches.default.put(cacheContext.cacheKey, responseForCache).catch(() => undefined);
+
+      if (waitUntil) {
+        waitUntil(cacheWrite);
+      } else {
+        await cacheWrite;
+      }
     } catch {
       // Cache API failures should not affect page rendering.
     }

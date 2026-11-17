@@ -159,6 +159,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const response = await next();
-  const cachedResponse = await maybeStorePublicCache(context.request, context.url, response);
+  const executionContext = context.locals.cfContext;
+  const cachedResponse = await maybeStorePublicCache(
+    context.request,
+    context.url,
+    response,
+    executionContext ? (task) => executionContext.waitUntil(task) : undefined
+  );
   return finalize(isPrivateHtmlPage(pathname) ? withPrivateRobots(cachedResponse) : cachedResponse, isPrivateHtmlPage(pathname));
 });

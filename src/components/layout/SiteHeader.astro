@@ -34,30 +34,34 @@ function isActive(href: string) {
 
 <header class="sc-site-header">
   <div class="sc-site-header-inner">
-    <a class="sc-site-title" href="/">{siteName}</a>
+    <a class="sc-site-title" href="/" aria-current={pathname === '/' ? 'page' : undefined} data-astro-prefetch>{siteName}</a>
 
     <nav class="sc-site-nav" aria-label="主导航">
       {leadingNavItems.map((item) => (
         <a
           class={`sc-site-nav-link ${isActive(item.href) ? 'sc-site-nav-link-active' : ''}`}
           href={item.href}
+          aria-current={isActive(item.href) ? 'page' : undefined}
+          data-astro-prefetch
         >
           {item.label}
         </a>
       ))}
       {adminUser ? (
-        <a class={`sc-site-nav-link ${pathname.startsWith('/write') ? 'sc-site-nav-link-active' : ''}`} href="/write">写作</a>
+        <a class={`sc-site-nav-link ${pathname.startsWith('/write') ? 'sc-site-nav-link-active' : ''}`} href="/write" aria-current={pathname.startsWith('/write') ? 'page' : undefined}>写作</a>
       ) : null}
       {trailingNavItems.map((item) => (
         <a
           class={`sc-site-nav-link ${isActive(item.href) ? 'sc-site-nav-link-active' : ''}`}
           href={item.href}
+          aria-current={isActive(item.href) ? 'page' : undefined}
+          data-astro-prefetch
         >
           {item.label}
         </a>
       ))}
       {adminUser ? (
-        <a class={`sc-site-nav-link ${pathname === '/settings' ? 'sc-site-nav-link-active' : ''}`} href="/settings">设置</a>
+        <a class={`sc-site-nav-link ${pathname === '/settings' ? 'sc-site-nav-link-active' : ''}`} href="/settings" aria-current={isActive('/settings') ? 'page' : undefined}>设置</a>
       ) : null}
     </nav>
 
@@ -122,31 +126,32 @@ function isActive(href: string) {
         </summary>
         <div class="sc-mobile-menu">
           {publicNavItems.map((item) => (
-            <a class="sc-mobile-menu-link" href={item.href}>
+            <a class="sc-mobile-menu-link" href={item.href} aria-current={isActive(item.href) ? 'page' : undefined} data-astro-prefetch>
               {item.label}
             </a>
           ))}
           {adminUser ? (
             <>
               <div class="sc-mobile-menu-divider"></div>
-              <a class="sc-mobile-menu-link" href="/write">写作</a>
-              <a class="sc-mobile-menu-link" href="/settings">设置</a>
+              <a class="sc-mobile-menu-link" href="/write" aria-current={isActive('/write') ? 'page' : undefined}>写作</a>
+              <a class="sc-mobile-menu-link" href="/settings" aria-current={isActive('/settings') ? 'page' : undefined}>设置</a>
             </>
           ) : null}
         </div>
       </details>
     </div>
   </div>
-  <div class="sc-search-overlay" hidden data-search-overlay>
+  <div class="sc-search-overlay" hidden data-search-overlay data-site-search="overlay">
     <button class="sc-search-backdrop" type="button" aria-label="关闭搜索" data-search-close></button>
     <section class="sc-search-dialog" role="dialog" aria-modal="true" aria-label="搜索">
       <div class="sc-search-box">
         <div class="sc-search-overlay-input-row">
-          <input id="site-search-overlay-input" class="sc-search-overlay-input" type="search" placeholder="请输入关键字" autocomplete="off" data-search-input />
+          <input id="site-search-overlay-input" class="sc-search-overlay-input" type="search" placeholder="请输入关键字" autocomplete="off" aria-label="搜索公开文章" aria-controls="site-search-overlay-results" data-search-input />
           <button class="sc-search-close" type="button" aria-label="关闭搜索" data-search-close>关闭</button>
         </div>
-        <p class="sc-search-overlay-status" data-search-status hidden></p>
-        <div class="sc-search-overlay-results" data-search-results></div>
+        <p class="sc-search-overlay-status" role="status" aria-live="polite" aria-atomic="true" data-search-status hidden></p>
+        <button class="sc-button sc-button-secondary sc-button-small" type="button" data-search-retry hidden>重新搜索</button>
+        <div id="site-search-overlay-results" class="sc-search-overlay-results" data-search-results></div>
       </div>
     </section>
   </div>
@@ -192,281 +197,9 @@ function isActive(href: string) {
       syncExpanded();
     })();
   </script>
-  <script is:inline>
-    (() => {
-      const overlay = document.querySelector('[data-search-overlay]');
-      const input = overlay?.querySelector('[data-search-input]');
-      const results = overlay?.querySelector('[data-search-results]');
-      const status = overlay?.querySelector('[data-search-status]');
-      let posts = [];
-      let searchIndexPromise = null;
-      const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-
-      function getSearchDateTerms(value) {
-        if (!value) {
-          return [];
-        }
-
-        const date = new Date(value);
-
-        if (Number.isNaN(date.getTime())) {
-          return [];
-        }
-
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        const mm = String(month).padStart(2, '0');
-        const dd = String(day).padStart(2, '0');
-
-        return [
-          `${year}/${mm}/${dd}`,
-          `${year}-${mm}-${dd}`,
-          `${year}年${month}月${day}日`,
-          `${year}年${mm}月${dd}日`,
-          `${month}月${day}日`,
-          `${mm}/${dd}`,
-          `${month}/${day}`,
-          `${day}日`,
-          `${day}号`,
-          `${year}年${month}月`,
-          `${year}年${mm}月`,
-          `${year}/${mm}`,
-          `${year}-${month}`,
-          `${year}-${mm}`,
-          String(year)
-        ];
-      }
-
-      function normalizeSearchPost(post) {
-        const tags = Array.isArray(post.tags) ? post.tags : [];
-        const publishedAt = post.published_at || post.publishedAt || null;
-
-        return {
-          title: post.title || '',
-          excerpt: post.excerpt || '',
-          slug: post.slug || '',
-          publishedAt,
-          tags,
-          searchableText: [post.title || '', post.excerpt || '', ...tags, ...getSearchDateTerms(publishedAt)].join(' ').toLowerCase()
-        };
-      }
-
-      async function loadSearchIndex() {
-        if (posts.length > 0) {
-          return posts;
-        }
-
-        searchIndexPromise ??= fetch('/api/search-index', {
-          headers: {
-            Accept: 'application/json'
-          }
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error('Search index request failed.');
-            }
-
-            return response.json();
-          })
-          .then((payload) => {
-            posts = Array.isArray(payload?.data?.posts) ? payload.data.posts.map(normalizeSearchPost) : [];
-            return posts;
-          })
-          .catch(() => {
-            searchIndexPromise = null;
-            throw new Error('Search index unavailable.');
-          });
-
-        return searchIndexPromise;
-      }
-
-      function clearResults() {
-        if (results) results.textContent = '';
-      }
-
-      function resetSearchUi() {
-        if (input) input.value = '';
-        clearResults();
-        if (status) {
-          status.textContent = '';
-          status.hidden = true;
-        }
-      }
-
-      function appendHighlightedText(parent, value, query) {
-        const text = String(value || '');
-
-        if (!query) {
-          parent.append(document.createTextNode(text));
-          return;
-        }
-
-        const normalizedText = text.toLowerCase();
-        let cursor = 0;
-        let index = normalizedText.indexOf(query, cursor);
-
-        while (index !== -1) {
-          if (index > cursor) {
-            parent.append(document.createTextNode(text.slice(cursor, index)));
-          }
-
-          const mark = document.createElement('mark');
-          mark.className = 'sc-search-highlight';
-          mark.textContent = text.slice(index, index + query.length);
-          parent.append(mark);
-          cursor = index + query.length;
-          index = normalizedText.indexOf(query, cursor);
-        }
-
-        if (cursor < text.length) {
-          parent.append(document.createTextNode(text.slice(cursor)));
-        }
-      }
-
-      function createTagList(tags, query) {
-        const tagList = document.createElement('div');
-        tagList.className = 'sc-tag-list sc-search-result-tags';
-
-        for (const tag of tags) {
-          const item = document.createElement('span');
-          item.className = 'sc-tag-link sc-tag-link-static';
-          appendHighlightedText(item, tag, query);
-          tagList.append(item);
-        }
-
-        return tagList;
-      }
-
-      function createResult(post, query) {
-        const link = document.createElement('a');
-        link.className = 'sc-search-overlay-result';
-        link.href = `/posts/${post.slug}`;
-
-        const title = document.createElement('strong');
-        appendHighlightedText(title, post.title, query);
-        link.append(title);
-
-        if (post.publishedAt) {
-          const meta = document.createElement('small');
-          meta.textContent = dateFormatter.format(new Date(post.publishedAt));
-          link.append(meta);
-        }
-
-        if (post.excerpt) {
-          const excerpt = document.createElement('span');
-          appendHighlightedText(excerpt, post.excerpt, query);
-          link.append(excerpt);
-        }
-
-        if (post.tags?.length) {
-          link.append(createTagList(post.tags, query));
-        }
-
-        return link;
-      }
-
-      async function renderSearch() {
-        const query = input?.value.trim().toLowerCase() || '';
-        clearResults();
-
-        if (!query) {
-          if (status) {
-            status.textContent = '';
-            status.hidden = true;
-          }
-          return;
-        }
-
-        if (status) {
-          status.textContent = '正在翻找纸页……';
-          status.hidden = false;
-        }
-
-        try {
-          await loadSearchIndex();
-        } catch {
-          if (status) {
-            status.textContent = '搜索暂时不可用。';
-            status.hidden = false;
-          }
-          return;
-        }
-
-        const matched = posts.filter((post) => {
-          return String(post.searchableText || '').includes(query);
-        });
-
-        if (matched.length === 0) {
-          if (status) {
-            status.textContent = '没有翻到相关纸页。';
-            status.hidden = false;
-          }
-          return;
-        }
-
-        if (status) {
-          status.textContent = '';
-          status.hidden = true;
-        }
-        for (const post of matched.slice(0, 8)) {
-          results?.append(createResult(post, query));
-        }
-      }
-
-      function openSearch() {
-        if (!(overlay instanceof HTMLElement)) return;
-        overlay.hidden = false;
-        document.documentElement.classList.add('sc-search-open');
-        window.setTimeout(() => {
-          input?.focus();
-          loadSearchIndex()
-            .then(renderSearch)
-            .catch(() => {
-              if (status) {
-                status.textContent = '搜索暂时不可用。';
-                status.hidden = false;
-              }
-            });
-        }, 20);
-      }
-
-      function closeSearch() {
-        if (!(overlay instanceof HTMLElement)) return;
-        overlay.hidden = true;
-        document.documentElement.classList.remove('sc-search-open');
-        resetSearchUi();
-      }
-
-      input?.addEventListener('input', renderSearch);
-
-      document.querySelectorAll('[data-search-open]').forEach((trigger) => {
-        trigger.addEventListener('click', (event) => {
-          event.preventDefault();
-          openSearch();
-        });
-      });
-
-      document.querySelectorAll('[data-search-close]').forEach((trigger) => {
-        trigger.addEventListener('click', closeSearch);
-      });
-
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          closeSearch();
-          return;
-        }
-
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-          event.preventDefault();
-          openSearch();
-        }
-      });
-    })();
+  <script>
+    import { bindSiteSearch } from '@/lib/site-search';
+    bindSiteSearch();
   </script>
   {adminUser ? (
     <script is:inline>

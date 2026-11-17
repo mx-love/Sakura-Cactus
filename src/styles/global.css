@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@import "./prose.css";
-@import "./admin.css";
 @import "./animations.css";
 
 :root {
@@ -275,6 +273,23 @@ summary {
 :focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.sc-skip-link {
+  position: fixed;
+  z-index: 100;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-control-bg);
+  padding: 0.65rem 1rem;
+  color: var(--color-text);
+  transform: translateY(calc(-100% - 1rem));
+}
+
+.sc-skip-link:focus {
+  transform: none;
 }
 
 .sc-page {
@@ -1617,6 +1632,15 @@ summary {
 
 .sc-search {
   margin-bottom: 1.5rem;
+}
+
+html.sc-search-open,
+html.sc-mobile-toc-open {
+  overflow: hidden;
+}
+
+[data-search-retry][hidden] {
+  display: none;
 }
 
 .sc-search-label {
@@ -3414,7 +3438,7 @@ html[data-theme="dark"] #sakura-comments {
   .sc-featured-paper,
   .sc-paper-strip,
   .sc-paper-public-shell {
-    animation: sc-paper-fade-up 420ms ease both;
+    animation: sc-paper-fade-up 180ms ease both;
   }
 
   .sc-paper-strip,
@@ -3469,8 +3493,8 @@ html[data-theme="dark"] #sakura-comments {
 
 @keyframes sc-paper-fade-up {
   from {
-    opacity: 0;
-    transform: translateY(0.35rem);
+    opacity: 0.85;
+    transform: translateY(0.15rem);
   }
 
   to {

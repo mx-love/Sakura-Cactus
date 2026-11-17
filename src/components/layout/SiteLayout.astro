@@ -2,6 +2,7 @@
 import '@/styles/global.css';
 import SiteHeader from './SiteHeader.astro';
 import { getSiteSettings } from '@/features/settings/settings.service';
+import type { SiteSettings } from '@/features/settings/settings.types';
 import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl, createJsonLd } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
 
@@ -11,6 +12,10 @@ interface Props {
   canonicalUrl?: string;
   robots?: string;
   ogImage?: string;
+  ogType?: 'website' | 'article';
+  publishedTime?: string | null;
+  modifiedTime?: string | null;
+  siteSettings?: SiteSettings;
   jsonLd?: unknown | unknown[];
   preconnectOrigins?: string[];
   showHeader?: boolean;
@@ -23,6 +28,10 @@ const {
   canonicalUrl,
   robots = ROBOTS_INDEX_FOLLOW,
   ogImage,
+  ogType = 'website',
+  publishedTime,
+  modifiedTime,
+  siteSettings: providedSiteSettings,
   jsonLd,
   preconnectOrigins = [],
   showHeader = true,
@@ -46,7 +55,7 @@ const footerLinks = [
     icon: 'bilibili'
   }
 ];
-const siteSettings = await getSiteSettings();
+const siteSettings = providedSiteSettings ?? await getSiteSettings();
 const faviconHref = siteSettings.faviconUrl || '/favicon.svg';
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const rssUrl = absoluteSiteUrl('/rss.xml');
@@ -170,8 +179,17 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     {robots ? <meta name="robots" content={robots} /> : null}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:locale" content="zh_CN" />
     {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
     {ogImage ? <meta property="og:image" content={ogImage} /> : null}
+    {ogType === 'article' && publishedTime ? <meta property="article:published_time" content={publishedTime} /> : null}
+    {ogType === 'article' && modifiedTime ? <meta property="article:modified_time" content={modifiedTime} /> : null}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {ogImage ? <meta name="twitter:image" content={ogImage} /> : null}
     {safePreconnectOrigins.map((origin) => <link rel="preconnect" href={origin} />)}
     <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href={rssUrl} />
     {siteSettings.faviconUrl ? <link rel="icon" href={faviconHref} /> : <link rel="icon" type="image/svg+xml" href={faviconHref} />}
@@ -179,8 +197,9 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     <title>{title}</title>
   </head>
   <body>
+    <a class="sc-skip-link" href="#main-content">跳到正文</a>
     {showHeader ? <SiteHeader /> : null}
-    <main>
+    <main id="main-content" tabindex="-1">
       <slot />
     </main>
     {showFooter ? (

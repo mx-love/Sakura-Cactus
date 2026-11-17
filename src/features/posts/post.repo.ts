@@ -233,17 +233,19 @@ export async function listPublicSitemapPosts(db: D1Database): Promise<PublicPost
   return result.results ?? [];
 }
 
-export async function listPublicSearchPosts(db: D1Database, limit = 100): Promise<PublicSearchPostRow[]> {
+export async function listPublicSearchPosts(db: D1Database, limit?: number): Promise<PublicSearchPostRow[]> {
   const { conditions, values } = publicPostWhere({ excludeAbout: true });
+  const limitClause = limit === undefined ? '' : 'LIMIT ?';
+  const boundedLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit!), 1), 100) : 100;
   const result = await db
     .prepare(
       `SELECT posts.id, posts.slug, posts.title, posts.excerpt, posts.published_at
        FROM posts
        WHERE ${conditions.join(' AND ')}
        ORDER BY posts.published_at DESC, posts.updated_at DESC
-       LIMIT ?`
+       ${limitClause}`
     )
-    .bind(...values, Math.min(Math.max(limit, 1), 100))
+    .bind(...values, ...(limit === undefined ? [] : [boundedLimit]))
     .all<PublicSearchPostRow>();
 
   return result.results ?? [];

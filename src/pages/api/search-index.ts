@@ -4,7 +4,7 @@ import { getPublicSearchIndex } from '@/features/posts/post.service';
 export const prerender = false;
 
 export const GET: APIRoute = async () => {
-  const posts = await getPublicSearchIndex(100);
+  const posts = await getPublicSearchIndex();
 
   return Response.json(
     {

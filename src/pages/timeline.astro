@@ -75,7 +75,7 @@ const canonicalUrl = absoluteSiteUrl('/timeline');
                         </div>
                         <div class="sc-archive-content">
                           <h4>
-                            <a href={`/posts/${post.slug}`}>{post.title}</a>
+                            <a href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
                           </h4>
                           {post.excerpt ? <p>{post.excerpt}</p> : null}
                         </div>

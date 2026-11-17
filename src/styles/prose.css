@@ -478,6 +478,23 @@
   opacity: 1;
 }
 
+.sc-code-copy-error {
+  color: var(--color-danger);
+}
+
+.sc-code-copy-feedback {
+  position: absolute;
+  top: 0.3rem;
+  right: 2.8rem;
+  max-width: calc(100% - 3.5rem);
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  line-height: 1.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sc-prose pre code,
 .prose-content pre code {
   background: transparent;

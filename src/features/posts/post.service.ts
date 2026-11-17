@@ -335,7 +335,7 @@ export async function getPublicSitemapPosts() {
   return listPublicSitemapPosts(getDb());
 }
 
-export async function getPublicSearchIndex(limit = 100) {
+export async function getPublicSearchIndex(limit?: number) {
   const db = getDb();
   const posts = await listPublicSearchPosts(db, limit);
   const tagsByPostId = await getTagsForPostIds(db, posts.map((post) => post.id));
