@@ -32,7 +32,7 @@ function isActive(href: string) {
 }
 ---
 
-<header class="sc-site-header">
+<header class="sc-site-header" data-home-header={pathname === '/' ? 'true' : undefined}>
   <div class="sc-site-header-inner">
     <a class="sc-site-title" href="/" aria-current={pathname === '/' ? 'page' : undefined} data-astro-prefetch>{siteName}</a>
 
@@ -47,9 +47,6 @@ function isActive(href: string) {
           {item.label}
         </a>
       ))}
-      {adminUser ? (
-        <a class={`sc-site-nav-link ${pathname.startsWith('/write') ? 'sc-site-nav-link-active' : ''}`} href="/write" aria-current={pathname.startsWith('/write') ? 'page' : undefined}>写作</a>
-      ) : null}
       {trailingNavItems.map((item) => (
         <a
           class={`sc-site-nav-link ${isActive(item.href) ? 'sc-site-nav-link-active' : ''}`}
@@ -60,9 +57,6 @@ function isActive(href: string) {
           {item.label}
         </a>
       ))}
-      {adminUser ? (
-        <a class={`sc-site-nav-link ${pathname === '/settings' ? 'sc-site-nav-link-active' : ''}`} href="/settings" aria-current={isActive('/settings') ? 'page' : undefined}>设置</a>
-      ) : null}
     </nav>
 
     <div class="sc-site-actions">
@@ -80,33 +74,34 @@ function isActive(href: string) {
         </svg>
       </a>
       {adminUser ? (
-        <button class="sc-icon-link sc-account-button" type="button" aria-label="账号" title="账号" data-account-logout>
-          <span class="sc-account-default" data-account-default>
-            {avatarUrl ? (
-              <>
-                <img class="sc-account-avatar" src={avatarUrl} alt="" width="32" height="32" loading="eager" decoding="async" data-account-avatar />
-                <span class="sc-account-fallback" data-account-fallback>
-                  <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21a8 8 0 0 0-16 0" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                </span>
-              </>
-            ) : (
-              <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21a8 8 0 0 0-16 0" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            )}
-          </span>
-          <span class="sc-account-logout-icon" aria-hidden="true">
-            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <path d="M16 17l5-5-5-5" />
-              <path d="M21 12H9" />
-            </svg>
-          </span>
-        </button>
+        <details class="sc-account-menu" data-account-menu data-header-menu>
+          <summary class="sc-icon-link sc-account-button list-none" aria-label="账号菜单" title="账号菜单" aria-expanded="false" aria-controls="site-account-panel" data-account-toggle data-header-menu-toggle>
+            <span class="sc-account-default" data-account-default>
+              {avatarUrl ? (
+                <>
+                  <img class="sc-account-avatar" src={avatarUrl} alt="" width="32" height="32" loading="eager" decoding="async" data-account-avatar />
+                  <span class="sc-account-fallback" data-account-fallback>
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 21a8 8 0 0 0-16 0" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </span>
+                </>
+              ) : (
+                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21a8 8 0 0 0-16 0" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              )}
+            </span>
+          </summary>
+          <nav class="sc-account-panel" id="site-account-panel" aria-label="账号操作">
+            <a class="sc-account-link" href="/write" aria-current={isActive('/write') ? 'page' : undefined}>写作</a>
+            <a class="sc-account-link" href="/settings" aria-current={isActive('/settings') ? 'page' : undefined}>设置</a>
+            <button class="sc-account-link sc-account-logout" type="button" data-account-logout>退出登录</button>
+            <p class="sc-account-status" role="status" aria-live="polite" aria-atomic="true" data-account-status hidden></p>
+          </nav>
+        </details>
       ) : (
         <a class="sc-icon-link" href={accountHref} aria-label="登录" title="登录">
           <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -116,8 +111,8 @@ function isActive(href: string) {
         </a>
       )}
 
-      <details class="relative md:hidden" data-mobile-menu>
-        <summary class="sc-icon-link list-none" aria-label="菜单" aria-expanded="false" data-mobile-menu-toggle>
+      <details class="relative md:hidden" data-mobile-menu data-header-menu>
+        <summary class="sc-icon-link list-none" aria-label="菜单" aria-expanded="false" data-mobile-menu-toggle data-header-menu-toggle>
           <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 7h16" />
             <path d="M4 12h16" />
@@ -130,13 +125,6 @@ function isActive(href: string) {
               {item.label}
             </a>
           ))}
-          {adminUser ? (
-            <>
-              <div class="sc-mobile-menu-divider"></div>
-              <a class="sc-mobile-menu-link" href="/write" aria-current={isActive('/write') ? 'page' : undefined}>写作</a>
-              <a class="sc-mobile-menu-link" href="/settings" aria-current={isActive('/settings') ? 'page' : undefined}>设置</a>
-            </>
-          ) : null}
         </div>
       </details>
     </div>
@@ -155,128 +143,15 @@ function isActive(href: string) {
       </div>
     </section>
   </div>
-  <script is:inline>
-    (() => {
-      const menu = document.querySelector('[data-mobile-menu]');
-      const toggle = menu?.querySelector('[data-mobile-menu-toggle]');
+  <script>
+    import { bindHeaderMenus } from '@/lib/header-menus';
 
-      if (!(menu instanceof HTMLDetailsElement) || !(toggle instanceof HTMLElement)) return;
-
-      function syncExpanded() {
-        toggle.setAttribute('aria-expanded', menu.open ? 'true' : 'false');
-      }
-
-      function closeMenu() {
-        if (!menu.open) return;
-        menu.open = false;
-        syncExpanded();
-      }
-
-      menu.addEventListener('toggle', syncExpanded);
-
-      document.addEventListener('click', (event) => {
-        if (!menu.open) return;
-        const target = event.target;
-
-        if (target instanceof Node && menu.contains(target)) {
-          if (target instanceof HTMLAnchorElement) {
-            closeMenu();
-          }
-          return;
-        }
-
-        closeMenu();
-      });
-
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          closeMenu();
-        }
-      });
-
-      syncExpanded();
-    })();
+    bindHeaderMenus();
   </script>
   <script>
     import { bindSiteSearch } from '@/lib/site-search';
     bindSiteSearch();
   </script>
-  {adminUser ? (
-    <script is:inline>
-      (() => {
-        const button = document.querySelector('[data-account-logout]');
-        if (!(button instanceof HTMLButtonElement)) return;
-
-        const avatar = button.querySelector('[data-account-avatar]');
-        const fallback = button.querySelector('[data-account-fallback]');
-        let armed = false;
-        let timer = 0;
-
-        function setArmed(nextArmed) {
-          armed = nextArmed;
-          button.classList.toggle('sc-account-armed', armed);
-          button.setAttribute('aria-label', armed ? '再次点击退出' : '账号');
-          button.setAttribute('title', armed ? '再次点击退出' : '账号');
-
-          if (timer) {
-            window.clearTimeout(timer);
-            timer = 0;
-          }
-
-          if (armed) {
-            timer = window.setTimeout(() => setArmed(false), 3000);
-          }
-        }
-
-        if (avatar instanceof HTMLImageElement && fallback instanceof HTMLElement) {
-          function showAvatar() {
-            button.classList.add('sc-account-avatar-ready');
-          }
-
-          function showFallback() {
-            avatar.hidden = true;
-            fallback.hidden = false;
-            button.classList.remove('sc-account-avatar-ready');
-          }
-
-          if (avatar.complete) {
-            if (avatar.naturalWidth > 0) {
-              showAvatar();
-            } else {
-              showFallback();
-            }
-          }
-
-          avatar.addEventListener('load', showAvatar, { once: true });
-          avatar.addEventListener('error', () => {
-            showFallback();
-          }, { once: true });
-        }
-
-        button.addEventListener('click', async () => {
-          if (!armed) {
-            setArmed(true);
-            return;
-          }
-
-          setArmed(false);
-
-          try {
-            const response = await fetch('/api/auth/logout', {
-              method: 'POST',
-              credentials: 'same-origin'
-            });
-
-            if (response.ok) {
-              window.location.assign('/');
-            }
-          } catch {
-            setArmed(false);
-          }
-        });
-      })();
-    </script>
-  ) : null}
   {shouldReloadAdminBfcache ? (
     <script is:inline>
       window.addEventListener('pageshow', (event) => {
