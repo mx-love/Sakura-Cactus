@@ -3,6 +3,7 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getPublicPosts } from '@/features/posts/post.service';
 import { getPublicTags } from '@/features/tags/tag.service';
 import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
+import { formatSiteDate as formatDate } from '@/lib/site-time';
 
 export const prerender = false;
 
@@ -20,15 +21,6 @@ if (!slug || !tag) {
 
 const canonicalUrl = absoluteSiteUrl(`/tags/${tag.slug}`);
 
-const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit'
-});
-
-function formatDate(value: string | null) {
-  return value ? dateFormatter.format(new Date(value)) : '';
-}
 ---
 
 <SiteLayout title={`${tag.name} | Sakura Cactus`} description={`${tag.name} 标签下的公开文章。`} canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>

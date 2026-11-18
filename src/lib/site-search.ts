@@ -1,4 +1,5 @@
 import { createDialogFocus } from './dialog-focus';
+import { getSiteDateParts, formatSiteDate } from './site-time-core';
 
 export interface SearchPost {
   title: string;
@@ -17,10 +18,7 @@ export interface SearchState {
 
 function getSearchDateTerms(value: string | null): string[] {
   if (!value) return [];
-  const date = new Date(value);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const { year, month, day } = getSiteDateParts(value);
   const mm = String(month).padStart(2, '0');
   const dd = String(day).padStart(2, '0');
 
@@ -111,7 +109,6 @@ export function createSearchController(loadIndex: () => Promise<SearchPost[]>, r
 }
 
 const loadSearchIndex = createSearchIndexLoader();
-const dateFormatter = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
 function appendHighlightedText(parent: HTMLElement, value: string, query: string): void {
   const normalizedText = value.toLowerCase();
@@ -165,7 +162,7 @@ function createResult(post: SearchPost, query: string, overlay: boolean): HTMLEl
     const meta = document.createElement(overlay ? 'small' : 'p');
     const time = document.createElement('time');
     time.dateTime = post.publishedAt;
-    time.textContent = dateFormatter.format(new Date(post.publishedAt));
+    time.textContent = formatSiteDate(post.publishedAt);
     if (!overlay) {
       meta.className = 'sc-post-meta';
       const icon = document.createElement('span');

@@ -10,6 +10,7 @@ import { getAdjacentPublicPosts, getAdminPostBySlug, getPublicPostBySlug } from 
 import { addHeadingIdsToHtml } from '@/features/posts/post.renderer';
 import { getPostViewCount, getSiteSettings } from '@/features/settings/settings.service';
 import { ROBOTS_INDEX_FOLLOW, ROBOTS_NOINDEX_NOFOLLOW, absoluteSiteUrl, summarizeHtml } from '@/lib/seo';
+import { formatSiteDate } from '@/lib/site-time';
 import { env } from 'cloudflare:workers';
 
 export const prerender = false;
@@ -71,14 +72,8 @@ const blogPostingJsonLd = publicPost && post.publishedAt
     }
   : undefined;
 
-const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric'
-});
-
 function formatDate(date: Date | null) {
-  return date ? dateFormatter.format(date) : '';
+  return formatSiteDate(date, 'long');
 }
 
 ---

@@ -2,33 +2,20 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getPublicPosts } from '@/features/posts/post.service';
 import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
+import { formatSiteDate as formatDate, getSiteDateParts } from '@/lib/site-time';
 
 export const prerender = false;
 
 const posts = await getPublicPosts({ limit: 200, excludeAbout: true });
-
-const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit'
-});
-
-function formatDate(value: string | null) {
-  return value ? dateFormatter.format(new Date(value)) : '';
-}
-
-function formatMonth(date: Date) {
-  return `${date.getMonth() + 1}月`;
-}
 
 const archive = posts.reduce<Record<string, Record<string, typeof posts>>>((acc, post) => {
   if (!post.publishedAt) {
     return acc;
   }
 
-  const date = new Date(post.publishedAt);
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const parts = getSiteDateParts(new Date(post.publishedAt));
+  const year = String(parts.year);
+  const month = String(parts.month).padStart(2, '0');
   acc[year] = acc[year] ?? {};
   acc[year][month] = acc[year][month] ?? [];
   acc[year][month].push(post);
@@ -64,13 +51,13 @@ const canonicalUrl = absoluteSiteUrl('/timeline');
               <h2>{year}</h2>
               {Object.keys(archive[year]).sort((a, b) => Number(b) - Number(a)).map((month) => (
                 <section class="sc-archive-month">
-                  <h3>{formatMonth(new Date(Number(year), Number(month) - 1, 1))}</h3>
+                  <h3>{Number(month)}月</h3>
                   <div class="sc-archive-list">
                     {archive[year][month].map((post) => (
                       <article class="sc-archive-entry">
                         <div class="sc-archive-date" aria-label={post.publishedAt ? formatDate(post.publishedAt) : undefined}>
                           {post.publishedAt ? (
-                            <time datetime={post.publishedAt}>{String(new Date(post.publishedAt).getMonth() + 1).padStart(2, '0')}/{String(new Date(post.publishedAt).getDate()).padStart(2, '0')}</time>
+                            <time datetime={post.publishedAt}>{formatDate(post.publishedAt, 'month-day')}</time>
                           ) : null}
                         </div>
                         <div class="sc-archive-content">

@@ -5,6 +5,7 @@ import { getSiteSettings } from '@/features/settings/settings.service';
 import type { SiteSettings } from '@/features/settings/settings.types';
 import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl, createJsonLd } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
+import { getSiteDateParts, getSiteTimeZone } from '@/lib/site-time';
 
 interface Props {
   title?: string;
@@ -73,7 +74,7 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-site-timezone={getSiteTimeZone()}>
   <head>
     <meta charset="UTF-8" />
     <meta name="description" content={description} />
@@ -206,7 +207,7 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
       <footer class="sc-site-footer">
         <div class="sc-footer-inner">
           <div class="sc-footer-meta-row">
-            <span class="sc-footer-copyright">{siteName} © {new Date().getFullYear()}</span>
+            <span class="sc-footer-copyright">{siteName} © {getSiteDateParts().year}</span>
             <div class="sc-theme-switcher" role="group" aria-label="外观主题">
               <button class="sc-theme-option" type="button" data-theme-value="light" aria-label="白昼纸页" title="白昼纸页" aria-pressed="false">
                 <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">

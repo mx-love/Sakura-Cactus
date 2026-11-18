@@ -15,7 +15,7 @@
     "db:migration:apply:local": "wrangler d1 migrations apply sakura_blog_prod --local",
     "db:migration:apply:prod": "wrangler d1 migrations apply sakura_blog_prod --remote",
     "test:article-image-viewer": "node --experimental-transform-types scripts/article-image-viewer.test.ts",
-    "test:experience": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/site-search.test.ts && node --experimental-transform-types scripts/reading-share.test.ts && node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/comments-cache.test.ts",
+    "test:experience": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/site-time.test.ts && node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/site-search.test.ts && node --experimental-transform-types scripts/reading-share.test.ts && node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/comments-cache.test.ts",
     "test:security": "node --experimental-transform-types scripts/security-checks.ts",
     "test:posts": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/post-delete.test.ts",
     "test:data": "node --experimental-transform-types --experimental-loader ./scripts/test-alias-loader.mjs scripts/data-portability.test.ts",

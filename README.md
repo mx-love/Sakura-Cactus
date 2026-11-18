@@ -82,6 +82,7 @@ Cloudflare 中的变量值都会以字符串形式提供给 Worker。普通配�
 | `SITE_TAGLINE` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 首页标语 |
 | `SITE_DESCRIPTION` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点描述 |
 | `SITE_AVATAR_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 登录后 Header 头像地址 |
+| `SITE_TIMEZONE` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点日期、日历、归档和月度统计使用的 IANA 时区，默认 `Asia/Shanghai`；非法值回退并记录一次警告 |
 | `PUBLIC_COMMENTS_SERVER_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 自己部署的 Waline 服务端地址 |
 
 ## 唯一管理员登录

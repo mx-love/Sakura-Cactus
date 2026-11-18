@@ -3,6 +3,7 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getSiteSettings } from '@/features/settings/settings.service';
 import { ROBOTS_NOINDEX_NOFOLLOW } from '@/lib/seo';
+import { formatSiteDateTime } from '@/lib/site-time';
 
 export const prerender = false;
 
@@ -90,7 +91,7 @@ const settingsJson = JSON.stringify(settings).replaceAll('<', '\\u003c');
               <div>
                 <h3>站点维护</h3>
                 <p>清理超过 24 小时、未引用的临时图片。不会删除文章、清空 R2 或清空 D1。</p>
-                {settings.maintenanceLastRunAt ? <small>上次执行：{new Date(settings.maintenanceLastRunAt).toLocaleString()}</small> : null}
+                {settings.maintenanceLastRunAt ? <small>上次执行：{formatSiteDateTime(settings.maintenanceLastRunAt)}</small> : null}
               </div>
               <button class="sc-settings-link" id="cleanup-assets-button" type="button">清理过期图片</button>
             </article>

@@ -4,6 +4,7 @@ import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminFriendLinks, getApprovedFriendLinks } from '@/features/friends/friend.service';
 import { getSiteSettings } from '@/features/settings/settings.service';
 import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
+import { formatSiteDateTime } from '@/lib/site-time';
 
 export const prerender = false;
 
@@ -52,7 +53,7 @@ function healthText(status: string): string {
 }
 
 function formatCheckedAt(value: string | null): string {
-  return value ? new Date(value).toLocaleString() : '尚未检测';
+  return value ? formatSiteDateTime(value) : '尚未检测';
 }
 ---
 
@@ -164,6 +165,7 @@ function formatCheckedAt(value: string | null): string {
       <script id="sc-friends-data" type="application/json" set:html={friendsJson} is:inline></script>
       <script>
         // @ts-nocheck -- legacy inline DOM script; tracked for extraction in SECURITY_AUDIT_REPORT.md.
+        import { formatSiteDateTime } from '@/lib/site-time-core';
         import { createDialogFocus } from '@/lib/dialog-focus';
 
         const isFriendAdmin = Boolean(document.getElementById('friend-add-button'));
@@ -231,7 +233,7 @@ function formatCheckedAt(value: string | null): string {
         }
 
         function formatCheckedAt(value) {
-          return value ? new Date(value).toLocaleString() : '尚未检测';
+          return value ? formatSiteDateTime(value) : '尚未检测';
         }
 
         function escapeHtml(value) {
