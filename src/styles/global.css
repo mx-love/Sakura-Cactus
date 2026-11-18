@@ -24,6 +24,7 @@
   --color-text: #2f292c;
   --color-text-rgb: 47 41 44;
   --color-muted: #7d7176;
+  --color-secondary-text: color-mix(in srgb, var(--color-muted) 88%, var(--color-text));
   --color-subtle: #a09499;
   --color-border: #f0e3e7;
   --color-border-strong: #e7cfd8;
@@ -52,7 +53,9 @@
   --shadow-soft: 0 10px 32px rgba(102, 66, 82, 0.06);
   --shadow-card: 0 8px 24px rgba(102, 66, 82, 0.05);
   --shadow-float: 0 12px 34px rgba(102, 66, 82, 0.07);
-  --footer-content-width: 860px;
+  /* Share the public frame while keeping long-form reading lines narrower. */
+  --sc-content-width: clamp(53.75rem, calc(75vw - 1.5rem), 67.5rem);
+  --sc-reading-width: 45rem;
   --sc-public-shell-background: var(--color-card-subtle);
   --sc-article-paper-background: var(--color-floating-bg);
   --sc-article-paper-shadow: var(--shadow-soft);
@@ -303,13 +306,14 @@ summary {
 }
 
 .sc-shell {
-  width: min(100% - 2rem, 840px);
+  width: min(100% - 2rem, var(--sc-content-width));
+  min-width: 0;
   margin-inline: auto;
   padding-block: var(--space-shell);
 }
 
 .sc-shell-wide {
-  width: min(100% - 2rem, 1080px);
+  width: min(100% - 2rem, var(--sc-content-width));
   margin-inline: auto;
 }
 
@@ -659,7 +663,7 @@ summary {
 
 .sc-site-header-inner {
   display: grid;
-  width: min(100% - 2rem, 860px);
+  width: min(100% - 2rem, var(--sc-content-width));
   margin-inline: auto;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -754,7 +758,7 @@ summary {
 }
 
 .sc-footer-inner {
-  width: min(calc(100% - 2rem), var(--footer-content-width));
+  width: min(calc(100% - 2rem), var(--sc-content-width));
   min-width: 0;
   margin-inline: auto;
   color: var(--color-muted);
@@ -880,17 +884,18 @@ summary {
 }
 
 .sc-page-shell {
-  width: min(100% - 2rem, 860px);
+  width: min(100% - 2rem, var(--sc-content-width));
+  min-width: 0;
   margin-inline: auto;
   padding-block: clamp(2rem, 5vw, 4rem);
 }
 
 .sc-list-shell {
-  max-width: 860px;
+  max-width: var(--sc-content-width);
 }
 
 .sc-home-shell {
-  --sc-home-muted: color-mix(in srgb, var(--color-muted) 88%, var(--color-text));
+  --sc-home-muted: var(--color-secondary-text);
 }
 
 .sc-home-intro {
@@ -918,13 +923,17 @@ summary {
   text-wrap: balance;
 }
 
-.sc-page-header h1 {
+.sc-page-header h1,
+.sc-settings-header h1,
+.sc-friends-header h1 {
   margin: 0;
   color: var(--color-text);
-  font-size: clamp(2rem, 6vw, 3.1rem);
-  font-weight: 850;
+  font-size: clamp(2rem, 4.5vw, 2.7rem);
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.16;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .sc-home-signature {
@@ -993,9 +1002,11 @@ summary {
 .sc-page-header p {
   max-width: 40rem;
   margin: 0.75rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 1rem;
   line-height: 1.8;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .sc-section {
@@ -1032,6 +1043,11 @@ summary {
   font-size: 0.9rem;
 }
 
+.sc-breadcrumb > :is(a, span) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .sc-page-header {
   margin-bottom: 2.25rem;
 }
@@ -1040,25 +1056,20 @@ summary {
   margin-bottom: 1.8rem;
 }
 
-.sc-list-header h1 {
-  font-size: clamp(2.1rem, 5vw, 2.55rem);
-}
-
-.sc-list-header p {
-  color: var(--color-subtle);
-}
-
 .sc-post-list {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0;
 }
 
 .sc-post-entry {
+  min-width: 0;
   border-bottom: 1px solid var(--color-border);
   padding-block: 1.35rem;
 }
 
-.sc-compact-post-list .sc-post-entry {
+.sc-compact-post-list .sc-post-entry:not(.sc-article-list-card) {
   padding-block: 1.15rem;
 }
 
@@ -1068,11 +1079,14 @@ summary {
 
 .sc-post-entry h2,
 .sc-post-entry h3 {
+  max-width: 100%;
   margin: 0;
   font-size: clamp(1.28rem, 3vw, 1.65rem);
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .sc-compact-post-list .sc-post-entry h2 {
@@ -1098,8 +1112,9 @@ summary {
   align-items: center;
   gap: 0.4rem;
   margin: 0.55rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1.5;
 }
 
@@ -1116,10 +1131,13 @@ summary {
 }
 
 .sc-post-excerpt {
+  max-width: var(--sc-reading-width);
   margin: 0.72rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 1rem;
   line-height: 1.78;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .sc-tag-list {
@@ -1130,9 +1148,13 @@ summary {
 }
 
 .sc-tag-link {
+  min-width: 0;
+  max-width: 100%;
   color: var(--color-primary);
   font-size: 0.86rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .sc-tag-link::before {
@@ -1147,6 +1169,8 @@ summary {
 
 .sc-tag-pill {
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   border: 1px solid var(--color-border);
   border-radius: 999px;
@@ -1156,6 +1180,8 @@ summary {
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: normal;
   transition:
     border-color 140ms ease,
     color 140ms ease;
@@ -1186,7 +1212,7 @@ summary {
 }
 
 .sc-article-inner {
-  width: min(100%, 720px);
+  width: min(100%, var(--sc-reading-width));
   min-width: 0;
   max-width: 100%;
   margin-inline: auto;
@@ -1250,9 +1276,9 @@ summary {
   margin: 0.6rem 0 0;
   color: var(--color-text);
   font-size: clamp(1.9rem, 5.2vw, 2.85rem);
-  font-weight: 800;
+  font-weight: 650;
   letter-spacing: 0;
-  line-height: 1.16;
+  line-height: 1.32;
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -1261,7 +1287,7 @@ summary {
   min-width: 0;
   max-width: 100%;
   margin: 0.75rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: clamp(1.02rem, 2.4vw, 1.16rem);
   line-height: 1.7;
   white-space: normal;
@@ -1545,7 +1571,7 @@ summary {
 .sc-archive-year h2 {
   margin: 0 0 0.9rem;
   font-size: clamp(1.45rem, 4vw, 1.9rem);
-  font-weight: 850;
+  font-weight: 650;
   line-height: 1.25;
   white-space: nowrap;
 }
@@ -1562,7 +1588,7 @@ summary {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.96rem;
-  font-weight: 800;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -1583,7 +1609,7 @@ summary {
 .sc-archive-date {
   display: flex;
   align-items: center;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.82rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1599,7 +1625,7 @@ summary {
   max-width: 100%;
   margin: 0;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.45;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1617,7 +1643,7 @@ summary {
 .sc-archive-entry p {
   max-width: 100%;
   margin: 0.22rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.9rem;
   line-height: 1.6;
   white-space: normal;
@@ -1661,6 +1687,8 @@ summary {
 
 .sc-tag-topic {
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 0.45rem;
   border: 1px solid var(--color-border);
@@ -1669,7 +1697,7 @@ summary {
   padding: 0.42rem 0.72rem;
   color: var(--color-text);
   font-size: 0.92rem;
-  font-weight: 750;
+  font-weight: 600;
   line-height: 1.25;
   transition:
     border-color 140ms ease,
@@ -1682,7 +1710,14 @@ summary {
   color: var(--color-subtle);
 }
 
+.sc-tag-topic span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
 .sc-tag-topic span:last-child {
+  flex-shrink: 0;
   color: var(--color-muted);
   font-size: 0.78rem;
   font-weight: 650;
@@ -1897,17 +1932,9 @@ html.sc-mobile-toc-open {
   margin-bottom: 1.25rem;
 }
 
-.sc-settings-header h1 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: clamp(2rem, 5vw, 2.8rem);
-  font-weight: 850;
-  letter-spacing: 0;
-}
-
 .sc-settings-header p {
   margin: 0.6rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.98rem;
   line-height: 1.75;
 }
@@ -1936,7 +1963,7 @@ html.sc-mobile-toc-open {
   margin: 0 0 0.7rem;
   color: var(--color-text);
   font-size: 1rem;
-  font-weight: 850;
+  font-weight: 650;
 }
 
 .sc-settings-row-list {
@@ -1960,14 +1987,14 @@ html.sc-mobile-toc-open {
   margin: 0;
   color: var(--color-text);
   font-size: 0.96rem;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.45;
 }
 
 .sc-settings-compact-row p {
   max-width: 38rem;
   margin: 0.28rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.88rem;
   line-height: 1.65;
 }
@@ -2118,12 +2145,12 @@ html.sc-mobile-toc-open {
   margin: 0;
   color: var(--color-text);
   font-size: 1rem;
-  font-weight: 820;
+  font-weight: 600;
 }
 
 .sc-settings-entry p {
   margin: 0.35rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.9rem;
   line-height: 1.7;
 }
@@ -2170,14 +2197,14 @@ html.sc-mobile-toc-open {
   margin: 0;
   color: var(--color-text);
   font-size: 0.98rem;
-  font-weight: 780;
+  font-weight: 600;
   line-height: 1.45;
 }
 
 .sc-settings-copy p {
   max-width: 38rem;
   margin: 0.35rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.9rem;
   line-height: 1.7;
 }
@@ -2379,7 +2406,7 @@ html.sc-mobile-toc-open {
 }
 
 .sc-friends-shell {
-  max-width: 860px;
+  max-width: var(--sc-content-width);
 }
 
 .sc-friends-header {
@@ -2390,17 +2417,9 @@ html.sc-mobile-toc-open {
   padding-block: 2.5rem 1rem;
 }
 
-.sc-friends-header h1 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: clamp(2rem, 5vw, 2.8rem);
-  font-weight: 850;
-  letter-spacing: 0;
-}
-
 .sc-friends-header p {
   margin: 0.7rem 0 0;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   line-height: 1.75;
 }
 
@@ -2479,9 +2498,13 @@ html.sc-mobile-toc-open {
 }
 
 .sc-friend-body strong {
+  min-width: 0;
   color: var(--color-text);
   font-size: 1rem;
+  font-weight: 600;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .sc-friend-body .sc-friend-number {
@@ -2494,7 +2517,7 @@ html.sc-mobile-toc-open {
 
 .sc-friend-body span {
   overflow: hidden;
-  color: var(--color-muted);
+  color: var(--color-secondary-text);
   font-size: 0.88rem;
   line-height: 1.55;
   text-overflow: ellipsis;
@@ -3154,13 +3177,16 @@ html[data-theme="dark"] #sakura-comments {
 
 .sc-paper-index-list .sc-post-entry {
   position: relative;
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.sc-paper-index-list .sc-post-entry:not(.sc-article-list-card) {
   margin-inline: -0.35rem;
   border-bottom-style: dashed;
   border-bottom-color: var(--color-border);
   padding-inline: 0.35rem;
-  transition:
-    background-color 140ms ease,
-    transform 140ms ease;
 }
 
 .sc-paper-index-list .sc-post-entry:hover {
@@ -3319,7 +3345,7 @@ html[data-theme="dark"] #sakura-comments {
 .sc-article-toc {
   position: fixed;
   top: 7rem;
-  left: max(1rem, calc(50% + 480px));
+  left: calc(50% + var(--sc-content-width) / 2 + 1rem);
   z-index: 5;
   width: 12rem;
   max-height: calc(100vh - 140px);
@@ -3579,11 +3605,6 @@ html[data-theme="dark"] #sakura-comments {
 
   :root[data-theme="dark"] {
     --sc-home-shadow-image: url("/backgrounds/window-shadow-dark.webp");
-  }
-
-  .sc-home-shell,
-  .sc-site-header[data-home-header="true"] .sc-site-header-inner {
-    width: min(calc(100% - 2rem), clamp(53.75rem, calc(75vw - 1.5rem), 67.5rem));
   }
 
   .sc-home-editorial {
@@ -3874,13 +3895,12 @@ html[data-theme="dark"] #sakura-comments {
   }
 }
 
-@media (max-width: 1180px) {
+/* Keep this breakpoint in sync with the article TOC controller. */
+@media (max-width: 1535px) {
   .sc-article-toc {
     display: none;
   }
-}
 
-@media (max-width: 1180px) {
   .sc-mobile-toc-trigger {
     position: fixed;
     right: 0;
@@ -3932,7 +3952,7 @@ html[data-theme="dark"] #sakura-comments {
   }
 }
 
-@media (max-width: 1180px) and (max-height: 640px) {
+@media (max-width: 1535px) and (max-height: 640px) {
   .sc-mobile-toc-trigger {
     bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
   }

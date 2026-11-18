@@ -36,7 +36,7 @@ const pathname = Astro.url.pathname;
     {
       !bare ? (
         <header class="sc-admin-bar sticky top-0 z-30">
-          <div class="mx-auto flex max-w-[1080px] items-center justify-between gap-4 px-4 py-3">
+          <div class="sc-shell-wide flex items-center justify-between gap-4 py-3">
             <a class="font-extrabold tracking-tight" href="/">Sakura Cactus</a>
             <nav class="flex items-center gap-1">
               <a class={`sc-admin-nav-link ${pathname.startsWith('/write') ? 'sc-admin-nav-link-active' : ''}`} href="/write">写作</a>
@@ -56,7 +56,7 @@ const pathname = Astro.url.pathname;
         !bare ? (
           <header class="mb-8">
             <p class="text-sm font-bold uppercase tracking-[0.12em] text-[var(--color-subtle)]">{eyebrow}</p>
-            <h1 class="mt-2 text-3xl font-extrabold tracking-tight">{heading}</h1>
+            <h1 class="mt-2 text-3xl font-semibold tracking-tight">{heading}</h1>
           </header>
         ) : null
       }
