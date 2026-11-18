@@ -8,7 +8,7 @@ export const ROBOTS_NOINDEX_FOLLOW = 'noindex,follow';
 export const ROBOTS_NOINDEX_NOFOLLOW = 'noindex,nofollow';
 
 export function getSiteOrigin(): string {
-  return resolveSiteOrigin(env.SITE_URL, import.meta.env.DEV);
+  return resolveSiteOrigin(env.SITE_URL, import.meta.env?.DEV ?? false);
 }
 
 export function absoluteSiteUrl(path: string): string {

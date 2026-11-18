@@ -3,10 +3,11 @@ import { checkApprovedFriendLinksHealth } from '@/features/friends/friend.servic
 import { getSiteSettings } from '@/features/settings/settings.service';
 import { jsonError, jsonOk } from '@/lib/response';
 import { reportError } from '@/lib/logging';
+import { invalidatePublicCache } from '@/lib/public-cache-invalidation';
 
 export const prerender = false;
 
-export const POST: APIRoute = async () => {
+export const POST: APIRoute = async (context) => {
   try {
     const settings = await getSiteSettings();
 
@@ -15,6 +16,7 @@ export const POST: APIRoute = async () => {
     }
 
     const stats = await checkApprovedFriendLinksHealth();
+    await invalidatePublicCache(context, { friends: true });
     return jsonOk({ stats });
   } catch (error) {
     reportError('Friend health check failed.', error);

@@ -138,6 +138,7 @@ pnpm.cmd build
 - 生产 `SITE_URL` 必须使用完整 HTTPS 地址
 - R2 Bucket 保持私有
 - D1/R2 生产资源、缓存规则、备份和 Secret 状态需要在 Cloudflare 控制台确认
+- 公开页面在写操作成功后使用 Cache API 清除缓存。Cloudflare `caches.default` 按数据中心独立存储，失效只影响当前数据中心；其他地区仍在原 TTL 到期后更新，不等同于 Cloudflare 全网 CDN purge。缓存失效失败会记录日志，不会撤销已经成功的写操作。
 - 当前生产依赖审计保留 1 个已知低危 Babel 传递依赖告警，等待上游发布可用修复版本
 
 ## 计划功能

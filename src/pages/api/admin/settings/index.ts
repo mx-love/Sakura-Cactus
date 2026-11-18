@@ -3,6 +3,7 @@ import { getSiteSettings, isSiteSettingsValidationError, updateSiteSettings } fr
 import type { SiteSettingsInput } from '@/features/settings/settings.types';
 import { jsonError, jsonOk } from '@/lib/response';
 import { reportError } from '@/lib/logging';
+import { capturePublicCacheState, invalidatePublicCache } from '@/lib/public-cache-invalidation';
 
 export const prerender = false;
 
@@ -10,7 +11,8 @@ export const GET: APIRoute = async () => {
   return jsonOk({ settings: await getSiteSettings() });
 };
 
-export const PATCH: APIRoute = async ({ request }) => {
+export const PATCH: APIRoute = async (context) => {
+  const { request } = context;
   let body: unknown;
 
   try {
@@ -20,7 +22,10 @@ export const PATCH: APIRoute = async ({ request }) => {
   }
 
   try {
-    return jsonOk({ settings: await updateSiteSettings((body && typeof body === 'object' ? body : {}) as SiteSettingsInput) });
+    const cacheBefore = await capturePublicCacheState();
+    const settings = await updateSiteSettings((body && typeof body === 'object' ? body : {}) as SiteSettingsInput);
+    await invalidatePublicCache(context, { settings: true }, cacheBefore);
+    return jsonOk({ settings });
   } catch (error) {
     if (isSiteSettingsValidationError(error)) {
       return jsonError(error.code, error.message, { status: 400 });

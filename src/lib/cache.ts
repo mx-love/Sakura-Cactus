@@ -75,6 +75,60 @@ function createCacheUrl(url: URL): URL | null {
   return null;
 }
 
+export interface PublicCacheScope {
+  postSlugs?: readonly string[];
+  oldPostSlugs?: readonly string[];
+  tagSlugs?: readonly string[];
+  friends?: boolean;
+  settings?: boolean;
+  articlePageCount?: number;
+}
+
+export function getPublicCacheKeys(origin: string, scope: PublicCacheScope): Request[] {
+  const base = new URL(origin).origin;
+  const paths = new Set<string>();
+  const postsChanged = scope.settings || scope.postSlugs !== undefined || scope.oldPostSlugs !== undefined ||
+    scope.tagSlugs !== undefined || scope.articlePageCount !== undefined;
+  if (postsChanged) {
+    ['/', '/articles', '/tags', '/timeline', '/rss.xml', '/sitemap.xml', '/api/search-index'].forEach((path) => paths.add(path));
+    const count = Number.isFinite(scope.articlePageCount) ? Math.trunc(scope.articlePageCount!) : 1;
+    for (let page = 2; page <= Math.min(100, Math.max(1, count)); page += 1) paths.add(`/articles?page=${page}`);
+    for (const slug of [...(scope.postSlugs ?? []), ...(scope.oldPostSlugs ?? [])]) {
+      const normalized = slug.replace(/^\/+|\/+$/g, '');
+      if (!normalized) continue;
+      paths.add(`/posts/${encodeURIComponent(normalized)}`);
+      if (normalized === 'about') paths.add('/about');
+    }
+    for (const slug of scope.tagSlugs ?? []) {
+      const normalized = slug.replace(/^\/+|\/+$/g, '');
+      if (normalized) paths.add(`/tags/${encodeURIComponent(normalized)}`);
+    }
+  }
+  if (scope.friends || scope.settings) paths.add('/friends');
+  if (scope.settings) {
+    paths.add('/about');
+    paths.add('/robots.txt');
+  }
+  const keys = new Map<string, Request>();
+  for (const path of paths) {
+    const url = createCacheUrl(new URL(path, base));
+    if (url) keys.set(url.href, new Request(url, { method: 'GET' }));
+  }
+  return [...keys.values()];
+}
+
+export async function purgePublicCache(origin: string, scope: PublicCacheScope): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  try {
+    const results = await Promise.allSettled(getPublicCacheKeys(origin, scope).map(async (key) => caches.default.delete(key)));
+    const failures = results.filter((result) => result.status === 'rejected').length;
+    if (failures) console.warn('[public-cache] Cache deletion failed.', { failures });
+  } catch {
+    // Availability of the cache must never determine the outcome of a write.
+    console.warn('[public-cache] Cache invalidation unavailable.');
+  }
+}
+
 export function shouldForceNoStore(request: Request, url: URL): boolean {
   const pathname = url.pathname;
 

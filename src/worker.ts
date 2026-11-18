@@ -4,6 +4,7 @@ import { checkApprovedFriendLinksHealthIfEnabled } from './features/friends/frie
 import { getDb } from './lib/db';
 import { cleanupStaleSessions } from './features/auth/session.repo';
 import { reportError } from './lib/logging';
+import { invalidatePublicCacheForOrigin } from './lib/public-cache-invalidation';
 
 async function runScheduledTasks(cron: string): Promise<void> {
   const db = getDb();
@@ -27,6 +28,7 @@ async function runScheduledTasks(cron: string): Promise<void> {
 
     if (friendStats) {
       console.info('Friend link health check completed.', { cron, ...friendStats });
+      await invalidatePublicCacheForOrigin(undefined, { friends: true });
     }
   } catch (error) {
     reportError('Scheduled friend health check failed.', error);

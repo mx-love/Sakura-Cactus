@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { importBlogDataFile, isBlogDataError } from '@/features/data-portability/data-portability.service';
 import { jsonError, jsonOk } from '@/lib/response';
 import { reportError } from '@/lib/logging';
+import { capturePublicCacheState, invalidatePublicCache } from '@/lib/public-cache-invalidation';
 
 export const prerender = false;
 
@@ -24,7 +25,8 @@ function readOptions(formData: FormData): unknown {
   }
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
+  const { request } = context;
   let formData: FormData;
 
   try {
@@ -40,7 +42,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
+    const cacheBefore = await capturePublicCacheState();
     const result = await importBlogDataFile(file, request, readOptions(formData));
+    await invalidatePublicCache(context, { settings: true }, cacheBefore);
     return jsonOk({ result });
   } catch (error) {
     if (isBlogDataError(error)) {

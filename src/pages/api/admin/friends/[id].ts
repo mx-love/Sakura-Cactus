@@ -6,6 +6,7 @@ import {
   updateAdminFriendLink
 } from '@/features/friends/friend.service';
 import { reportError } from '@/lib/logging';
+import { invalidatePublicCache } from '@/lib/public-cache-invalidation';
 
 export const prerender = false;
 
@@ -14,7 +15,8 @@ function getId(params: Record<string, string | undefined>): string | null {
   return id && id.length > 0 ? id : null;
 }
 
-export const PATCH: APIRoute = async ({ params, request }) => {
+export const PATCH: APIRoute = async (context) => {
+  const { params, request } = context;
   const id = getId(params);
 
   if (!id) {
@@ -36,6 +38,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       return jsonError('FRIEND_NOT_FOUND', 'Friend link not found.', { status: 404 });
     }
 
+    await invalidatePublicCache(context, { friends: true });
     return jsonOk({ friend });
   } catch (error) {
     if (isFriendLinkValidationError(error)) {
@@ -47,7 +50,8 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async (context) => {
+  const { params } = context;
   const id = getId(params);
 
   if (!id) {
@@ -60,5 +64,6 @@ export const DELETE: APIRoute = async ({ params }) => {
     return jsonError('FRIEND_NOT_FOUND', 'Friend link not found.', { status: 404 });
   }
 
+  await invalidatePublicCache(context, { friends: true });
   return jsonOk({ friend });
 };

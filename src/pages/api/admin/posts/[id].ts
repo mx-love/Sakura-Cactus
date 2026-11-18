@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { jsonError, jsonOk } from '@/lib/response';
 import { reportError } from '@/lib/logging';
 import { isAssetStorageError } from '@/features/assets/asset.service';
+import { capturePublicCacheState, invalidatePublicCache } from '@/lib/public-cache-invalidation';
 import {
   deleteAdminPost,
   getAdminPost,
@@ -33,7 +34,8 @@ export const GET: APIRoute = async ({ params }) => {
   return jsonOk({ post });
 };
 
-export const PUT: APIRoute = async ({ params, request }) => {
+export const PUT: APIRoute = async (context) => {
+  const { params, request } = context;
   const id = getId(params);
 
   if (!id) {
@@ -49,12 +51,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
   }
 
   try {
+    const cacheBefore = await capturePublicCacheState();
     const post = await updateAdminPost(id, body);
 
     if (!post) {
       return jsonError('POST_NOT_FOUND', 'Post not found.', { status: 404 });
     }
 
+    await invalidatePublicCache(context, { postSlugs: [post.slug] }, cacheBefore);
     return jsonOk({ post });
   } catch (error) {
     if (isPostValidationError(error)) {
@@ -74,7 +78,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async (context) => {
+  const { params } = context;
   const id = getId(params);
 
   if (!id) {
@@ -82,12 +87,14 @@ export const DELETE: APIRoute = async ({ params }) => {
   }
 
   try {
+    const cacheBefore = await capturePublicCacheState();
     const post = await deleteAdminPost(id);
 
     if (!post) {
       return jsonError('POST_NOT_FOUND', 'Post not found.', { status: 404 });
     }
 
+    await invalidatePublicCache(context, { oldPostSlugs: [post.slug] }, cacheBefore);
     return jsonOk({ post });
   } catch (error) {
     if (isAssetStorageError(error)) {

@@ -6,6 +6,7 @@ import {
   isFriendLinkValidationError
 } from '@/features/friends/friend.service';
 import { reportError } from '@/lib/logging';
+import { invalidatePublicCache } from '@/lib/public-cache-invalidation';
 
 export const prerender = false;
 
@@ -14,7 +15,8 @@ export const GET: APIRoute = async () => {
   return jsonOk({ friends });
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
+  const { request } = context;
   let body: unknown;
 
   try {
@@ -25,6 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const friend = await createAdminFriendLink(body);
+    await invalidatePublicCache(context, { friends: true });
     return jsonOk({ friend }, { status: 201 });
   } catch (error) {
     if (isFriendLinkValidationError(error)) {

@@ -10,6 +10,7 @@ import {
 import type { PostStatus, PostVisibility } from '@/features/posts/post.types';
 import { POST_STATUSES, POST_VISIBILITIES } from '@/features/posts/post.schema';
 import { reportError } from '@/lib/logging';
+import { capturePublicCacheState, invalidatePublicCache } from '@/lib/public-cache-invalidation';
 
 export const prerender = false;
 
@@ -30,7 +31,8 @@ export const GET: APIRoute = async ({ url }) => {
   return jsonOk({ posts });
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
+  const { request } = context;
   let body: unknown;
 
   try {
@@ -41,7 +43,9 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const isAboutPost = Boolean(body && typeof body === 'object' && (body as Record<string, unknown>).type === 'about');
+    const cacheBefore = await capturePublicCacheState();
     const post = isAboutPost ? await saveAdminAboutPost(body) : await createAdminPost(body);
+    await invalidatePublicCache(context, { postSlugs: [post.slug] }, cacheBefore);
     return jsonOk({ post }, { status: 201 });
   } catch (error) {
     if (isPostValidationError(error)) {
