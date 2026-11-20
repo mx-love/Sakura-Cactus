@@ -1,0 +1,162 @@
+
+.sc-home-shell {
+  --sc-home-muted: var(--color-secondary-text);
+}
+
+.sc-home-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: none;
+  padding-block: 0;
+}
+
+.sc-home-intro-copy,
+.sc-home-calendar-body {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sc-home-intro h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-family: Georgia, "Times New Roman", "Songti SC", "STSong", serif;
+  font-size: clamp(2rem, 4.8vw, 2.85rem);
+  font-weight: 580;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.sc-page-header h1,
+.sc-settings-header h1,
+.sc-friends-header h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(2rem, 4.5vw, 2.7rem);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.sc-home-signature {
+  position: relative;
+  max-width: 17em;
+  margin: 1.05rem 0 0;
+  padding-bottom: 1rem;
+  color: var(--color-text);
+  font-size: clamp(1.08rem, 1.95vw, 1.18rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.76;
+}
+
+.sc-home-signature::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2rem;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-primary) 42%, transparent);
+}
+
+.sc-home-description {
+  max-width: 22em;
+  margin: 1rem 0 0;
+  color: var(--sc-home-muted);
+  font-size: 0.98rem;
+  line-height: 1.92;
+  text-wrap: pretty;
+}
+
+.sc-home-issue {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: clamp(2.2rem, 5vw, 3.8rem);
+}
+
+.sc-home-issue-number {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1.55;
+}
+
+.sc-home-issue-stats,
+.sc-home-issue-empty {
+  margin: 0.42rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+.sc-home-issue-stats strong {
+  color: var(--color-text);
+  font-weight: 650;
+}
+
+.sc-home-issue-empty {
+  letter-spacing: 0.02em;
+}
+
+.sc-page-header p {
+  max-width: 40rem;
+  margin: 0.75rem 0 0;
+  color: var(--color-secondary-text);
+  font-size: 1rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.sc-section {
+  padding-block: 1.5rem;
+}
+
+.sc-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+.sc-section-heading h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.sc-section-heading a,
+.sc-breadcrumb a {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.sc-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.sc-breadcrumb > :is(a, span) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sc-page-header {
+  margin-bottom: 2.25rem;
+}
+
+.sc-list-header {
+  margin-bottom: 1.8rem;
+}

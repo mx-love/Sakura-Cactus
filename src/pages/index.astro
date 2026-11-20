@@ -4,6 +4,7 @@ import { getPublicMonthlyPostDates, getPublicMonthlyPostStats, getPublicPosts } 
 import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
 import { getSiteCalendar, getSiteDateParts, getSiteMonthRange, formatSiteDate } from '@/lib/site-time';
+import { getGanzhiYear } from '@/lib/ganzhi-year';
 
 export const prerender = false;
 
@@ -79,24 +80,7 @@ const formattedPostCount = String(monthlyStats.postCount).padStart(2, '0');
 const formattedWordCount = new Intl.NumberFormat('zh-CN').format(monthlyStats.wordCount);
 const { daysInMonth, monthStartDay, dayOfYear, isoWeek } = calendar;
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-const earthlyBranches = [
-  { branch: '子', zodiac: '鼠' },
-  { branch: '丑', zodiac: '牛' },
-  { branch: '寅', zodiac: '虎' },
-  { branch: '卯', zodiac: '兔' },
-  { branch: '辰', zodiac: '龙' },
-  { branch: '巳', zodiac: '蛇' },
-  { branch: '午', zodiac: '马' },
-  { branch: '未', zodiac: '羊' },
-  { branch: '申', zodiac: '猴' },
-  { branch: '酉', zodiac: '鸡' },
-  { branch: '戌', zodiac: '狗' },
-  { branch: '亥', zodiac: '猪' }
-];
-const stem = heavenlyStems[(calendarYear - 4) % 10];
-const branchInfo = earthlyBranches[(calendarYear - 4) % 12];
-const ganzhiYear = `${stem}${branchInfo.branch}${branchInfo.zodiac}年`;
+const ganzhiYear = getGanzhiYear(calendar);
 
 function formatDate(value: string | null) {
   return formatSiteDate(value);
@@ -268,7 +252,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
           </span>
         </div>
         <script>
-          // @ts-nocheck -- legacy inline DOM script; tracked for extraction in SECURITY_AUDIT_REPORT.md.
+          // @ts-nocheck -- legacy inline DOM script; tracked for extraction in docs/SECURITY_AUDIT_REPORT.md.
           const quoteRoot = document.querySelector('[data-paper-quotes]');
           const quoteBody = quoteRoot?.querySelector('[data-paper-quote-body]');
           const quoteContent = quoteRoot?.querySelector('[data-paper-quote-content]');

@@ -13,9 +13,9 @@ Scope: local uncommitted security hardening changes only. No commit, push, deplo
 
 ## Original Report Inconsistency
 
-- Recounted `SECURITY_AUDIT_REPORT.md`: 12 findings total.
+- Recounted [SECURITY_AUDIT_REPORT.md](./SECURITY_AUDIT_REPORT.md): 12 findings total.
 - Final count is 1 P0, 6 P1, and 5 P2.
-- Updated `SECURITY_AUDIT_REPORT.md`, `SECURITY_CHECKLIST.md`, and `AI_PROGRESS.md` to use the same count.
+- Updated [SECURITY_AUDIT_REPORT.md](./SECURITY_AUDIT_REPORT.md), [SECURITY_CHECKLIST.md](./SECURITY_CHECKLIST.md), and [AI_PROGRESS.md](./AI_PROGRESS.md) to use the same count.
 
 ## Fixed During This Review
 

@@ -8,7 +8,7 @@ Status legend:
 - `[PENDING]` not fully complete; see the audit report.
 - `[N/A]` not applicable to this project.
 
-Audit issue count: `SECURITY_AUDIT_REPORT.md` records 12 issue entries: 1 P0, 6 P1, and 5 P2. Console and pending checklist items are residual controls, not additional high-risk findings.
+Audit issue count: [SECURITY_AUDIT_REPORT.md](./SECURITY_AUDIT_REPORT.md) records 12 issue entries: 1 P0, 6 P1, and 5 P2. Console and pending checklist items are residual controls, not additional high-risk findings.
 
 ## Secrets and deployment
 

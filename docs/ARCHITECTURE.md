@@ -94,4 +94,8 @@ Any future extension context must be capability-based and must not expose:
 
 ## Known structural debt
 
-`PostEditor.tsx`, `post.renderer.ts`, `post.repo.ts`, several public Astro pages, and the global stylesheet exceed the preferred size threshold. The large legacy inline scripts in `index.astro`, `friends.astro`, `settings.astro`, and `posts/[slug].astro` are explicitly excluded from TypeScript diagnostics and should be extracted into focused client modules in a UI-specific change. This audit did not perform that high-risk visual refactor.
+`PostEditor.tsx`, `post.renderer.ts`, `post.repo.ts`, and several public Astro pages exceed the preferred size threshold. The large legacy inline scripts in `index.astro`, `friends.astro`, `settings.astro`, and `posts/[slug].astro` are explicitly excluded from TypeScript diagnostics and should be extracted into focused client modules in a UI-specific change. This audit did not perform that high-risk visual refactor.
+
+## Stylesheet ownership
+
+`src/styles/global.css` is the ordered stylesheet entrypoint. Its imports preserve the original contiguous rule blocks: tokens, base controls and layout, home, articles, timeline, tags, search, settings, friends, comments, editorial/public-page treatments, article TOC, motion, desktop home, and responsive rules. Some shared selectors remain beside a page module because moving them by selector name would change cascade order. Keep the import order stable when maintaining these modules; `prose.css` and `admin.css` retain their existing separate entrypoints.

@@ -2,6 +2,15 @@
 
 Sakura Cactus 是一个基于 Astro 和 Cloudflare Workers 的个人博客系统，适合用于文章、笔记、随笔和长期记录。后台只供博客所有者本人登录，不提供访客注册或多管理员体系。项目使用 Cloudflare D1 保存已发表内容与设置，使用 Cloudflare R2 保存图片和媒体文件。
 
+演示站：[演示链接占位，部署后请替换](https://example.com/)。这不是项目的真实演示地址。
+
+以下图片为截图占位，请在部署验收后替换为真实截图；它们不代表当前站点的实际内容。
+
+| 页面 | 浅色主题 | 深色主题 |
+| --- | --- | --- |
+| 首页 | ![首页浅色截图占位](./docs/screenshots/home-light.svg) | ![首页深色截图占位](./docs/screenshots/home-dark.svg) |
+| 文章页 | ![文章页浅色截图占位](./docs/screenshots/article-light.svg) | ![文章页深色截图占位](./docs/screenshots/article-dark.svg) |
+
 ## 核心功能
 
 - Markdown 写作后台，支持编辑、预览、本地自动暂存、恢复提示、正式发表、修订、置顶和永久删除
@@ -131,6 +140,24 @@ $env:ASTRO_TELEMETRY_DISABLED='1'
 pnpm.cmd check
 pnpm.cmd build
 ```
+
+## 持续集成
+
+`.github/workflows/ci.yml` 在推送到 `main` 或提交 Pull Request 时运行。CI 使用 Node 22，并从 `package.json` 的 `packageManager` 读取精确 pnpm 版本，执行冻结锁文件安装、TypeScript 检查、Astro 检查、全部 `test:*` 脚本和最终构建。
+
+CI 仅使用 `SAKURA_D1_DATABASE_ID=ci-placeholder` 生成本地测试绑定，不需要生产密钥或真实云资源。`test:d1` 会启动构建后的 `dist/server/wrangler.json`，所以在该测试之前额外预构建一次；测试完成后仍执行最终构建。生成的 `wrangler.jsonc` 仅存在于临时 CI 工作区，不会被提交或部署。
+
+## 项目文档
+
+- [架构与模块边界](./docs/ARCHITECTURE.md)
+- [部署说明](./docs/DEPLOYMENT.md)
+- [安全核对清单](./docs/SECURITY_CHECKLIST.md)
+- [安全审计记录](./docs/SECURITY_AUDIT_REPORT.md)
+- [历史最终复核](./docs/FINAL_REVIEW.md)
+- [后续计划](./docs/TODO.md)
+- [开发进度记录](./docs/AI_PROGRESS.md)
+- [博客数据文件格式](./docs/BLOG_DATA_FORMAT.md)
+- [项目数据审查](./docs/PROJECT_DATA_AUDIT.md)
 
 ## 安全说明
 

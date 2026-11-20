@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  ASTRO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up pnpm from packageManager
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare local Cloudflare bindings
+        env:
+          SAKURA_D1_DATABASE_ID: ci-placeholder
+        run: node scripts/prepare-cloudflare-config.mjs
+
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit --pretty false
+
+      - name: Astro check
+        run: pnpm check
+
+      - name: Run every test script
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+          for (const name of Object.keys(scripts).filter((name) => name.startsWith('test:'))) {
+            // The D1 HTTP tests launch the generated dist/server/wrangler.json.
+            if (name === 'test:d1') execFileSync('pnpm', ['build'], { stdio: 'inherit' });
+            execFileSync('pnpm', [name], { stdio: 'inherit' });
+          }
+          NODE
+
+      - name: Production build
+        run: pnpm build

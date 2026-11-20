@@ -21,7 +21,7 @@
 - 友链 URL 是不可信的服务端出站目标；每次请求及每次跳转都必须重新通过公共 HTTP(S) 地址校验。
 - Cache API 只允许显式列出的公开 GET 页面；管理端、认证接口、写作/设置页面和携带管理 cookie 的请求不得进入公共缓存。
 
-更完整的代码归属和扩展边界见 `ARCHITECTURE.md`。
+更完整的代码归属和扩展边界见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
 ## 威胁模型
 
@@ -168,7 +168,7 @@
 
 扫描了 `src/` 下 104 个 TypeScript、TSX、Astro 和 CSS 文件；10 个文件超过 400 行。最大项为 `global.css`（3343 行）、`PostEditor.tsx`（1199 行）、`post.renderer.ts`（747 行）、`SiteHeader.astro`（556 行）、`post.repo.ts`（554 行）、`prose.css`（531 行）、文章详情页（530 行）、友链页（510 行）、首页（488 行）和 `admin.css`（455 行）。
 
-人工复核了安全关键长函数与高分支区域：Markdown AST 转换、文章编辑器状态机、友链健康检查、schema bootstrap、上传协调和 middleware。此次只抽取了具有明确复用和安全边界价值的 `src/lib/security/`、`src/lib/logging.ts` 与 `src/features/rate-limit/`；没有为降低行数机械拆分 CSS/展示组件，也没有引入无真实第二实现的插件 registry。未来扩展边界和新代码归属已写入 `ARCHITECTURE.md`，扩展不得接触 raw env、Secret、cookie、session token 或 D1/R2 binding。
+人工复核了安全关键长函数与高分支区域：Markdown AST 转换、文章编辑器状态机、友链健康检查、schema bootstrap、上传协调和 middleware。此次只抽取了具有明确复用和安全边界价值的 `src/lib/security/`、`src/lib/logging.ts` 与 `src/features/rate-limit/`；没有为降低行数机械拆分 CSS/展示组件，也没有引入无真实第二实现的插件 registry。未来扩展边界和新代码归属已写入 [ARCHITECTURE.md](./ARCHITECTURE.md)，扩展不得接触 raw env、Secret、cookie、session token 或 D1/R2 binding。
 
 ## 验证记录
 
@@ -186,6 +186,6 @@
 
 - 审核 `migrations/0008_security_hardening.sql`，先核对生产 D1 的 migrations 历史和自动 bootstrap 状态，再决定是否手动 remote apply；不要盲目重复执行生产迁移命令。
 - 在 preview 环境完成登录、登出、上传/读取图片、文章发布、友链申请/健康检查、浏览计数和 cron 验证。
-- 按 `SECURITY_CHECKLIST.md` 完成所有 `[CONSOLE]` 项；保留部署前 D1 备份/恢复点。
+- 按 [SECURITY_CHECKLIST.md](./SECURITY_CHECKLIST.md) 完成所有 `[CONSOLE]` 项；保留部署前 D1 备份/恢复点。
 - 发布后检查 `/admin/*`、`/api/admin/*`、`/api/auth/*`、`/write*`、`/settings*` 的 `Cache-Control: no-store`，并确认 Cloudflare Cache Rules 没有覆盖它。
 - 不提交 `.dev.vars`、真实管理凭据、D1/R2 标识符或审计运行日志。本次工作区未写入真实秘密，也未执行 push、deploy 或生产迁移。

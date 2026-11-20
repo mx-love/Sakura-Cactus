@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { env } from 'cloudflare:workers';
 import { formatSiteDate, getSiteDateParts, getSiteMonthRange, getSiteTimeZone, getSiteCalendar } from '../src/lib/site-time.ts';
+import { CHINESE_NEW_YEAR_DATES, getGanzhiYear } from '../src/lib/ganzhi-year.ts';
 
 test('site dates default to Shanghai, independent of the runtime time zone', () => {
   delete env.SITE_TIMEZONE;
@@ -47,4 +48,26 @@ test('invalid configuration falls back and warns only once per isolate', () => {
     console.warn = original;
     delete env.SITE_TIMEZONE;
   }
+});
+
+test('Ganzhi changes at Chinese New Year in the site timezone, not January 1', () => {
+  assert.equal(getGanzhiYear(getSiteDateParts('2026-02-16T12:00:00+08:00')), '乙巳蛇年');
+  assert.equal(getGanzhiYear(getSiteDateParts('2026-02-17T00:00:00+08:00')), '丙午马年');
+  assert.equal(getGanzhiYear(getSiteDateParts('2026-02-16T15:59:59Z')), '乙巳蛇年');
+  assert.equal(getGanzhiYear(getSiteDateParts('2026-02-16T16:00:00Z')), '丙午马年');
+  // These dates differ in some ICU Chinese-calendar implementations.
+  assert.equal(getGanzhiYear({ year: 2027, month: 2, day: 5 }), '丙午马年');
+  assert.equal(getGanzhiYear({ year: 2027, month: 2, day: 6 }), '丁未羊年');
+  assert.equal(getGanzhiYear({ year: 2030, month: 2, day: 2 }), '己酉鸡年');
+  assert.equal(getGanzhiYear({ year: 2030, month: 2, day: 3 }), '庚戌狗年');
+});
+
+test('verified table covers every year from 2024 through 2040 and has explicit fallback', () => {
+  assert.deepEqual(Object.keys(CHINESE_NEW_YEAR_DATES).map(Number), Array.from({ length: 17 }, (_, index) => 2024 + index));
+  for (const [year, monthDay] of Object.entries(CHINESE_NEW_YEAR_DATES)) {
+    const instant = new Date(`${year}-${monthDay}T00:00:00+08:00`).getTime();
+    assert.notEqual(getGanzhiYear(getSiteDateParts(instant - 1)), getGanzhiYear(getSiteDateParts(instant)));
+  }
+  assert.equal(getGanzhiYear({ year: 2041, month: 1, day: 1 }), '辛酉鸡年');
+  assert.equal(getGanzhiYear({ year: 2023, month: 1, day: 1 }), '癸卯兔年');
 });

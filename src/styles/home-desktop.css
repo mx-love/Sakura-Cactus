@@ -1,0 +1,279 @@
+
+@media (min-width: 900px) {
+  :root {
+    --sc-home-shadow-image: url("/backgrounds/window-shadow-light.webp");
+  }
+
+  :root[data-theme="dark"] {
+    --sc-home-shadow-image: url("/backgrounds/window-shadow-dark.webp");
+  }
+
+  .sc-home-editorial {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    margin-bottom: clamp(2.625rem, calc(1.5vw + 1.875rem), 3.125rem);
+  }
+
+  .sc-home-editorial::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset-block-start: 2.5rem;
+    inset-inline-start: -10rem;
+    width: min(32vw, 25rem);
+    aspect-ratio: 4 / 3;
+    background: var(--sc-home-shadow-image) center / contain no-repeat;
+    opacity: var(--sc-home-shadow-opacity);
+    mix-blend-mode: var(--sc-home-shadow-blend);
+    pointer-events: none;
+  }
+
+  .sc-home-desk {
+    grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .sc-home-intro.sc-paper-piece {
+    align-self: stretch;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 34px 50px 1.375rem 0;
+  }
+
+  .sc-home-issue {
+    margin-top: auto;
+    margin-left: auto;
+    padding-right: 0.25rem;
+    text-align: right;
+  }
+
+  .sc-home-issue > :last-child,
+  .sc-home-calendar-meta > :last-child {
+    margin-bottom: 0;
+  }
+
+  .sc-home-issue-number {
+    white-space: nowrap;
+  }
+
+  .sc-home-intro .sc-paper-kicker {
+    margin-left: 0;
+    margin-bottom: 0.95rem;
+  }
+
+  .sc-home-intro h1 {
+    font-size: clamp(2.28rem, 3.55vw, 3rem);
+    line-height: 1.02;
+    max-width: 12ch;
+  }
+
+  .sc-home-intro .sc-home-signature {
+    max-width: 16.5em;
+    margin-top: 1.15rem;
+    font-size: clamp(1.12rem, 1.45vw, 1.2rem);
+  }
+
+  .sc-home-intro .sc-home-description {
+    max-width: 26em;
+    margin-top: 1.05rem;
+  }
+
+  .sc-home-calendar {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    min-width: 0;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 24px 26px 1.375rem 30px;
+    transform: none;
+  }
+
+  .sc-home-calendar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    background: var(--color-home-divider);
+    pointer-events: none;
+  }
+
+  .sc-home-calendar-body {
+    margin-bottom: 0.95rem;
+  }
+
+  .sc-home-calendar-meta {
+    margin-top: auto;
+    padding-bottom: 0;
+  }
+
+  .sc-home-issue-stats,
+  .sc-home-issue-empty,
+  .sc-home-calendar-meta span {
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+
+  .sc-calendar-note strong {
+    font-size: 0.92rem;
+  }
+
+  .sc-calendar-weekdays {
+    margin-top: 0.9rem;
+  }
+
+  .sc-home-articles .sc-section-heading {
+    margin-bottom: 1.5rem;
+    padding-top: clamp(1.35rem, 2vw, 1.65rem);
+  }
+
+  .sc-home-posts {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: clamp(1.8rem, 4vw, 2.4rem);
+    align-items: stretch;
+  }
+
+  .sc-featured-paper,
+  .sc-featured-paper-with-cover {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0 calc(2rem + 1px) 0 0;
+  }
+
+  .sc-featured-paper::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: -0.875rem;
+    right: 0;
+    width: 1px;
+    background: var(--color-border);
+    pointer-events: none;
+  }
+
+  .sc-featured-paper-body {
+    padding: 0.9rem 0 0;
+  }
+
+  .sc-featured-paper:not(.sc-featured-paper-with-cover) .sc-featured-paper-body {
+    padding: clamp(1.2rem, 2.5vw, 1.6rem);
+  }
+
+  .sc-featured-paper:not(.sc-featured-paper-with-cover) {
+    padding: 0 calc(2rem + 1px) 0 0;
+  }
+
+  .sc-featured-cover {
+    margin: 0 0 0.8rem;
+    border-radius: 6px;
+  }
+
+  .sc-featured-cover img {
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .sc-featured-paper h3 {
+    font-size: clamp(1.5rem, 1.85vw, 1.75rem);
+    line-height: 1.36;
+    text-wrap: wrap;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .sc-featured-paper time {
+    margin-top: 0.55rem;
+  }
+
+  .sc-featured-paper p {
+    margin-top: 0.65rem;
+    text-wrap: pretty;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .sc-featured-paper .sc-tag-list {
+    margin-top: 0.65rem;
+  }
+
+  .sc-paper-strip-rail {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sc-paper-strip-list {
+    width: 100%;
+    min-width: 0;
+    margin-block: auto;
+    gap: 0;
+  }
+
+  .sc-paper-strip,
+  .sc-paper-strip:nth-child(2n) {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    align-items: start;
+    column-gap: 1.1rem;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    background: transparent;
+    padding: 0.95rem 0;
+    transform: none;
+  }
+
+  .sc-paper-strip h3 {
+    text-wrap: wrap;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .sc-paper-strip p {
+    font-size: 0.92rem;
+    line-height: 1.72;
+    text-wrap: pretty;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .sc-paper-strip:first-child p {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .sc-paper-strip time {
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  .sc-home-quote {
+    margin-top: clamp(1.9rem, 4vw, 3rem);
+    padding-top: 1rem;
+  }
+}

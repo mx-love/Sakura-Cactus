@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title description">
+  <title id="title">首页浅色截图占位</title>
+  <desc id="description">这是一张待替换的截图占位，不是站点的实际截图。</desc>
+  <rect width="960" height="600" rx="20" fill="#fffdfd"/>
+  <rect x="30" y="30" width="900" height="540" rx="14" fill="none" stroke="#f0e3e7" stroke-width="2"/>
+  <path d="M80 140h800M80 425h800M630 175v210" fill="none" stroke="#f0e3e7" stroke-width="2"/>
+  <text x="80" y="100" fill="#2f292c" font-family="system-ui,sans-serif" font-size="28">Sakura Cactus</text>
+  <text x="80" y="235" fill="#d96f91" font-family="system-ui,sans-serif" font-size="32">首页 · 浅色主题</text>
+  <text x="80" y="295" fill="#7d7176" font-family="system-ui,sans-serif" font-size="22">截图占位 · 部署验收后请替换</text>
+  <text x="80" y="485" fill="#7d7176" font-family="system-ui,sans-serif" font-size="18">Placeholder only — not an actual site screenshot</text>
+</svg>

@@ -122,7 +122,7 @@ Project maintenance: dependency verification is complete; current work is roadma
 - [x] Added D1-backed rate limiting for login, uploads, friend applications, and view counting.
 - [x] Added SSRF guards for friend URLs and favicon URL settings.
 - [x] Hardened upload validation, private media responses, Markdown rendering paths, CSRF checks, private no-store responses, scheduled task isolation, and dependency pins.
-- [x] Added `ARCHITECTURE.md`, `SECURITY_AUDIT_REPORT.md`, and `FINAL_REVIEW.md` as audit handoff documents.
+- [x] Added [ARCHITECTURE.md](./ARCHITECTURE.md), [SECURITY_AUDIT_REPORT.md](./SECURITY_AUDIT_REPORT.md), and [FINAL_REVIEW.md](./FINAL_REVIEW.md) as audit handoff documents.
 - [x] Verified dependency state on `codex/project-maintenance`: every direct dependency in `package.json` is an exact version and matches `pnpm-lock.yaml`.
 - [x] Confirmed first-stage dependency maintenance required no file changes and no commit.
 - [x] Confirmed the remaining production dependency audit item is 1 known low-severity Babel source-map advisory from the React/Vite toolchain.
@@ -149,7 +149,7 @@ Project maintenance: dependency verification is complete; current work is roadma
 - The web setup flow is retired: `/admin/setup` redirects to login and the setup API returns 404. Standard deployment continues to use `ADMIN_USERNAME` and `ADMIN_PASSWORD` from Cloudflare Variables/Secrets.
 - `pnpm preview` uses redirected build config under `dist/server`; when manually testing preview-local D1, apply the migrations against that config or use `pnpm dev`.
 - `@astrojs/check`, Node types, and binding-only Cloudflare declarations are installed/generated. `pnpm check` and `pnpm exec tsc --noEmit` pass after the 2026-07-15 security audit.
-- The remaining dependency audit item is one low-severity Babel source-map advisory whose declared patched Babel 7 version is not yet published. See `SECURITY_AUDIT_REPORT.md`.
+- The remaining dependency audit item is one low-severity Babel source-map advisory whose declared patched Babel 7 version is not yet published. See [SECURITY_AUDIT_REPORT.md](./SECURITY_AUDIT_REPORT.md).
 
 ## Last Verified Commands
 

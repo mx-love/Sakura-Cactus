@@ -1,0 +1,88 @@
+
+.sc-archive {
+  display: grid;
+  gap: 2.1rem;
+}
+
+.sc-archive-year h2 {
+  margin: 0 0 0.9rem;
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.sc-archive-month {
+  display: grid;
+  grid-template-columns: 4.2rem minmax(0, 1fr);
+  gap: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  padding-block: 0.95rem;
+}
+
+.sc-archive-month h3 {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.96rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sc-archive-list {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0.65rem;
+}
+
+.sc-archive-entry {
+  display: grid;
+  grid-template-columns: 3.8rem minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.sc-archive-date {
+  display: flex;
+  align-items: center;
+  color: var(--color-secondary-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sc-archive-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sc-archive-entry h4 {
+  max-width: 100%;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.sc-archive-entry h4 a {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.sc-archive-entry p {
+  max-width: 100%;
+  margin: 0.22rem 0 0;
+  color: var(--color-secondary-text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
