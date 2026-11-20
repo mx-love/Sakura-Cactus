@@ -196,6 +196,16 @@ export async function getMonthlyPublicPostStats(
   };
 }
 
+export async function listMonthlyPublicPostDates(db: D1Database, range: MonthlyPostStatsRange): Promise<string[]> {
+  const result = await db.prepare(
+    `SELECT published_at FROM posts
+     WHERE status = 'published' AND visibility = 'public'
+       AND published_at IS NOT NULL AND published_at <= ?
+       AND published_at >= ? AND published_at < ? AND slug != 'about'`
+  ).bind(range.currentTime, range.monthStart, range.nextMonthStart).all<{ published_at: string }>();
+  return (result.results ?? []).map((row) => row.published_at);
+}
+
 function normalizeAggregateValue(value: number | string | null | undefined): number {
   const normalized = Number(value ?? 0);
   return Number.isFinite(normalized) ? Math.max(0, Math.trunc(normalized)) : 0;

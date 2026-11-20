@@ -13,6 +13,7 @@ import {
   findPublicPostBySlug,
   getPostAssetReplacementPlan,
   getMonthlyPublicPostStats,
+  listMonthlyPublicPostDates,
   countPublicPosts,
   listPublicFeedPosts,
   listAdminPosts,
@@ -301,6 +302,10 @@ export async function getPublicPosts(options: {
   const db = getDb();
   const posts = await listPublicPosts(db, options);
   return toPublicPostSummaries(db, posts);
+}
+
+export async function getPublicMonthlyPostDates(range: MonthlyPostStatsRange): Promise<string[]> {
+  return listMonthlyPublicPostDates(getDb(), range);
 }
 
 export async function getPublicMonthlyPostStats(range: MonthlyPostStatsRange): Promise<MonthlyPostStats> {

@@ -1,3 +1,5 @@
+import { getCodeLanguageLabel } from './code-language';
+
 async function copyText(value: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(value);
@@ -70,6 +72,7 @@ function setButtonState(button: HTMLButtonElement, state: 'idle' | 'success' | '
   button.setAttribute('title', label);
 
   const wrapper = button.closest('.sc-code-block');
+  if (wrapper instanceof HTMLElement) wrapper.dataset.copyState = state;
   let feedback = wrapper?.querySelector<HTMLElement>('.sc-code-copy-feedback');
   if (!feedback && wrapper) {
     feedback = document.createElement('span');
@@ -139,6 +142,24 @@ async function handleCodeCopyClick(event: Event) {
 }
 
 export function bindCodeCopyControls(root: (ParentNode & EventTarget) = document): void {
+  // Preview HTML can change while its delegated event root remains the same.
+  for (const wrapper of root.querySelectorAll<HTMLElement>('.sc-code-block')) {
+    const code = wrapper.querySelector('pre > code');
+    const language = code ? getCodeLanguageLabel(code.classList) : null;
+    let label = wrapper.querySelector<HTMLElement>(':scope > .sc-code-language');
+    if (!language) {
+      label?.remove();
+      continue;
+    }
+    if (!label) {
+      label = document.createElement('span');
+      label.className = 'sc-code-language';
+      wrapper.prepend(label);
+    }
+    // Language names are presentation text, never HTML or a sanitizer exception.
+    label.textContent = language;
+  }
+
   if (boundCodeCopyRoots.has(root)) {
     return;
   }

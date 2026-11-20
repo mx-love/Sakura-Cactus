@@ -59,7 +59,8 @@ function formatCheckedAt(value: string | null): string {
 
 <SiteLayout siteSettings={settings} title="友人帐 | Sakura Cactus" description="枯叶落处各异，百花各自争鸣。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
-    <div class="sc-shell sc-friends-shell sc-friends-paper-shell">
+    <div class="sc-page-shell sc-friends-shell">
+      <div class="sc-paper-public-shell sc-public-page-paper sc-friends-paper-shell">
       <nav class="sc-breadcrumb" aria-label="Breadcrumb">
         <a href="/">首页</a>
         <span>»</span>
@@ -74,13 +75,21 @@ function formatCheckedAt(value: string | null): string {
         {isAdmin ? (
           <button class="sc-button sc-button-primary sc-friend-add-button" id="friend-add-button" type="button">添加友人</button>
         ) : canApply ? (
-          <button class="sc-button sc-button-secondary sc-friend-add-button" id="friend-apply-button" type="button">申请友链</button>
+          <button class="sc-button sc-button-secondary sc-friend-add-button" id="friend-apply-button" data-friend-apply type="button">申请友链</button>
         ) : null}
       </header>
 
       <div id="friend-grid-root">
         {friends.length === 0 ? (
-          <p class="sc-empty-state">还没有友链。</p>
+          canApply ? (
+            <div class="sc-empty sc-friend-empty">
+              <p>还没有友链。</p>
+              <p>欢迎留下你的纸页，提交友链申请后会由站点主人审核。</p>
+              <button class="sc-button sc-button-secondary" data-friend-apply type="button">申请友链 →</button>
+            </div>
+          ) : (
+            <p class="sc-empty-state">还没有友链。</p>
+          )
         ) : (
           <div class="sc-friend-grid">
             {friends.map((friend, index) => (
@@ -112,6 +121,7 @@ function formatCheckedAt(value: string | null): string {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   </section>
@@ -175,6 +185,7 @@ function formatCheckedAt(value: string | null): string {
         const gridRoot = document.getElementById('friend-grid-root');
         const addButton = document.getElementById('friend-add-button');
         const applyButton = document.getElementById('friend-apply-button');
+        const applyButtons = Array.from(document.querySelectorAll('[data-friend-apply]'));
         const modal = document.getElementById('friend-modal');
         const form = document.getElementById('friend-form');
         const message = document.getElementById('friend-message');
@@ -404,7 +415,7 @@ function formatCheckedAt(value: string | null): string {
         }
 
         addButton?.addEventListener('click', () => openModal());
-        applyButton?.addEventListener('click', () => openModal());
+        applyButtons.forEach((button) => button.addEventListener('click', () => openModal()));
 
         modal?.addEventListener('click', (event) => {
           const target = event.target;

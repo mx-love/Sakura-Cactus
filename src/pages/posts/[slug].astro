@@ -42,7 +42,7 @@ const robots = publicPost ? ROBOTS_INDEX_FOLLOW : ROBOTS_NOINDEX_NOFOLLOW;
 const publishedAt = post.publishedAt ? new Date(post.publishedAt) : null;
 const updatedAt = new Date(post.updatedAt);
 const shouldShowUpdatedAt = publishedAt ? updatedAt.getTime() - publishedAt.getTime() > 60_000 : false;
-const { previous: previousPost, next: nextPost } = publicPost
+const { previous: olderPost, next: newerPost } = publicPost
   ? await getAdjacentPublicPosts(publicPost)
   : { previous: null, next: null };
 const renderedContent = addHeadingIdsToHtml(post.contentHtml);
@@ -176,31 +176,31 @@ function formatDate(date: Date | null) {
         />
         {publicPost ? <ArticleImageViewer /> : null}
         <CommentSlot enabled={siteSettings.commentEnabled} serverURL={commentsServerURL} path={`/posts/${post.slug}`} />
-        {previousPost || nextPost ? (
+        {publicPost ? (
           <footer class="sc-article-nav sc-article-inner" aria-label="文章导航">
-            {previousPost ? (
-              <a class="sc-article-nav-card sc-article-nav-prev" href={`/posts/${previousPost.slug}`} data-astro-prefetch>
-                <span>上一页</span>
-                <strong>{previousPost.title}</strong>
-                {previousPost.publishedAt ? <time datetime={previousPost.publishedAt}>{formatDate(new Date(previousPost.publishedAt))}</time> : null}
+            {newerPost ? (
+              <a class="sc-article-nav-card sc-article-nav-prev" href={`/posts/${newerPost.slug}`} data-astro-prefetch>
+                <span>更新的一篇</span>
+                <strong>{newerPost.title}</strong>
+                {newerPost.publishedAt ? <time datetime={newerPost.publishedAt}>{formatDate(new Date(newerPost.publishedAt))}</time> : null}
               </a>
             ) : (
               <div class="sc-article-nav-card sc-article-nav-disabled">
-                <span>上一页</span>
-                <strong>已是第一页</strong>
+                <span>更新的一篇</span>
+                <strong>已是最新</strong>
               </div>
             )}
 
-            {nextPost ? (
-              <a class="sc-article-nav-card sc-article-nav-next" href={`/posts/${nextPost.slug}`} data-astro-prefetch>
-                <span>下一页</span>
-                <strong>{nextPost.title}</strong>
-                {nextPost.publishedAt ? <time datetime={nextPost.publishedAt}>{formatDate(new Date(nextPost.publishedAt))}</time> : null}
+            {olderPost ? (
+              <a class="sc-article-nav-card sc-article-nav-next" href={`/posts/${olderPost.slug}`} data-astro-prefetch>
+                <span>更早的一篇</span>
+                <strong>{olderPost.title}</strong>
+                {olderPost.publishedAt ? <time datetime={olderPost.publishedAt}>{formatDate(new Date(olderPost.publishedAt))}</time> : null}
               </a>
             ) : (
               <div class="sc-article-nav-card sc-article-nav-disabled sc-article-nav-next">
-                <span>下一页</span>
-                <strong>已是最后一页</strong>
+                <span>更早的一篇</span>
+                <strong>已是最早</strong>
               </div>
             )}
           </footer>

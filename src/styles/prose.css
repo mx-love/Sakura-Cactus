@@ -431,6 +431,27 @@
     transform 160ms ease;
 }
 
+.sc-code-language {
+  position: absolute;
+  top: 0.28rem;
+  left: 1rem;
+  max-width: calc(100% - 4rem);
+  overflow: hidden;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.sc-code-block[data-copy-state="success"] .sc-code-language,
+.sc-code-block[data-copy-state="error"] .sc-code-language {
+  visibility: hidden;
+}
+
 .sc-code-block:hover .sc-code-copy,
 .sc-code-block:focus-within .sc-code-copy {
   opacity: 1;

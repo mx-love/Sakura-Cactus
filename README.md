@@ -83,6 +83,9 @@ Cloudflare 中的变量值都会以字符串形式提供给 Worker。普通配�
 | `SITE_DESCRIPTION` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点描述 |
 | `SITE_AVATAR_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 登录后 Header 头像地址 |
 | `SITE_TIMEZONE` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 站点日期、日历、归档和月度统计使用的 IANA 时区，默认 `Asia/Shanghai`；非法值回退并记录一次警告 |
+| `SITE_GITHUB_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 页脚 GitHub 个人链接，仅接受安全的公开 HTTPS 地址；未配置或非法时不显示图标 |
+| `SITE_BILIBILI_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 页脚 Bilibili 个人链接，仅接受安全的公开 HTTPS 地址；未配置或非法时不显示图标 |
+| `SITE_OG_IMAGE_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 首页、列表和无封面文章的默认分享图，仅接受安全的公开 HTTPS 地址；未配置时不额外输出图片 |
 | `PUBLIC_COMMENTS_SERVER_URL` | Worker → 设置 → 变量和密钥 | 否 | 文本（Text） | 自己部署的 Waline 服务端地址 |
 
 ## 唯一管理员登录

@@ -76,6 +76,9 @@ interface Env {
   SITE_AVATAR_URL?: string;
   SITE_URL?: string;
   SITE_TIMEZONE?: string;
+  SITE_GITHUB_URL?: string;
+  SITE_BILIBILI_URL?: string;
+  SITE_OG_IMAGE_URL?: string;
   PUBLIC_COMMENTS_SERVER_URL?: string;
   ADMIN_USERNAME?: string;
   ADMIN_PASSWORD?: string;
@@ -90,6 +93,9 @@ declare namespace Cloudflare {
     SITE_AVATAR_URL?: string;
     SITE_URL?: string;
     SITE_TIMEZONE?: string;
+    SITE_GITHUB_URL?: string;
+    SITE_BILIBILI_URL?: string;
+    SITE_OG_IMAGE_URL?: string;
     PUBLIC_COMMENTS_SERVER_URL?: string;
     ADMIN_USERNAME?: string;
     ADMIN_PASSWORD?: string;

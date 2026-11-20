@@ -1,9 +1,9 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicMonthlyPostStats, getPublicPosts } from '@/features/posts/post.service';
+import { getPublicMonthlyPostDates, getPublicMonthlyPostStats, getPublicPosts } from '@/features/posts/post.service';
 import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
-import { getSiteCalendar, getSiteMonthRange, formatSiteDate } from '@/lib/site-time';
+import { getSiteCalendar, getSiteDateParts, getSiteMonthRange, formatSiteDate } from '@/lib/site-time';
 
 export const prerender = false;
 
@@ -12,10 +12,18 @@ const calendar = getSiteCalendar(now);
 const calendarYear = calendar.year;
 const calendarMonth = calendar.month - 1;
 const { monthStart, nextMonthStart } = getSiteMonthRange(now);
-const [posts, monthlyStats] = await Promise.all([
+const monthRange = { monthStart, nextMonthStart, currentTime: now.toISOString() };
+const [posts, monthlyStats, publishedDates] = await Promise.all([
   getPublicPosts({ limit: 12, excludeAbout: true, pinnedFirst: true }),
-  getPublicMonthlyPostStats({ monthStart, nextMonthStart, currentTime: now.toISOString() })
+  getPublicMonthlyPostStats(monthRange),
+  getPublicMonthlyPostDates(monthRange)
 ]);
+const postsByDay = new Map<number, number>();
+for (const date of publishedDates) {
+  const { day } = getSiteDateParts(date);
+  postsByDay.set(day, (postsByDay.get(day) ?? 0) + 1);
+}
+const timelineMonthHref = `/timeline#y${calendarYear}-m${String(calendarMonth + 1).padStart(2, '0')}`;
 const latestPosts = posts.slice(0, 5);
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地收录。';
@@ -153,14 +161,19 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                   <span>{day}</span>
                 ))}
               </div>
-              <div class="sc-calendar-grid" aria-hidden="true" data-calendar-grid>
+              <div class="sc-calendar-grid" aria-label={`${calendarYear}年${calendarMonth + 1}月文章日历`} data-calendar-grid>
                 {Array.from({ length: monthStartDay }).map(() => <span class="sc-calendar-empty"></span>)}
                 {Array.from({ length: daysInMonth }).map((_, index) => {
                   const day = index + 1;
+                  const postCount = postsByDay.get(day) ?? 0;
                   return (
-                    <span class:list={['sc-calendar-day', day === calendar.day && 'sc-calendar-today']} data-date={formatCalendarDate(calendarYear, calendarMonth, day)} aria-current={day === calendar.day ? 'date' : undefined}>
-                      {day}
-                    </span>
+                    postCount > 0 ? (
+                      <a class:list={['sc-calendar-day', 'sc-calendar-has-posts', day === calendar.day && 'sc-calendar-today']} href={timelineMonthHref} data-date={formatCalendarDate(calendarYear, calendarMonth, day)} aria-current={day === calendar.day ? 'date' : undefined} aria-label={`${calendarMonth + 1} 月 ${day} 日，${postCount} 篇文章`}>
+                        {day}<span class="sc-calendar-post-dot" aria-hidden="true"></span>
+                      </a>
+                    ) : (
+                      <span class:list={['sc-calendar-day', day === calendar.day && 'sc-calendar-today']} data-date={formatCalendarDate(calendarYear, calendarMonth, day)} aria-current={day === calendar.day ? 'date' : undefined}>{day}</span>
+                    )
                   );
                 })}
               </div>
@@ -214,6 +227,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                       ))}
                     </div>
                   ) : null}
+                  {!leadPost.coverImageUrl ? <a class="sc-featured-read-more" href={`/posts/${leadPost.slug}`} data-astro-prefetch>阅读全文 →</a> : null}
                 </div>
               </article>
             ) : null}

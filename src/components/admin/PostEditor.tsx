@@ -3,6 +3,7 @@ import type { AssetRow } from '@/features/assets/asset.types';
 import { extractAssetTokens, renderMarkdown } from '@/features/posts/post.renderer';
 import type { PostRow } from '@/features/posts/post.types';
 import { bindCodeCopyControls } from '@/lib/prose-controls';
+import { createEditorLeaveGuard, type EditorLeaveGuard } from '@/lib/editor-leave-guard';
 import {
   buildWriterAutosaveSnapshot,
   clearWriterAutosaveSnapshot,
@@ -130,6 +131,7 @@ function isImageUrl(value: string): boolean {
 }
 
 export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
+  const [form, setForm] = useState<PostFormState>(() => postToState(post));
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const excerptInputRef = useRef<HTMLInputElement | null>(null);
   const tagInputRef = useRef<HTMLInputElement | null>(null);
@@ -137,15 +139,16 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const previewRef = useRef<HTMLDivElement | null>(null);
   const splitPreviewRef = useRef<HTMLDivElement | null>(null);
   const sessionUploadedTokensRef = useRef<Set<string>>(new Set());
-  const latestFormRef = useRef<PostFormState>(postToState(post));
+  const latestFormRef = useRef<PostFormState>(form);
   const latestPostIdRef = useRef<string | null>(post?.id ?? null);
   const latestSlugRef = useRef(post?.slug ?? '');
   const isRestorePromptOpenRef = useRef(false);
   const autosaveDebounceTimerRef = useRef<number | null>(null);
   const autosaveCheckpointTimerRef = useRef<number | null>(null);
   const lastAutosaveComparableRef = useRef<string | null>(null);
-  const [form, setForm] = useState<PostFormState>(() => postToState(post));
-  const [savedSnapshot, setSavedSnapshot] = useState<FormSnapshot | null>(() => (post ? createSnapshot(postToState(post)) : null));
+  const [savedSnapshot, setSavedSnapshot] = useState<FormSnapshot>(() => createSnapshot(form));
+  const savedSnapshotRef = useRef(savedSnapshot);
+  const leaveGuardRef = useRef<EditorLeaveGuard | null>(null);
   const [postId, setPostId] = useState(post?.id ?? null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +169,9 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   const currentSnapshot = useMemo(() => createSnapshot(form), [form]);
   const isDirty = useMemo(() => !snapshotsEqual(savedSnapshot, currentSnapshot), [savedSnapshot, currentSnapshot]);
   const previewHtml = useMemo(() => renderMarkdown(form.contentMarkdown), [form.contentMarkdown]);
+  // Keep the prop identity stable during autosave/status renders. React otherwise
+  // rewrites innerHTML and removes the client-enhanced code toolbar labels.
+  const previewMarkup = useMemo(() => ({ __html: previewHtml }), [previewHtml]);
   const isBusy = isSubmitting || isUploadingImage;
   const isCleanExistingPost = isExisting && !isDirty && saveFeedback !== 'error';
   const mainActionLabel = isExisting ? '保存修订' : '收录';
@@ -195,6 +201,20 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   useEffect(() => {
     setIsEditorReady(true);
   }, []);
+
+  useEffect(() => {
+    const guard = createEditorLeaveGuard(window);
+    leaveGuardRef.current = guard;
+    guard.setDirty(!snapshotsEqual(savedSnapshotRef.current, createSnapshot(latestFormRef.current)));
+    return () => {
+      guard.dispose();
+      if (leaveGuardRef.current === guard) leaveGuardRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    leaveGuardRef.current?.setDirty(isDirty);
+  }, [currentSnapshot, savedSnapshot, isDirty]);
 
   useEffect(() => {
     latestFormRef.current = form;
@@ -377,7 +397,18 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     setSaveFeedback('idle');
     setSubmitAction(null);
     setError(null);
-    setForm((current) => ({ ...current, [field]: value }));
+    const next = { ...latestFormRef.current, [field]: value };
+    latestFormRef.current = next;
+    leaveGuardRef.current?.setDirty(!snapshotsEqual(savedSnapshotRef.current, createSnapshot(next)));
+    setForm(next);
+  }
+
+  function resetLeaveBaseline(nextForm: PostFormState) {
+    const snapshot = createSnapshot(nextForm);
+    savedSnapshotRef.current = snapshot;
+    setSavedSnapshot(snapshot);
+    // Do this synchronously: navigation can precede React's next effect cleanup.
+    leaveGuardRef.current?.setDirty(false);
   }
 
   function clearAutosaveTimers() {
@@ -418,6 +449,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       setSubmitAction(null);
       setError(null);
       latestFormRef.current = next;
+      leaveGuardRef.current?.setDirty(!snapshotsEqual(savedSnapshotRef.current, createSnapshot(next)));
       setForm((formState) =>
         formState.title === next.title &&
         formState.excerpt === next.excerpt &&
@@ -710,6 +742,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     };
 
     latestFormRef.current = nextForm;
+    leaveGuardRef.current?.setDirty(!snapshotsEqual(savedSnapshotRef.current, createSnapshot(nextForm)));
     setForm(nextForm);
     updateAutosaveSavedState(snapshot);
     setAutosaveRecoveryNotice(null);
@@ -733,6 +766,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   }
 
   function clearTemporaryPaper() {
+    resetLeaveBaseline(latestFormRef.current);
     isRestorePromptOpenRef.current = false;
     cleanupUnsavedSessionUploads();
     clearWriterAutosaveSnapshot(getWriterAutosaveKey(null, aboutMode));
@@ -764,6 +798,8 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
     if (!pendingLocalRevision) {
       return;
     }
+
+    resetLeaveBaseline(latestFormRef.current);
 
     isRestorePromptOpenRef.current = false;
     cleanupUnsavedSessionUploads();
@@ -889,8 +925,11 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
         })
       );
       setPostId(savedPost.id);
+      latestPostIdRef.current = savedPost.id;
+      latestSlugRef.current = savedPost.slug;
+      latestFormRef.current = nextForm;
       setForm(nextForm);
-      setSavedSnapshot(createSnapshot(nextForm));
+      resetLeaveBaseline(nextForm);
       markSavedAssetTokens(savedPost.content_markdown);
       cleanupUnsavedSessionUploads();
       setTemporaryPaper(null);
@@ -936,6 +975,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
       cleanupUnsavedSessionUploads();
       clearWriterAutosaveSnapshot(getWriterAutosaveKey(postId, aboutMode));
+      leaveGuardRef.current?.setDirty(false);
       window.location.assign(aboutMode ? '/about?fresh=1' : '/articles');
     } finally {
       setIsSubmitting(false);
@@ -972,7 +1012,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
   function renderPreview(ref: RefObject<HTMLDivElement | null>) {
     return (
       <div className="sc-writer-preview-wrap">
-        <div ref={ref} className="sc-writer-preview sc-prose prose-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        <div ref={ref} className="sc-writer-preview sc-prose prose-content" dangerouslySetInnerHTML={previewMarkup} />
         <button
           className={`sc-preview-top-button ${showPreviewTop ? 'sc-preview-top-button-visible' : ''}`}
           onClick={scrollPreviewToTop}
