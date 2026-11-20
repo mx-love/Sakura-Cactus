@@ -125,6 +125,7 @@ pnpm.cmd build
 常用检查：
 
 ```bash
+pnpm.cmd exec astro sync
 pnpm.cmd exec tsc --noEmit --pretty false
 pnpm.cmd check
 pnpm.cmd test:security
@@ -143,7 +144,7 @@ pnpm.cmd build
 
 ## 持续集成
 
-`.github/workflows/ci.yml` 在推送到 `main` 或提交 Pull Request 时运行。CI 使用 Node 22，并从 `package.json` 的 `packageManager` 读取精确 pnpm 版本，执行冻结锁文件安装、TypeScript 检查、Astro 检查、全部 `test:*` 脚本和最终构建。
+`.github/workflows/ci.yml` 在推送到 `main` 或提交 Pull Request 时运行。CI 使用 Node 22，并从 `package.json` 的 `packageManager` 读取精确 pnpm 版本，执行冻结锁文件安装、`astro sync` 类型生成、TypeScript 检查、Astro 检查、全部 `test:*` 脚本和最终构建。干净检出没有本地生成的 `.astro/` 目录，必须先同步类型；Cloudflare 的 `App.Locals` 则通过 `src/env.d.ts` 直接引用适配器官方类型，避免依赖开发缓存。
 
 CI 仅使用 `SAKURA_D1_DATABASE_ID=ci-placeholder` 生成本地测试绑定，不需要生产密钥或真实云资源。`test:d1` 会启动构建后的 `dist/server/wrangler.json`，所以在该测试之前额外预构建一次；测试完成后仍执行最终构建。生成的 `wrangler.jsonc` 仅存在于临时 CI 工作区，不会被提交或部署。
 

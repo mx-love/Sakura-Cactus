@@ -39,6 +39,9 @@ jobs:
           SAKURA_D1_DATABASE_ID: ci-placeholder
         run: node scripts/prepare-cloudflare-config.mjs
 
+      - name: Generate Astro types
+        run: pnpm exec astro sync
+
       - name: TypeScript check
         run: pnpm exec tsc --noEmit --pretty false
 

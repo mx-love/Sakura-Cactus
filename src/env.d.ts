@@ -1,4 +1,5 @@
 /// <reference types="astro/client" />
+/// <reference types="@astrojs/cloudflare/types.d.ts" />
 
 interface D1Result<T = unknown> {
   results?: T[];
@@ -57,14 +58,6 @@ interface ExportedHandler<Environment = unknown> {
     environment: Environment,
     context: ExecutionContext
   ) => void | Promise<void>;
-}
-
-type Runtime = import('@astrojs/cloudflare').Runtime<Env>;
-
-declare namespace App {
-  interface Locals extends Runtime {
-    runtime: Runtime;
-  }
 }
 
 interface Env {
