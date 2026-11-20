@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import { createSearchController, createSearchIndexLoader, normalizeSearchPost } from '../src/lib/site-search.ts';
 import type { SearchPost, SearchState } from '../src/lib/site-search.ts';
 import { listPublicSearchPosts } from '../src/features/posts/post.repo.ts';
@@ -20,6 +21,21 @@ function post(title: string, slug = title): SearchPost {
   assert.ok(normalized);
   return normalized;
 }
+
+test('the search overlay is outside the filtered header and keeps its existing scrollbar gutter', () => {
+  const header = readFileSync(new URL('../src/components/layout/SiteHeader.astro', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('../src/styles/search.css', import.meta.url), 'utf8');
+  const search = readFileSync(new URL('../src/lib/site-search.ts', import.meta.url), 'utf8');
+  const headerEnd = header.indexOf('</header>');
+  assert.ok(headerEnd >= 0 && header.indexOf('<div class="sc-search-overlay"') > headerEnd);
+  assert.match(styles, /html\.sc-search-open\s*\{\s*padding-inline-end:\s*var\(--sc-search-inline-padding, 0px\);/);
+  assert.match(search, /Math\.max\(0, window\.innerWidth - documentRoot\.clientWidth\)/);
+  assert.match(search, /setProperty\('--sc-search-inline-padding', `\$\{existingPadding \+ scrollbarWidth\}px`\)/);
+  assert.equal(search.match(/unlockSearchScroll\(\);/g)?.length, 2, 'Close and pagehide must both release the compensation.');
+  assert.match(search, /removeProperty\('--sc-search-inline-padding'\)/);
+  assert.match(styles, /\.sc-search-dialog\s*\{[^}]*pointer-events:\s*none;/);
+  assert.match(styles, /\.sc-search-box\s*\{[^}]*pointer-events:\s*auto;/);
+});
 
 test('search normalizes public metadata, date terms and malformed optional values', () => {
   const normalized = normalizeSearchPost({

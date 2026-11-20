@@ -8,6 +8,11 @@ html.sc-mobile-toc-open {
   overflow: hidden;
 }
 
+/* Preserve the page width while locking scroll, without changing vw-based layout. */
+html.sc-search-open {
+  padding-inline-end: var(--sc-search-inline-padding, 0px);
+}
+
 [data-search-retry][hidden] {
   display: none;
 }
@@ -67,6 +72,7 @@ html.sc-mobile-toc-open {
   min-height: 100%;
   place-items: start center;
   padding: clamp(4rem, 12vh, 7rem) 1rem 1rem;
+  pointer-events: none;
 }
 
 .sc-search-box {
@@ -76,6 +82,7 @@ html.sc-mobile-toc-open {
   background: var(--color-floating-surface);
   box-shadow: var(--shadow-float);
   padding: 0.55rem;
+  pointer-events: auto;
 }
 
 .sc-search-overlay-input-row {

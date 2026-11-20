@@ -129,6 +129,8 @@ function isActive(href: string) {
       </details>
     </div>
   </div>
+</header>
+<!-- A fixed search layer must not inherit the header's backdrop-filter containing block. -->
   <div class="sc-search-overlay" hidden data-search-overlay data-site-search="overlay">
     <button class="sc-search-backdrop" type="button" aria-label="关闭搜索" data-search-close></button>
     <section class="sc-search-dialog" role="dialog" aria-modal="true" aria-label="搜索">
@@ -161,4 +163,3 @@ function isActive(href: string) {
       });
     </script>
   ) : null}
-</header>

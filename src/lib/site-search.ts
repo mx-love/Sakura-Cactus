@@ -242,11 +242,19 @@ function bindSearch(root: HTMLElement): void {
   const focus = createDialogFocus(dialog, { initialFocus: input, onEscape: closeSearch });
 
   function openSearch(trigger?: HTMLElement): void {
+    if (!root.hidden) {
+      input!.focus({ preventScroll: true });
+      return;
+    }
     const anotherDialogOpen = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], dialog[open]'))
       .some((element) => !root.contains(element) && !element.closest('[hidden]') && element.getClientRects().length > 0);
     if (anotherDialogOpen) return;
+    const documentRoot = document.documentElement;
+    const scrollbarWidth = Math.max(0, window.innerWidth - documentRoot.clientWidth);
+    const existingPadding = Number.parseFloat(window.getComputedStyle(documentRoot).paddingInlineEnd) || 0;
+    documentRoot.style.setProperty('--sc-search-inline-padding', `${existingPadding + scrollbarWidth}px`);
     root.hidden = false;
-    document.documentElement.classList.add('sc-search-open');
+    documentRoot.classList.add('sc-search-open');
     focus.activate(trigger);
     input!.focus({ preventScroll: true });
     search();
@@ -255,9 +263,14 @@ function bindSearch(root: HTMLElement): void {
   function closeSearch(): void {
     focus.deactivate();
     root.hidden = true;
-    document.documentElement.classList.remove('sc-search-open');
+    unlockSearchScroll();
     input!.value = '';
     controller.reset();
+  }
+
+  function unlockSearchScroll(): void {
+    document.documentElement.classList.remove('sc-search-open');
+    document.documentElement.style.removeProperty('--sc-search-inline-padding');
   }
 
   document.querySelectorAll<HTMLElement>('[data-search-open]').forEach((trigger) => {
@@ -279,7 +292,7 @@ function bindSearch(root: HTMLElement): void {
   window.addEventListener('pagehide', () => {
     focus.deactivate({ restoreFocus: false });
     root.hidden = true;
-    document.documentElement.classList.remove('sc-search-open');
+    unlockSearchScroll();
     input.value = '';
     controller.reset();
   });
