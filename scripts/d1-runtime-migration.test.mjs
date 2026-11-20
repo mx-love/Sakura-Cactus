@@ -3,7 +3,9 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
+  readFileSync,
   readdirSync,
   rmSync,
   statSync,
@@ -13,17 +15,25 @@ import { DatabaseSync } from 'node:sqlite';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
+import { createD1MigrationTestConfig } from './d1-test-config.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const { values } = parseArgs({ options: { 'runtime-config': { type: 'string' } } });
+const runtimeConfigPath = path.resolve(values['runtime-config'] ?? path.join(repoRoot, 'dist', 'server', 'wrangler.json'));
+assert.ok(existsSync(runtimeConfigPath), 'The built Wrangler configuration is missing. Run pnpm build before pnpm test:d1.');
+const runtimeConfig = JSON.parse(readFileSync(runtimeConfigPath, 'utf8'));
 const tempRoot = path.join(tmpdir(), 'sakura-cactus-d1-runtime-migration');
 const fullPersistPath = path.join(tempRoot, 'empty-to-0010');
 const upgradePersistPath = path.join(tempRoot, 'upgrade-0009-to-0010');
 const v9MigrationsPath = path.join(tempRoot, 'migrations-v9');
 const v9ConfigPath = path.join(tempRoot, 'wrangler-v9.jsonc');
+const fullConfigPath = path.join(tempRoot, 'wrangler-full.jsonc');
 const seedPath = path.join(tempRoot, 'seed-0009.sql');
 const postMigrationHttpSetupPath = path.join(tempRoot, 'prepare-http-0010.sql');
 const wranglerCli = path.join(repoRoot, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
-const databaseName = 'sakura_blog_prod';
+const fullMigrationConfig = createD1MigrationTestConfig(runtimeConfig, path.join(repoRoot, 'migrations'), path.join(repoRoot, 'src', 'worker.ts'));
+const databaseName = fullMigrationConfig.d1_databases[0].database_name;
 const testPort = 8796;
 const testOrigin = `http://127.0.0.1:${testPort}`;
 const configuredSiteOrigin = 'https://blog.example.test';
@@ -42,6 +52,7 @@ const wranglerEnv = {
 assert.ok(path.resolve(tempRoot).startsWith(path.resolve(tmpdir()) + path.sep));
 rmSync(tempRoot, { recursive: true, force: true });
 mkdirSync(v9MigrationsPath, { recursive: true });
+writeFileSync(fullConfigPath, JSON.stringify(fullMigrationConfig, null, 2));
 
 function runWrangler(args, options = {}) {
   const result = spawnSync(process.execPath, [wranglerCli, ...args], {
@@ -286,20 +297,7 @@ function createV9MigrationFixture() {
 
   writeFileSync(
     v9ConfigPath,
-    jsonConfig({
-      name: 'sakura-cactus-d1-migration-test',
-      main: '../../src/worker.ts',
-      compatibility_date: '2026-05-19',
-      compatibility_flags: ['nodejs_compat'],
-      d1_databases: [
-        {
-          binding: 'DB',
-          database_name: databaseName,
-          database_id: 'REPLACE_WITH_YOUR_D1_DATABASE_ID',
-          migrations_dir: './migrations-v9'
-        }
-      ]
-    })
+    jsonConfig(createD1MigrationTestConfig(runtimeConfig, v9MigrationsPath, path.join(repoRoot, 'src', 'worker.ts')))
   );
 
   writeFileSync(
@@ -528,7 +526,7 @@ async function runHttpSmoke(persistPath, { testZip }) {
       'dev',
       '--local',
       '--config',
-      path.join(repoRoot, 'dist', 'server', 'wrangler.json'),
+      runtimeConfigPath,
       '--persist-to',
       persistPath,
       '--ip',
@@ -775,7 +773,7 @@ async function runMissingAuthConfigurationSmoke(persistPath) {
       'dev',
       '--local',
       '--config',
-      path.join(repoRoot, 'dist', 'server', 'wrangler.json'),
+      runtimeConfigPath,
       '--persist-to',
       persistPath,
       '--ip',
@@ -826,7 +824,7 @@ async function runMissingAuthConfigurationSmoke(persistPath) {
 }
 
 console.log('Wrangler D1 path A: applying 0001 through 0010 to an empty local database.');
-runWrangler(migrationArgs(path.join(repoRoot, 'wrangler.jsonc'), fullPersistPath));
+runWrangler(migrationArgs(fullConfigPath, fullPersistPath));
 {
   const db = openPersistedD1(fullPersistPath);
   assertDatabaseHealthy(db);

@@ -148,6 +148,8 @@ pnpm.cmd build
 
 CI 仅使用 `SAKURA_D1_DATABASE_ID=ci-placeholder` 生成本地测试绑定，不需要生产密钥或真实云资源。`test:d1` 会启动构建后的 `dist/server/wrangler.json`，所以在该测试之前额外预构建一次；测试完成后仍执行最终构建。生成的 `wrangler.jsonc` 仅存在于临时 CI 工作区，不会被提交或部署。
 
+D1 集成测试从构建产物读取 `DB` 绑定，让完整迁移、旧库升级、夹具种子和 HTTP 测试使用同一个本地数据库 ID，不依赖默认占位值。所有迁移和写入只发生在系统临时目录的隔离测试库，既不修改已有 migration，也不会对生产库自动建表。可用 `pnpm test:d1 --runtime-config <构建配置路径>` 验证其他本地绑定配置。
+
 ## 项目文档
 
 - [架构与模块边界](./docs/ARCHITECTURE.md)
