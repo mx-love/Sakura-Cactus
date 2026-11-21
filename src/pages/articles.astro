@@ -81,15 +81,30 @@ const robots = currentPage === 1 && !isOutOfRange ? ROBOTS_INDEX_FOLLOW : ROBOTS
 
           <nav class="sc-article-pagination" aria-label="文章分页">
             {currentPage > 1 ? (
-              <a href={`/articles?page=${currentPage - 1}`} data-astro-prefetch>上一页</a>
+              <a class="sc-pagination-link sc-pagination-prev" href={`/articles?page=${currentPage - 1}`} rel="prev" data-astro-prefetch>
+                <span aria-hidden="true">←</span><span>上一页</span>
+              </a>
             ) : (
-              <span class="sc-pagination-disabled">上一页</span>
+              <span class="sc-pagination-link sc-pagination-prev sc-pagination-disabled" aria-disabled="true">
+                <span aria-hidden="true">←</span><span>上一页</span>
+              </span>
             )}
-            <span>第 {currentPage} / {totalPages} 页</span>
+            <span class="sc-pagination-position">
+              <span class="sr-only">第 {currentPage} 页，共 {totalPages} 页</span>
+              <span class="sc-pagination-numbers" aria-hidden="true">
+                <span class="sc-pagination-current">{String(currentPage).padStart(2, '0')}</span>
+                <span class="sc-pagination-divider">/</span>
+                <span>{String(totalPages).padStart(2, '0')}</span>
+              </span>
+            </span>
             {currentPage < totalPages ? (
-              <a href={`/articles?page=${currentPage + 1}`} data-astro-prefetch>下一页</a>
+              <a class="sc-pagination-link sc-pagination-next" href={`/articles?page=${currentPage + 1}`} rel="next" data-astro-prefetch>
+                <span>下一页</span><span aria-hidden="true">→</span>
+              </a>
             ) : (
-              <span class="sc-pagination-disabled">下一页</span>
+              <span class="sc-pagination-link sc-pagination-next sc-pagination-disabled" aria-disabled="true">
+                <span>下一页</span><span aria-hidden="true">→</span>
+              </span>
             )}
           </nav>
         </>

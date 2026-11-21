@@ -94,24 +94,61 @@
 }
 
 .sc-article-pagination {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: clamp(0.5rem, 2vw, 1rem);
   margin-top: 1.4rem;
-  border-top: 1px dashed var(--color-border);
-  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.85rem;
   color: var(--color-muted);
   font-size: 0.92rem;
-  font-weight: 760;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
-.sc-article-pagination a {
-  color: var(--color-text);
+.sc-pagination-link {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding-block: 0.25rem;
+  white-space: nowrap;
   transition: color 140ms ease;
 }
 
-.sc-article-pagination a:hover {
+.sc-pagination-prev {
+  justify-self: start;
+}
+
+.sc-pagination-next {
+  justify-self: end;
+}
+
+.sc-pagination-position {
+  justify-self: center;
+  white-space: nowrap;
+}
+
+.sc-pagination-numbers {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.035em;
+}
+
+.sc-pagination-current {
+  color: var(--color-text);
+  font-weight: 650;
+}
+
+.sc-pagination-divider {
+  color: var(--color-subtle);
+}
+
+.sc-article-pagination a:is(:hover, :focus-visible) {
   color: var(--color-primary);
 }
 

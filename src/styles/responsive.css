@@ -146,7 +146,17 @@
   }
 
   .sc-article-pagination {
-    flex-wrap: wrap;
+    column-gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .sc-pagination-link {
+    gap: 0.3rem;
+  }
+
+  .sc-pagination-numbers {
+    gap: 0.3rem;
+    letter-spacing: 0.02em;
   }
 
   .sc-paper-public-shell {
