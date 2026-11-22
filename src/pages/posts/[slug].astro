@@ -165,7 +165,6 @@ function formatDate(date: Date | null) {
           data-article-image-viewer-root={publicPost ? true : undefined}
           set:html={renderedContent.html}
         />
-        <p class="sc-endmark sc-article-inner" aria-hidden="true">◆ ◆ ◆</p>
         {publicPost ? <ArticleImageViewer /> : null}
         {publicPost ? (
           <div class="sc-article-inner">
@@ -377,6 +376,10 @@ function formatDate(date: Date | null) {
 
               updateActiveHeading();
               mobileTocFocus?.activate(mobileTocTrigger);
+              const activeMobileLink = mobileTocSheet?.querySelector('.sc-toc-link-active');
+              if (activeMobileLink instanceof HTMLElement) {
+                activeMobileLink.scrollIntoView({ block: 'center' });
+              }
             }
 
             function syncMobileTocTrigger() {
@@ -433,6 +436,54 @@ function formatDate(date: Date | null) {
             mobileTocCloseControls.forEach((control) => {
               control.addEventListener('click', () => closeMobileToc());
             });
+
+            // Drawer: drag the handle/header down to dismiss; the list itself scrolls.
+            if (mobileTocSheet instanceof HTMLElement) {
+              const dragZone = mobileTocSheet.querySelector('.sc-mobile-toc-head');
+              const tocList = mobileTocSheet.querySelector('nav');
+              let dragStartY = 0;
+              let dragStartTime = 0;
+              let dragOffset = 0;
+              let dragging = false;
+
+              const beginDrag = (event) => {
+                const touch = event.touches?.[0];
+                if (!touch) return;
+                const fromHandle = event.target instanceof Element && (event.target.closest('.sc-mobile-toc-handle, .sc-mobile-toc-head') !== null);
+                const listAtTop = !(tocList instanceof HTMLElement) || tocList.scrollTop <= 0;
+                if (!fromHandle && !listAtTop) return;
+                dragging = true;
+                dragStartY = touch.clientY;
+                dragStartTime = performance.now();
+                dragOffset = 0;
+                mobileTocSheet.classList.add('is-dragging');
+              };
+
+              const moveDrag = (event) => {
+                if (!dragging) return;
+                const touch = event.touches?.[0];
+                if (!touch) return;
+                dragOffset = Math.max(0, touch.clientY - dragStartY);
+                if (dragOffset > 0 && event.cancelable) event.preventDefault();
+                mobileTocSheet.style.transform = `translateY(${dragOffset}px)`;
+              };
+
+              const endDrag = () => {
+                if (!dragging) return;
+                dragging = false;
+                mobileTocSheet.classList.remove('is-dragging');
+                const velocity = dragOffset / Math.max(1, performance.now() - dragStartTime);
+                const shouldClose = dragOffset > Math.min(140, mobileTocSheet.offsetHeight * 0.3) || velocity > 0.6;
+                mobileTocSheet.style.transform = '';
+                if (shouldClose) closeMobileToc();
+              };
+
+              mobileTocSheet.addEventListener('touchstart', beginDrag, { passive: true });
+              mobileTocSheet.addEventListener('touchmove', moveDrag, { passive: false });
+              mobileTocSheet.addEventListener('touchend', endDrag);
+              mobileTocSheet.addEventListener('touchcancel', endDrag);
+              void dragZone;
+            }
 
             window.addEventListener('scroll', scheduleActiveUpdate, { passive: true });
             window.addEventListener('resize', scheduleActiveUpdate);

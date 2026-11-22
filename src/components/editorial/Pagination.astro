@@ -3,9 +3,9 @@ import EntryNav from './EntryNav.astro';
 import type { PublicPageNeighbor } from '@/features/posts/post.service';
 import { formatSiteDotDate } from '@/lib/site-time';
 
-// List pagination without page numbers: the masthead strip carries
-// "Page 06 / 42"; here an end mark and the Newer/Older neighbours (labelled by
-// the first post on that page). The full index lives under the 时间轴 nav item.
+// List pagination without page numbers or ornaments: the masthead strip
+// carries "Page 06 / 42"; here only the Newer/Older neighbours, each labelled
+// by the first post on that page. The year index lives in the nav (时间轴).
 interface Props {
   currentPage: number;
   totalPages: number;
@@ -34,7 +34,6 @@ const toItem = (item: PublicPageNeighbor | null, labelText: string) =>
 ---
 
 <div class="sc-pagination">
-  <p class="sc-endmark" aria-hidden="true">◆ ◆ ◆</p>
   <p class="sr-only">第 {currentPage} 页，共 {totalPages} 页</p>
   <EntryNav ariaLabel={label} newer={toItem(newer, 'Newer · 较新的一页')} older={toItem(older, 'Older · 较早的一页')} />
 </div>

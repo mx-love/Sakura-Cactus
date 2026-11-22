@@ -5,7 +5,6 @@ import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
 import { getSiteCalendar, getSiteDateParts, getSiteMonthRange } from '@/lib/site-time';
 import { getGanzhiYear } from '@/lib/ganzhi-year';
-import PostIndex from '@/components/editorial/PostIndex.astro';
 import { formatSiteDotDate } from '@/lib/site-time';
 
 export const prerender = false;
@@ -17,7 +16,7 @@ const calendarMonth = calendar.month - 1;
 const { monthStart, nextMonthStart } = getSiteMonthRange(now);
 const monthRange = { monthStart, nextMonthStart, currentTime: now.toISOString() };
 const [posts, monthlyStats, publishedDates] = await Promise.all([
-  getPublicPosts({ limit: 12, excludeAbout: true, pinnedFirst: true }),
+  getPublicPosts({ limit: 40, excludeAbout: true, pinnedFirst: true }),
   getPublicMonthlyPostStats(monthRange),
   getPublicMonthlyPostDates(monthRange)
 ]);
@@ -27,7 +26,15 @@ for (const date of publishedDates) {
   postsByDay.set(day, (postsByDay.get(day) ?? 0) + 1);
 }
 const timelineMonthHref = `/timeline#y${calendarYear}-m${String(calendarMonth + 1).padStart(2, '0')}`;
-const latestPosts = posts.slice(0, 5);
+const latestPosts = posts.slice(0, 1);
+// 「文章」第一页已经列出最新 5 篇，首页只保留头条，其余位置每天从更早的文章里换一组「旧文重读」。
+const ARTICLES_PAGE_SIZE = 5;
+const ARCHIVE_PICK_COUNT = 3;
+const archivePool = (posts.length > ARTICLES_PAGE_SIZE ? posts.slice(ARTICLES_PAGE_SIZE) : posts.slice(1)).map((post) => ({
+  post,
+  number: posts.indexOf(post) + 1
+}));
+const archivePicks = pickDailyArchive(archivePool, calendar.dayOfYear + calendar.year * 366, ARCHIVE_PICK_COUNT);
 const siteName = env.SITE_NAME?.trim() || 'Sakura Cactus';
 const tagline = env.SITE_TAGLINE?.trim() || '温柔地写，安静地收录。';
 const siteDescription = env.SITE_DESCRIPTION?.trim() || '一些文章、笔记，以及慢慢整理的想法。';
@@ -41,7 +48,6 @@ const websiteJsonLd = {
   inLanguage: 'zh-CN'
 };
 const leadPost = latestPosts[0] ?? null;
-const notePosts = latestPosts.slice(1);
 type PaperQuote = {
   text: string;
   author: string;
@@ -86,6 +92,15 @@ const ganzhiYear = getGanzhiYear(calendar);
 
 function formatCalendarDate(year: number, monthIndex: number, day: number) {
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function pickDailyArchive<T>(pool: T[], seed: number, count: number): T[] {
+  if (pool.length <= count) {
+    return pool;
+  }
+
+  const start = (seed * count) % pool.length;
+  return Array.from({ length: count }, (_, index) => pool[(start + index) % pool.length]);
 }
 
 function formatPaperQuote(quote: PaperQuote) {
@@ -203,10 +218,45 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                 </div>
               </article>
             ) : null}
-            {notePosts.length > 0 ? <PostIndex posts={notePosts} startNumber={2} headingLevel="h3" showCovers={false} /> : null}
           </>
         )}
       </section>
+
+      {archivePicks.length > 0 ? (
+        <section class="sc-home-archive" aria-labelledby="home-archive-heading">
+          <div class="sc-home-archive-head">
+            <h2 id="home-archive-heading">From the Archive<span>旧文重读</span></h2>
+            <p class="sc-label">每日从较早的文章中换一组</p>
+          </div>
+          <div class="sc-home-archive-grid">
+            {archivePicks.map(({ post, number }) => (
+              <article class="sc-home-archive-card">
+                <a class:list={['sc-home-archive-plate', !post.coverImageUrl && 'is-empty']} href={`/posts/${post.slug}`} tabindex="-1" aria-hidden="true" data-astro-prefetch>
+                  {post.coverImageUrl ? (
+                    <>
+                      <span class="sc-home-archive-blur" style={`background-image:url("${post.coverImageUrl.replace(/"/g, '%22')}")`}></span>
+                      <img src={post.coverImageUrl} alt="" loading="lazy" decoding="async" />
+                    </>
+                  ) : (
+                    <span class="sc-home-archive-tag">{post.tags[0]?.name ?? 'Essay'}</span>
+                  )}
+                </a>
+                <p class="sc-home-archive-no">No.{String(number).padStart(2, '0')}</p>
+                <p class="sc-label sc-index-meta">
+                  {post.publishedAt ? <time datetime={post.publishedAt}>{formatSiteDotDate(post.publishedAt)}</time> : null}
+                  {post.tags.slice(0, 2).map((tag) => (
+                    <a class="sc-index-tag" href={`/tags/${tag.slug}`}>#{tag.name}</a>
+                  ))}
+                </p>
+                <h3 class="sc-home-archive-title">
+                  <a class="sc-draw-link" href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
+                </h3>
+                {post.excerpt ? <p class="sc-home-archive-excerpt">{post.excerpt}</p> : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section class="sc-home-quote" aria-label="纸页摘句" data-paper-quotes={JSON.stringify(paperQuotes)} data-animate="false">
         <span class="sc-home-quote-label sc-label">纸页摘句</span>

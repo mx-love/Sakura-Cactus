@@ -69,7 +69,6 @@ const canonicalUrl = absoluteSiteUrl('/about');
               data-article-image-viewer-root={isPublicAbout ? true : undefined}
               set:html={aboutPost.contentHtml}
             />
-            <p class="sc-endmark sc-article-inner" aria-hidden="true">◆ ◆ ◆</p>
             {isPublicAbout ? <ArticleImageViewer /> : null}
           </article>
         ) : (
