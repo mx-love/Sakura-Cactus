@@ -437,6 +437,94 @@ function formatDate(date: Date | null) {
               control.addEventListener('click', () => closeMobileToc());
             });
 
+            // Trigger: drag it up/down (and across to the other edge) to wherever
+            // the thumb is comfortable; the spot is remembered on this device.
+            if (mobileTocTrigger instanceof HTMLButtonElement) {
+              const POSITION_KEY = 'sc-mobile-toc-trigger-position';
+              let suppressClick = false;
+              let pointerId = null;
+              let startX = 0;
+              let startY = 0;
+              let startTop = 0;
+              let moved = false;
+
+              const clampTop = (top) => {
+                const min = 72;
+                const max = window.innerHeight - mobileTocTrigger.offsetHeight - 16;
+                return Math.min(Math.max(top, min), Math.max(min, max));
+              };
+
+              const applyPosition = (position) => {
+                if (!position || typeof position.ratio !== 'number') return;
+                const top = clampTop(position.ratio * window.innerHeight);
+                mobileTocTrigger.style.top = `${top}px`;
+                mobileTocTrigger.classList.add('sc-mobile-toc-trigger-placed');
+                mobileTocTrigger.classList.toggle('sc-mobile-toc-trigger-left', position.side === 'left');
+              };
+
+              try {
+                applyPosition(JSON.parse(localStorage.getItem(POSITION_KEY) ?? 'null'));
+              } catch {
+                // ignore unreadable saved position
+              }
+
+              mobileTocTrigger.addEventListener('pointerdown', (event) => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                pointerId = event.pointerId;
+                startX = event.clientX;
+                startY = event.clientY;
+                startTop = mobileTocTrigger.getBoundingClientRect().top;
+                moved = false;
+              });
+
+              window.addEventListener('pointermove', (event) => {
+                if (pointerId !== event.pointerId) return;
+                const dx = event.clientX - startX;
+                const dy = event.clientY - startY;
+                if (!moved && Math.hypot(dx, dy) < 8) return;
+                if (!moved) {
+                  moved = true;
+                  mobileTocTrigger.classList.add('sc-mobile-toc-trigger-placed', 'is-dragging');
+                }
+                event.preventDefault();
+                mobileTocTrigger.style.top = `${clampTop(startTop + dy)}px`;
+                mobileTocTrigger.classList.toggle('sc-mobile-toc-trigger-left', event.clientX < window.innerWidth / 2);
+              });
+
+              const finishDrag = (event) => {
+                if (pointerId !== event.pointerId) return;
+                pointerId = null;
+                mobileTocTrigger.classList.remove('is-dragging');
+                if (!moved) return;
+                suppressClick = true;
+                window.setTimeout(() => { suppressClick = false; }, 350);
+                const top = mobileTocTrigger.getBoundingClientRect().top;
+                const position = {
+                  ratio: top / window.innerHeight,
+                  side: mobileTocTrigger.classList.contains('sc-mobile-toc-trigger-left') ? 'left' : 'right'
+                };
+                try {
+                  localStorage.setItem(POSITION_KEY, JSON.stringify(position));
+                } catch {
+                  // storage may be unavailable (private mode); position still applies for this visit
+                }
+              };
+
+              window.addEventListener('pointerup', finishDrag);
+              window.addEventListener('pointercancel', finishDrag);
+              mobileTocTrigger.addEventListener('click', (event) => {
+                if (suppressClick) {
+                  event.preventDefault();
+                  event.stopImmediatePropagation();
+                  suppressClick = false;
+                }
+              }, true);
+              window.addEventListener('resize', () => {
+                if (!mobileTocTrigger.classList.contains('sc-mobile-toc-trigger-placed')) return;
+                mobileTocTrigger.style.top = `${clampTop(mobileTocTrigger.getBoundingClientRect().top)}px`;
+              });
+            }
+
             // Drawer: drag the handle/header down to dismiss; the list itself scrolls.
             if (mobileTocSheet instanceof HTMLElement) {
               const dragZone = mobileTocSheet.querySelector('.sc-mobile-toc-head');

@@ -591,18 +591,31 @@
   }
 }
 
+
 /*
- * Drop cap on the opening paragraph of a published page. It only applies when
- * the content starts with a text paragraph (not a heading, image, code or
- * quote), and the paragraph must not itself start with an image or code.
- * ::first-letter takes a single CJK character (plus leading punctuation).
+ * Post and About reading column. Text runs at ~44 CJK characters a line;
+ * image paragraphs step out wider than the text so landscape photos get room,
+ * while a height cap keeps tall portrait photos from filling the whole screen.
+ * Images always keep their own ratio (never cropped).
  */
-.sc-article-paper .sc-prose > p:first-child:not(:has(> :is(img, code, picture, a > img):first-child))::first-letter {
-  float: left;
-  margin: 0.2em 0.5rem 0 0;
-  color: var(--color-primary);
-  font-family: var(--font-serif);
-  font-size: 3.4em;
-  font-weight: 600;
-  line-height: 0.82;
+@media (min-width: 1024px) {
+  .sc-article-prose {
+    font-size: 1.125rem;
+  }
+}
+
+.sc-article-prose > p:is(.sc-prose-image-paragraph, :has(> img:only-child), :has(> a:only-child > img:only-child)) {
+  max-width: none;
+  margin-inline: calc(50% - min(31rem, 50vw - 1.25rem));
+  text-align: center;
+}
+
+.sc-article-prose img {
+  max-height: min(72vh, 720px);
+  margin-block: 2.2rem;
+}
+
+.sc-article-prose > p:has(> img:only-child) + .sc-prose-image-caption,
+.sc-article-prose .sc-prose-image-paragraph + .sc-prose-image-caption {
+  text-align: center;
 }
