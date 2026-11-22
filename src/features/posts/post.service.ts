@@ -380,12 +380,22 @@ export async function getPublicSitemapPosts() {
   return listPublicSitemapPosts(getDb());
 }
 
-export async function getPublicArchivePosts(): Promise<Array<{ slug: string; title: string; publishedAt: string }>> {
+export interface PublicArchivePost {
+  slug: string;
+  title: string;
+  excerpt: string;
+  publishedAt: string;
+  tag: { name: string; slug: string } | null;
+}
+
+export async function getPublicArchivePosts(): Promise<PublicArchivePost[]> {
   const posts = await listPublicArchivePosts(getDb());
   return posts.map((post) => ({
     slug: post.slug,
     title: decodeHtmlEntities(post.title),
-    publishedAt: post.published_at
+    excerpt: post.excerpt ? decodeHtmlEntities(post.excerpt).trim() : '',
+    publishedAt: post.published_at,
+    tag: post.tag_name && post.tag_slug ? { name: post.tag_name, slug: post.tag_slug } : null
   }));
 }
 

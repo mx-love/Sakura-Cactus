@@ -37,7 +37,10 @@ export interface PublicPostSitemapRow {
 export interface PublicArchivePostRow {
   slug: string;
   title: string;
+  excerpt: string | null;
   published_at: string;
+  tag_name: string | null;
+  tag_slug: string | null;
 }
 
 export interface PublicPostHeadlineRow {
@@ -276,13 +279,24 @@ export async function listPublicSitemapPosts(db: D1Database): Promise<PublicPost
   return result.results ?? [];
 }
 
-// The archive is the full index of public posts, so it reads only the columns it renders.
+// The archive is the full index of public posts, so it reads only the columns it
+// renders: the short excerpt and the post's first tag (by name, matching the post
+// header), looked up by primary key per row rather than by joining every tag.
 export async function listPublicArchivePosts(db: D1Database): Promise<PublicArchivePostRow[]> {
   const { conditions, values } = publicPostWhere({ excludeAbout: true });
   const result = await db
     .prepare(
-      `SELECT posts.slug, posts.title, posts.published_at
+      `SELECT posts.slug, posts.title, posts.excerpt, posts.published_at,
+         first_tag.name AS tag_name, first_tag.slug AS tag_slug
        FROM posts
+       LEFT JOIN tags first_tag ON first_tag.id = (
+         SELECT archive_post_tags.tag_id
+         FROM post_tags archive_post_tags
+         INNER JOIN tags archive_tags ON archive_tags.id = archive_post_tags.tag_id
+         WHERE archive_post_tags.post_id = posts.id
+         ORDER BY archive_tags.name ASC
+         LIMIT 1
+       )
        WHERE ${conditions.join(' AND ')}
        ORDER BY posts.published_at DESC, posts.updated_at DESC`
     )

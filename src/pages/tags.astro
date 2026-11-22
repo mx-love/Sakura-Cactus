@@ -1,60 +1,116 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import PageHero from '@/components/editorial/PageHero.astro';
-import { getPublicTags } from '@/features/tags/tag.service';
+import { getPublicTagIndex } from '@/features/tags/tag.service';
+import { TAG_INDEX_LETTERS, TAG_INDEX_OTHER } from '@/features/tags/tag-index';
 import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
+import { formatSiteDotDate } from '@/lib/site-time';
 
 export const prerender = false;
 
-// Most-used subjects first; ties fall back to a stable, locale-aware name order.
-const tags = (await getPublicTags())
-  .filter((tag) => tag.post_count > 0)
-  .map((tag) => ({ name: tag.name, slug: tag.slug, postCount: tag.post_count }))
-  .sort((a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name, 'zh-CN'));
-const leadTags = tags.slice(0, 6);
+// Only tags with at least one public, published post are part of the index.
+const index = await getPublicTagIndex();
+const firstYear = index.years[0];
+const lastYear = index.years[index.years.length - 1];
+const groupLetters = new Set(index.groups.map((group) => group.letter));
+const letterId = (letter: string) => (letter === TAG_INDEX_OTHER ? 'letter-other' : `letter-${letter}`);
+const rows = index.mostWritten.map((tag) => {
+  const peak = Math.max(1, ...tag.years.map((bar) => bar.count));
+  return {
+    ...tag,
+    bars: tag.years.map((bar) => ({ ...bar, scale: (bar.count / peak).toFixed(3) })),
+    barsLabel: tag.years.map((bar) => `${bar.year} 年 ${bar.count} 篇`).join('，')
+  };
+});
 const canonicalUrl = absoluteSiteUrl('/tags');
 ---
 
 <SiteLayout title="标签 | Sakura Cactus" description="按主题浏览公开文章。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-page-shell">
-      <PageHero label="The Index" title="标签" subtitle="按主题浏览公开文章。" count={tags.length} countLabel="个标签" />
+      <PageHero label="The Index" title="标签" subtitle="按主题浏览公开文章。" count={index.total} countLabel="个标签" />
 
-      {tags.length === 0 ? (
+      {index.total === 0 ? (
         <div class="sc-empty">
           <p>暂无公开标签。</p>
         </div>
       ) : (
         <>
-          {tags.length > 12 ? (
-            <section class="sc-tag-lead" aria-labelledby="tag-lead-heading">
-              <h2 class="sc-label" id="tag-lead-heading">Most Written · 常写的主题</h2>
-              <ol class="sc-tag-lead-list">
-                {leadTags.map((tag) => (
-                  <li>
-                    <a class="sc-tag-lead-link" href={`/tags/${tag.slug}`}>
-                      <span class="sc-draw-text">{tag.name}</span>
-                      <span class="sc-tag-lead-count">{tag.postCount} 篇</span>
-                    </a>
-                  </li>
+          <section class="sc-subjects" aria-labelledby="tag-lead-heading">
+            <h2 class="sc-label sc-subjects-heading" id="tag-lead-heading">Most Written · 常写的主题</h2>
+            <table class="sc-subject-table">
+              <thead>
+                <tr class="sc-label">
+                  <th scope="col" class="sc-subject-col-name">Subject</th>
+                  <th scope="col" class="sc-subject-col-count">篇</th>
+                  <th scope="col" class="sc-subject-col-years">{firstYear === lastYear ? firstYear : `${firstYear} → ${lastYear}`}</th>
+                  <th scope="col" class="sc-subject-col-latest">Latest · 最近一篇</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((tag, rowIndex) => (
+                  <tr class="sc-subject-row" style={`--sc-entry-index:${Math.min(rowIndex, 9)}`}>
+                    <th scope="row" class="sc-subject-name">
+                      <a href={`/tags/${tag.slug}`}><span class="sc-draw-text">{tag.name}</span></a>
+                    </th>
+                    <td class="sc-subject-count">{tag.postCount}<span class="sr-only"> 篇</span></td>
+                    <td class="sc-subject-years">
+                      <span class="sc-year-bars" role="img" aria-label={tag.barsLabel}>
+                        {tag.bars.map((bar) => (
+                          <span class:list={['sc-year-bar', bar.count > 0 && 'sc-year-bar-filled']} style={`--sc-bar:${bar.scale}`}></span>
+                        ))}
+                      </span>
+                    </td>
+                    <td class="sc-subject-latest">
+                      {tag.latest ? (
+                        <>
+                          <a class="sc-subject-latest-title" href={`/posts/${tag.latest.slug}`} data-astro-prefetch>
+                            <span class="sc-draw-text">{tag.latest.title}</span>
+                          </a>
+                          <span class="sc-label sc-subject-latest-date">
+                            最近 · <time datetime={tag.latest.publishedAt}>{formatSiteDotDate(tag.latest.publishedAt)}</time>
+                          </span>
+                        </>
+                      ) : null}
+                    </td>
+                  </tr>
                 ))}
-              </ol>
+              </tbody>
+            </table>
+          </section>
+
+          {index.showAlphabet ? (
+            <section class="sc-subjects sc-subjects-az" aria-labelledby="tag-az-heading">
+              <h2 class="sc-label sc-subjects-heading" id="tag-az-heading">All Subjects · 全部标签 A–Z</h2>
+              <nav class="sc-az" aria-label="按首字母跳转">
+                {[...TAG_INDEX_LETTERS, ...(groupLetters.has(TAG_INDEX_OTHER) ? [TAG_INDEX_OTHER] : [])].map((letter) =>
+                  groupLetters.has(letter) ? (
+                    <a class="sc-az-letter" href={`#${letterId(letter)}`}>{letter}</a>
+                  ) : (
+                    <span class="sc-az-letter sc-az-letter-empty" aria-hidden="true">{letter}</span>
+                  )
+                )}
+              </nav>
+              <div class="sc-az-columns">
+                {index.groups.map((group) => (
+                  <section class="sc-az-group" id={letterId(group.letter)} aria-labelledby={`${letterId(group.letter)}-heading`}>
+                    <h3 class="sc-az-group-letter" id={`${letterId(group.letter)}-heading`}>{group.letter}</h3>
+                    <ul class="sc-tag-index">
+                      {group.tags.map((tag) => (
+                        <li>
+                          <a class="sc-tag-index-link" href={`/tags/${tag.slug}`}>
+                            <span class="sc-tag-index-name">{tag.name}</span>
+                            <span class="sc-tag-index-leader" aria-hidden="true"></span>
+                            <span class="sc-tag-index-count">{tag.postCount}<span class="sr-only"> 篇</span></span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             </section>
           ) : null}
-          <section aria-label="全部标签">
-            {tags.length > 12 ? <h2 class="sc-label sc-tag-index-heading">All Subjects · 全部标签</h2> : null}
-            <ul class="sc-tag-index">
-              {tags.map((tag) => (
-                <li>
-                  <a class="sc-tag-index-link" href={`/tags/${tag.slug}`}>
-                    <span class="sc-tag-index-name">{tag.name}</span>
-                    <span class="sc-tag-index-leader" aria-hidden="true"></span>
-                    <span class="sc-tag-index-count">{tag.postCount}<span class="sr-only"> 篇</span></span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
         </>
       )}
     </div>
