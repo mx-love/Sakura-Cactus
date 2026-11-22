@@ -300,15 +300,6 @@ a.sc-entry-nav-item:is(:hover, :focus-visible) .sc-entry-nav-title {
   color: var(--color-primary);
 }
 
-.sc-pagination-all {
-  margin: 1.4rem 0 0;
-  text-align: center;
-}
-
-.sc-pagination-all a:is(:hover, :focus-visible) {
-  color: var(--color-primary);
-}
-
 /* ---------- Chronology (timeline) ---------- */
 
 .sc-year-jump {
@@ -529,10 +520,6 @@ a.sc-month-tag:is(:hover, :focus-visible) {
   margin-top: clamp(2.25rem, 5vw, 2.75rem);
 }
 
-.sc-subjects-az {
-  margin-top: clamp(3rem, 6vw, 4rem);
-}
-
 .sc-subjects-heading {
   margin: 0;
 }
@@ -559,8 +546,9 @@ a.sc-month-tag:is(:hover, :focus-visible) {
   width: 4.5rem;
 }
 
+/* The bars column hugs its bars (width set per page from the year count); Latest takes the rest. */
 .sc-subject-col-years {
-  width: 30%;
+  width: var(--sc-years-width, 12rem);
 }
 
 .sc-subject-row > * {
@@ -638,116 +626,6 @@ a.sc-month-tag:is(:hover, :focus-visible) {
   margin-top: 0.2rem;
   font-size: 0.625rem;
   letter-spacing: 0.12em;
-}
-
-.sc-az {
-  display: flex;
-  flex-wrap: wrap;
-  margin-top: 1.25rem;
-  border-top: 1px solid var(--color-rule-strong);
-  border-bottom: 1px solid var(--color-rule);
-}
-
-.sc-az-letter {
-  flex: 1 0 1.75rem;
-  padding-block: 0.6rem;
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-style: italic;
-  font-weight: 500;
-  line-height: 1.3;
-  text-align: center;
-}
-
-a.sc-az-letter:is(:hover, :focus-visible) {
-  color: var(--color-primary);
-}
-
-/* Letters without tags stay readable as a faint printed alphabet in both themes. */
-.sc-az-letter-empty {
-  color: var(--color-subtle);
-  opacity: 0.4;
-}
-
-/* A book-style index: columns of letter groups with "name ······ count" rows. */
-.sc-az-columns {
-  columns: 3;
-  column-gap: 2.75rem;
-  column-rule: 1px solid var(--color-rule);
-  margin-top: 1.875rem;
-}
-
-.sc-az-group {
-  break-inside: avoid;
-  margin-bottom: 1.625rem;
-  scroll-margin-top: 5.5rem;
-}
-
-.sc-az-group-letter {
-  margin: 0 0 0.5rem;
-  border-bottom: 1px solid var(--color-rule-strong);
-  padding-bottom: 0.375rem;
-  color: var(--color-primary);
-  font-family: var(--font-display);
-  font-size: 3rem;
-  font-style: italic;
-  font-weight: 500;
-  line-height: 1;
-}
-
-.sc-tag-index {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sc-tag-index-link {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding-block: 0.2rem;
-  color: var(--color-text);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-}
-
-.sc-tag-index-name {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.sc-tag-index-leader {
-  flex: 1 1 1.5rem;
-  min-width: 1.5rem;
-  border-bottom: 1px dotted var(--color-subtle);
-  opacity: 0.55;
-  transform: translateY(-0.3em);
-}
-
-.sc-tag-index-count {
-  flex: none;
-  color: var(--color-muted);
-  font-family: var(--font-display);
-  font-size: 1.0625rem;
-  font-style: italic;
-}
-
-.sc-tag-index-link:is(:hover, :focus-visible) {
-  color: var(--color-primary);
-}
-
-.sc-tag-index-link:is(:hover, :focus-visible) .sc-tag-index-leader {
-  border-bottom-color: var(--color-primary);
-  opacity: 1;
-}
-
-@media (max-width: 960px) {
-  .sc-az-columns {
-    columns: 2;
-    column-gap: 2rem;
-  }
 }
 
 /* Small inline tag links (post header, search overlay). */
@@ -952,7 +830,7 @@ a.sc-az-letter:is(:hover, :focus-visible) {
     text-align: left;
   }
 
-  /* Most Written: each row stacks into name + count, the yearly bars, then the latest post. */
+  /* Subject table: each row stacks into name + count, the yearly bars, then the latest post. */
   .sc-subject-table,
   .sc-subject-table tbody {
     display: block;
@@ -1007,21 +885,6 @@ a.sc-az-letter:is(:hover, :focus-visible) {
   .sc-year-bar-filled {
     height: max(0.25rem, calc(var(--sc-bar, 0) * 1.25rem));
   }
-
-  .sc-az-letter {
-    flex-basis: 1.6rem;
-    font-size: 1.125rem;
-  }
-
-  .sc-az-group-letter {
-    font-size: 2.5rem;
-  }
-}
-
-@media (max-width: 560px) {
-  .sc-az-columns {
-    columns: 1;
-  }
 }
 
 /* ---------- Motion (all behind prefers-reduced-motion) ---------- */
@@ -1051,8 +914,7 @@ a.sc-az-letter:is(:hover, :focus-visible) {
   .sc-hero,
   .sc-lead,
   .sc-year,
-  .sc-subject-row,
-  .sc-az-columns {
+  .sc-subject-row {
     animation: sc-fade-up 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
     animation-delay: calc(var(--sc-entry-index, 0) * 45ms);
   }
