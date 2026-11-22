@@ -1,2 +1,7 @@
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Paper textures and window shadows are unversioned but effectively static.
+# Rename a file when its content changes so caches pick up the new asset.
+/backgrounds/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400

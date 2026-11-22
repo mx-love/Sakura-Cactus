@@ -127,9 +127,9 @@ function appendHighlightedText(parent: HTMLElement, value: string, query: string
   if (cursor < value.length) parent.append(document.createTextNode(value.slice(cursor)));
 }
 
-function createTags(tags: string[], query: string, overlay: boolean): HTMLElement {
+function createTags(tags: string[], query: string): HTMLElement {
   const list = document.createElement('div');
-  list.className = overlay ? 'sc-tag-list sc-search-result-tags' : 'sc-tag-list';
+  list.className = 'sc-tag-list sc-search-result-tags';
   for (const tag of tags) {
     const item = document.createElement('span');
     item.className = 'sc-tag-link sc-tag-link-static';
@@ -139,50 +139,84 @@ function createTags(tags: string[], query: string, overlay: boolean): HTMLElemen
   return list;
 }
 
-function createResult(post: SearchPost, query: string, overlay: boolean): HTMLElement {
+function createOverlayResult(post: SearchPost, query: string): HTMLElement {
   const link = document.createElement('a');
   link.href = `/posts/${encodeURIComponent(post.slug)}`;
   link.dataset.astroPrefetch = 'hover';
-  if (overlay) link.className = 'sc-search-overlay-result';
-
-  const title = document.createElement(overlay ? 'strong' : 'h2');
-  let result: HTMLElement = link;
-  if (overlay) {
-    appendHighlightedText(title, post.title, query);
-    link.append(title);
-  } else {
-    result = document.createElement('article');
-    result.className = 'sc-post-entry';
-    appendHighlightedText(link, post.title, query);
-    title.append(link);
-    result.append(title);
-  }
-
+  link.className = 'sc-search-overlay-result';
+  const title = document.createElement('strong');
+  appendHighlightedText(title, post.title, query);
+  link.append(title);
   if (post.publishedAt) {
-    const meta = document.createElement(overlay ? 'small' : 'p');
+    const meta = document.createElement('small');
     const time = document.createElement('time');
     time.dateTime = post.publishedAt;
     time.textContent = formatSiteDate(post.publishedAt);
-    if (!overlay) {
-      meta.className = 'sc-post-meta';
-      const icon = document.createElement('span');
-      icon.className = 'sc-calendar-icon';
-      icon.setAttribute('aria-hidden', 'true');
-      icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>';
-      meta.append(icon);
-    }
     meta.append(time);
-    result.append(meta);
+    link.append(meta);
+  }
+  if (post.excerpt) {
+    const excerpt = document.createElement('span');
+    appendHighlightedText(excerpt, post.excerpt, query);
+    link.append(excerpt);
+  }
+  if (post.tags.length) link.append(createTags(post.tags, query));
+  return link;
+}
+
+/** Search-page results reuse the editorial index entry markup (see PostIndex.astro). */
+function createPageResult(post: SearchPost, query: string, index: number): HTMLElement {
+  const entry = document.createElement('article');
+  entry.className = 'sc-index-entry';
+  entry.style.setProperty('--sc-entry-index', String(Math.min(index, 9)));
+
+  const number = document.createElement('span');
+  const label = String(index + 1).padStart(2, '0');
+  number.className = 'sc-index-no';
+  number.dataset.digits = label.length > 2 ? '3' : '2';
+  number.setAttribute('aria-hidden', 'true');
+  number.textContent = `No.${label}`;
+
+  const body = document.createElement('div');
+  body.className = 'sc-index-body';
+  const heading = document.createElement('h2');
+  heading.className = 'sc-index-title';
+  const link = document.createElement('a');
+  link.className = 'sc-draw-link';
+  link.href = `/posts/${encodeURIComponent(post.slug)}`;
+  link.dataset.astroPrefetch = 'hover';
+  appendHighlightedText(link, post.title, query);
+  heading.append(link);
+  body.append(heading);
+
+  if (post.publishedAt || post.tags.length) {
+    const meta = document.createElement('p');
+    meta.className = 'sc-label sc-index-meta';
+    if (post.publishedAt) {
+      const time = document.createElement('time');
+      time.dateTime = post.publishedAt;
+      time.textContent = formatSiteDate(post.publishedAt).replaceAll('/', '.');
+      meta.append(time);
+    }
+    for (const tag of post.tags) {
+      const item = document.createElement('span');
+      item.className = 'sc-index-tag';
+      item.append(document.createTextNode('#'));
+      appendHighlightedText(item, tag, query);
+      meta.append(item);
+    }
+    body.append(meta);
   }
 
   if (post.excerpt) {
-    const excerpt = document.createElement(overlay ? 'span' : 'p');
-    if (!overlay) excerpt.className = 'sc-post-excerpt';
+    const excerpt = document.createElement('p');
+    excerpt.className = 'sc-index-excerpt';
     appendHighlightedText(excerpt, post.excerpt, query);
-    result.append(excerpt);
+    body.append(excerpt);
   }
-  if (post.tags.length) result.append(createTags(post.tags, query, overlay));
-  return result;
+
+  entry.append(number, body);
+  return entry;
 }
 
 function bindSearch(root: HTMLElement): void {
@@ -213,7 +247,7 @@ function bindSearch(root: HTMLElement): void {
       } else {
         message = `${state.posts.length} 篇文章`;
         if (overlay && state.posts.length > 8) message += '，显示前 8 篇';
-        for (const post of matched) fragment.append(createResult(post, state.query, overlay));
+        matched.forEach((post, index) => fragment.append(overlay ? createOverlayResult(post, state.query) : createPageResult(post, state.query, index)));
       }
     }
 

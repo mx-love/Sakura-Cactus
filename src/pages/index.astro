@@ -3,8 +3,10 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import { getPublicMonthlyPostDates, getPublicMonthlyPostStats, getPublicPosts } from '@/features/posts/post.service';
 import { ROBOTS_INDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 import { env } from 'cloudflare:workers';
-import { getSiteCalendar, getSiteDateParts, getSiteMonthRange, formatSiteDate } from '@/lib/site-time';
+import { getSiteCalendar, getSiteDateParts, getSiteMonthRange } from '@/lib/site-time';
 import { getGanzhiYear } from '@/lib/ganzhi-year';
+import PostIndex from '@/components/editorial/PostIndex.astro';
+import { formatSiteDotDate } from '@/lib/site-time';
 
 export const prerender = false;
 
@@ -82,10 +84,6 @@ const { daysInMonth, monthStartDay, dayOfYear, isoWeek } = calendar;
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const ganzhiYear = getGanzhiYear(calendar);
 
-function formatDate(value: string | null) {
-  return formatSiteDate(value);
-}
-
 function formatCalendarDate(year: number, monthIndex: number, day: number) {
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
@@ -112,68 +110,59 @@ function getExternalOrigin(value: string | null | undefined): string | null {
 <SiteLayout canonicalUrl={homeCanonicalUrl} robots={ROBOTS_INDEX_FOLLOW} jsonLd={websiteJsonLd} preconnectOrigins={preconnectOrigins}>
   <section class="sc-page">
     <div class="sc-page-shell sc-home-shell">
-      <header class="sc-home-editorial">
-        <div class="sc-home-desk">
-          <div class="sc-home-intro sc-paper-piece">
-            <div class="sc-home-intro-copy">
-              <span class="sc-paper-kicker">窗边纸页</span>
-              <h1>{siteName}</h1>
-              <p class="sc-home-signature">{tagline}</p>
-              <p class="sc-home-description">{siteDescription}</p>
-            </div>
-            <div class="sc-home-issue">
-              <p class="sc-home-issue-number">{issueLabel}</p>
-              {monthlyStats.postCount > 0 ? (
-                <p class="sc-home-issue-stats">
-                  本月落笔{' '}<strong>{formattedPostCount}</strong>{' '}篇{' '}
-                  <span aria-hidden="true">·</span>{' '}<strong>{formattedWordCount}</strong>{' '}字
-                </p>
-              ) : (
-                <p class="sc-home-issue-empty">本月留白，静候落笔。</p>
-              )}
-            </div>
-          </div>
-
-          <aside class="sc-calendar-note sc-home-calendar" aria-label="今日纸页">
-            <div class="sc-home-calendar-body">
-              <div class="sc-calendar-note-head">
-                <span>今日纸页</span>
-                <strong data-calendar-title>{calendarYear}年{calendarMonth + 1}月 · {weekdays[calendar.weekday]}</strong>
-              </div>
-              <div class="sc-calendar-weekdays" aria-hidden="true">
-                {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
-                  <span>{day}</span>
-                ))}
-              </div>
-              <div class="sc-calendar-grid" aria-label={`${calendarYear}年${calendarMonth + 1}月文章日历`} data-calendar-grid>
-                {Array.from({ length: monthStartDay }).map(() => <span class="sc-calendar-empty"></span>)}
-                {Array.from({ length: daysInMonth }).map((_, index) => {
-                  const day = index + 1;
-                  const postCount = postsByDay.get(day) ?? 0;
-                  return (
-                    postCount > 0 ? (
-                      <a class:list={['sc-calendar-day', 'sc-calendar-has-posts', day === calendar.day && 'sc-calendar-today']} href={timelineMonthHref} data-date={formatCalendarDate(calendarYear, calendarMonth, day)} aria-current={day === calendar.day ? 'date' : undefined} aria-label={`${calendarMonth + 1} 月 ${day} 日，${postCount} 篇文章`}>
-                        {day}<span class="sc-calendar-post-dot" aria-hidden="true"></span>
-                      </a>
-                    ) : (
-                      <span class:list={['sc-calendar-day', day === calendar.day && 'sc-calendar-today']} data-date={formatCalendarDate(calendarYear, calendarMonth, day)} aria-current={day === calendar.day ? 'date' : undefined}>{day}</span>
-                    )
-                  );
-                })}
-              </div>
-            </div>
-            <div class="sc-calendar-note-foot sc-home-calendar-meta">
-              <span data-calendar-day-week>第{dayOfYear}天 第{isoWeek}周</span>
-              <span data-calendar-ganzhi>{ganzhiYear}</span>
-            </div>
-          </aside>
+      <header class="sc-cover">
+        <div class="sc-cover-main">
+          <p class="sc-label sc-cover-issue">{issueLabel}</p>
+          <h1 class="sc-cover-title">{siteName}</h1>
+          <p class="sc-cover-tagline">{tagline}</p>
+          <p class="sc-cover-description">{siteDescription}</p>
+          {monthlyStats.postCount > 0 ? (
+            <p class="sc-cover-stats">
+              本月落笔{' '}<strong>{formattedPostCount}</strong>{' '}篇{' '}
+              <span aria-hidden="true">·</span>{' '}<strong>{formattedWordCount}</strong>{' '}字
+            </p>
+          ) : (
+            <p class="sc-cover-stats">本月留白，静候落笔。</p>
+          )}
         </div>
+
+        <aside class="sc-calendar-note sc-home-calendar" aria-label="今日纸页">
+          <div class="sc-calendar-note-head">
+            <span class="sc-label">今日纸页</span>
+            <strong data-calendar-title>{calendarYear}年{calendarMonth + 1}月 · {weekdays[calendar.weekday]}</strong>
+          </div>
+          <div class="sc-calendar-weekdays" aria-hidden="true">
+            {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+              <span>{day}</span>
+            ))}
+          </div>
+          <div class="sc-calendar-grid" aria-label={`${calendarYear}年${calendarMonth + 1}月文章日历`} data-calendar-grid>
+            {Array.from({ length: monthStartDay }).map(() => <span class="sc-calendar-empty"></span>)}
+            {Array.from({ length: daysInMonth }).map((_, index) => {
+              const day = index + 1;
+              const postCount = postsByDay.get(day) ?? 0;
+              return (
+                postCount > 0 ? (
+                  <a class:list={['sc-calendar-day', 'sc-calendar-has-posts', day === calendar.day && 'sc-calendar-today']} href={timelineMonthHref} data-date={formatCalendarDate(calendarYear, calendarMonth, day)} aria-current={day === calendar.day ? 'date' : undefined} aria-label={`${calendarMonth + 1} 月 ${day} 日，${postCount} 篇文章`}>
+                    {day}<span class="sc-calendar-post-dot" aria-hidden="true"></span>
+                  </a>
+                ) : (
+                  <span class:list={['sc-calendar-day', day === calendar.day && 'sc-calendar-today']} data-date={formatCalendarDate(calendarYear, calendarMonth, day)} aria-current={day === calendar.day ? 'date' : undefined}>{day}</span>
+                )
+              );
+            })}
+          </div>
+          <div class="sc-calendar-note-foot sc-label">
+            <span data-calendar-day-week>第{dayOfYear}天 第{isoWeek}周</span>
+            <span data-calendar-ganzhi>{ganzhiYear}</span>
+          </div>
+        </aside>
       </header>
 
-      <section class="sc-section sc-home-articles">
+      <section class="sc-home-articles" aria-labelledby="home-latest-heading">
         <div class="sc-section-heading">
-          <h2>最近文章</h2>
-          <a href="/articles" data-astro-prefetch>所有文章 →</a>
+          <h2 class="sc-label" id="home-latest-heading">Latest · 最近文章</h2>
+          <a class="sc-label sc-draw-link" href="/articles" data-astro-prefetch>所有文章 →</a>
         </div>
 
         {latestPosts.length === 0 ? (
@@ -182,11 +171,11 @@ function getExternalOrigin(value: string | null | undefined): string | null {
             <p>第一篇文章收录后会显示在这里。</p>
           </div>
         ) : (
-          <div class="sc-home-posts">
+          <>
             {leadPost ? (
-              <article class:list={['sc-featured-paper', leadPost.coverImageUrl && 'sc-featured-paper-with-cover']}>
+              <article class:list={['sc-lead', leadPost.coverImageUrl && 'sc-lead-with-cover']}>
                 {leadPost.coverImageUrl ? (
-                  <a class="sc-featured-cover" href={`/posts/${leadPost.slug}`} aria-label={leadPost.title} data-astro-prefetch>
+                  <a class="sc-lead-plate" href={`/posts/${leadPost.slug}`} tabindex="-1" aria-hidden="true" data-astro-prefetch>
                     <img
                       src={leadPost.coverImageUrl}
                       alt=""
@@ -198,47 +187,29 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                     />
                   </a>
                 ) : null}
-                <div class="sc-featured-paper-body">
-                  <h3>
-                    <a href={`/posts/${leadPost.slug}`} data-astro-prefetch>{leadPost.title}</a>
+                <div class="sc-lead-body">
+                  <p class="sc-label sc-index-meta">
+                    <span class="sc-lead-kicker">No.01 · Lead</span>
+                    {leadPost.publishedAt ? <time datetime={leadPost.publishedAt}>{formatSiteDotDate(leadPost.publishedAt)}</time> : null}
+                    {leadPost.tags.map((tag) => (
+                      <a class="sc-index-tag" href={`/tags/${tag.slug}`}>#{tag.name}</a>
+                    ))}
+                  </p>
+                  <h3 class="sc-lead-title">
+                    <a class="sc-draw-link" href={`/posts/${leadPost.slug}`} data-astro-prefetch>{leadPost.title}</a>
                   </h3>
-                  {leadPost.publishedAt ? <time datetime={leadPost.publishedAt}>{formatDate(leadPost.publishedAt)}</time> : null}
-                  {leadPost.excerpt ? <p>{leadPost.excerpt}</p> : null}
-                  {leadPost.tags.length > 0 ? (
-                    <div class="sc-tag-list">
-                      {leadPost.tags.map((tag) => (
-                        <a class="sc-tag-link" href={`/tags/${tag.slug}`}>{tag.name}</a>
-                      ))}
-                    </div>
-                  ) : null}
-                  {!leadPost.coverImageUrl ? <a class="sc-featured-read-more" href={`/posts/${leadPost.slug}`} data-astro-prefetch>阅读全文 →</a> : null}
+                  {leadPost.excerpt ? <p class="sc-lead-excerpt">{leadPost.excerpt}</p> : null}
+                  <a class="sc-label sc-lead-more sc-draw-link" href={`/posts/${leadPost.slug}`} data-astro-prefetch>阅读全文 →</a>
                 </div>
               </article>
             ) : null}
-
-            {notePosts.length > 0 ? (
-              <div class="sc-paper-strip-rail">
-                <div class="sc-paper-strip-list">
-                  {notePosts.map((post) => (
-                    <article class="sc-paper-strip">
-                      <div>
-                        <h3>
-                          <a href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
-                        </h3>
-                        {post.excerpt ? <p>{post.excerpt}</p> : null}
-                      </div>
-                      {post.publishedAt ? <time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time> : null}
-                    </article>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
+            {notePosts.length > 0 ? <PostIndex posts={notePosts} startNumber={2} headingLevel="h3" showCovers={false} /> : null}
+          </>
         )}
       </section>
 
       <section class="sc-home-quote" aria-label="纸页摘句" data-paper-quotes={JSON.stringify(paperQuotes)} data-animate="false">
-        <span class="sc-home-quote-label">纸页摘句</span>
+        <span class="sc-home-quote-label sc-label">纸页摘句</span>
         <span class="sc-home-quote-separator" aria-hidden="true">｜</span>
         <div class="sc-home-quote-body" data-paper-quote-body>
           <span

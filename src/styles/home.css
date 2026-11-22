@@ -1,121 +1,176 @@
+/* Home page as the issue "cover": title block, calendar, lead story, index, quote. */
 
-.sc-home-shell {
-  --sc-home-muted: var(--color-secondary-text);
+.sc-cover {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(16rem, 1fr);
+  border-bottom: 1px solid var(--color-rule-strong);
 }
 
-.sc-home-intro {
+.sc-cover-main {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   align-items: flex-start;
-  max-width: none;
-  padding-block: 0;
+  padding: clamp(1.75rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.25rem) 0;
 }
 
-.sc-home-intro-copy,
-.sc-home-calendar-body {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.sc-home-intro h1 {
+.sc-cover-issue {
   margin: 0;
+  color: var(--color-primary);
+}
+
+.sc-cover-title {
+  margin: 0.75rem 0 0;
   color: var(--color-text);
-  font-family: Georgia, "Times New Roman", "Songti SC", "STSong", serif;
-  font-size: clamp(2rem, 4.8vw, 2.85rem);
-  font-weight: 580;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 8vw, 6rem);
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 
-.sc-page-header h1,
-.sc-settings-header h1,
-.sc-friends-header h1 {
-  margin: 0;
+.sc-cover-tagline {
+  margin: 1.25rem 0 0;
   color: var(--color-text);
-  font-size: clamp(2rem, 4.5vw, 2.7rem);
+  font-size: clamp(1.125rem, 2vw, 1.3rem);
   font-weight: 600;
-  letter-spacing: 0;
-  line-height: 1.16;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-
-.sc-home-signature {
-  position: relative;
-  max-width: 17em;
-  margin: 1.05rem 0 0;
-  padding-bottom: 1rem;
-  color: var(--color-text);
-  font-size: clamp(1.08rem, 1.95vw, 1.18rem);
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  line-height: 1.76;
-}
-
-.sc-home-signature::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 2rem;
-  height: 1px;
-  background: color-mix(in srgb, var(--color-primary) 42%, transparent);
-}
-
-.sc-home-description {
-  max-width: 22em;
-  margin: 1rem 0 0;
-  color: var(--sc-home-muted);
-  font-size: 0.98rem;
-  line-height: 1.92;
-  text-wrap: pretty;
-}
-
-.sc-home-issue {
-  width: fit-content;
-  max-width: 100%;
-  margin-top: clamp(2.2rem, 5vw, 3.8rem);
-}
-
-.sc-home-issue-number {
-  margin: 0;
-  color: var(--color-primary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  line-height: 1.55;
-}
-
-.sc-home-issue-stats,
-.sc-home-issue-empty {
-  margin: 0.42rem 0 0;
-  color: var(--color-muted);
-  font-size: 0.82rem;
+  letter-spacing: 0.04em;
   line-height: 1.7;
 }
 
-.sc-home-issue-stats strong {
+.sc-cover-description {
+  max-width: 28em;
+  margin: 0.6rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.975rem;
+  line-height: 1.9;
+  text-wrap: pretty;
+}
+
+.sc-cover-stats {
+  margin: auto 0 0;
+  padding-top: 1.75rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.sc-cover-stats strong {
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Calendar: a flat ruled grid set in the cover's right column. */
+.sc-calendar-note {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border-left: 1px solid var(--color-rule);
+  padding: clamp(1.5rem, 3vw, 2.25rem) 0 1.25rem clamp(1.25rem, 3vw, 2rem);
+}
+
+.sc-calendar-note-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.85rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-bottom: 0.7rem;
+}
+
+.sc-calendar-note-head strong {
   color: var(--color-text);
-  font-weight: 650;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: right;
 }
 
-.sc-home-issue-empty {
-  letter-spacing: 0.02em;
+.sc-calendar-weekdays,
+.sc-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.2rem;
 }
 
-.sc-page-header p {
-  max-width: 40rem;
-  margin: 0.75rem 0 0;
-  color: var(--color-secondary-text);
-  font-size: 1rem;
-  line-height: 1.8;
-  overflow-wrap: anywhere;
-  word-break: normal;
+.sc-calendar-weekdays {
+  margin-top: 0.8rem;
 }
 
-.sc-section {
-  padding-block: 1.5rem;
+.sc-calendar-weekdays span {
+  color: var(--color-subtle);
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+.sc-calendar-grid {
+  margin-top: 0.35rem;
+}
+
+.sc-calendar-day,
+.sc-calendar-empty {
+  position: relative;
+  display: grid;
+  width: 1.85rem;
+  height: 1.85rem;
+  place-items: center;
+  justify-self: center;
+  border-bottom: 1px solid transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-calendar-empty {
+  visibility: hidden;
+}
+
+.sc-calendar-has-posts {
+  color: var(--color-text);
+}
+
+.sc-calendar-has-posts:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-calendar-post-dot {
+  position: absolute;
+  bottom: 0.1rem;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  background: var(--color-primary);
+  transform: rotate(45deg);
+}
+
+.sc-calendar-today {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.sc-calendar-note-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 0.8rem;
+  margin-top: auto;
+  border-top: 1px solid var(--color-rule);
+  padding-top: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+/* Latest stories */
+.sc-home-articles {
+  padding-top: clamp(1.5rem, 3vw, 2rem);
 }
 
 .sc-section-heading {
@@ -123,40 +178,200 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.4rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-bottom: 0.75rem;
 }
 
 .sc-section-heading h2 {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 800;
+  color: var(--color-text);
 }
 
-.sc-section-heading a,
-.sc-breadcrumb a {
+.sc-section-heading a {
   color: var(--color-primary);
-  font-weight: 700;
+  white-space: nowrap;
 }
 
-.sc-breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
+.sc-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.sc-lead-with-cover {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 1.5rem;
-  color: var(--color-muted);
-  font-size: 0.9rem;
 }
 
-.sc-breadcrumb > :is(a, span) {
+.sc-lead-plate {
+  aspect-ratio: 16 / 10;
+}
+
+.sc-lead-body {
   min-width: 0;
+}
+
+.sc-lead-body .sc-index-meta {
+  margin: 0 0 0.75rem;
+}
+
+.sc-lead-kicker {
+  color: var(--color-text);
+}
+
+.sc-lead-title {
+  font-size: clamp(1.6rem, 3.2vw, 2.25rem);
+  line-height: 1.35;
+}
+
+.sc-lead-excerpt {
+  margin: 0.85rem 0 0;
+  color: var(--color-muted);
+  font-size: 1rem;
+  line-height: 1.9;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
 }
 
-.sc-page-header {
-  margin-bottom: 2.25rem;
+.sc-lead-more {
+  display: inline-block;
+  margin-top: 1.1rem;
+  color: var(--color-primary);
 }
 
-.sc-list-header {
-  margin-bottom: 1.8rem;
+/* Rotating quote line between thin rules. */
+.sc-home-quote {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  margin-top: clamp(2rem, 5vw, 3rem);
+  border-top: 1px solid var(--color-rule-strong);
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 0.6rem;
+}
+
+.sc-home-quote-label {
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.sc-home-quote-separator {
+  color: var(--color-subtle);
+}
+
+.sc-home-quote-body {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sc-home-quote-content {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.975rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 1;
+  transition: opacity 220ms ease;
+}
+
+.sc-home-quote-text,
+.sc-home-quote-meta {
+  white-space: nowrap;
+}
+
+.sc-home-quote-meta {
+  color: var(--color-subtle);
+  font-size: 0.92em;
+}
+
+.sc-home-quote[data-animate="true"] .sc-home-quote-content {
+  display: inline-block;
+  min-width: max-content;
+  overflow: visible;
+  padding-right: 1.75rem;
+  text-overflow: clip;
+  will-change: transform;
+  animation: sc-home-quote-scroll var(--sc-quote-duration, 18s) linear both;
+}
+
+.sc-home-quote.is-paused .sc-home-quote-content {
+  animation-play-state: paused;
+}
+
+.sc-home-quote.is-fading .sc-home-quote-content {
+  opacity: 0;
+}
+
+@keyframes sc-home-quote-scroll {
+  0%,
+  16% {
+    transform: translateX(0);
+  }
+
+  84%,
+  100% {
+    transform: translateX(var(--sc-quote-shift, 0px));
+  }
+}
+
+/* A faint window shadow behind the cover on wide screens. */
+@media (min-width: 900px) {
+  .sc-cover::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset-block-start: 1.5rem;
+    inset-inline-start: -9rem;
+    width: min(30vw, 24rem);
+    aspect-ratio: 4 / 3;
+    background: url("/backgrounds/window-shadow-light.webp") center / contain no-repeat;
+    opacity: 0.05;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  :root[data-theme="dark"] .sc-cover::after {
+    background-image: url("/backgrounds/window-shadow-dark.webp");
+    opacity: 0.035;
+    mix-blend-mode: screen;
+  }
+}
+
+@media (max-width: 760px) {
+  .sc-cover,
+  .sc-lead-with-cover {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-cover-main {
+    padding-right: 0;
+  }
+
+  .sc-cover-title {
+    font-size: clamp(2.75rem, 14vw, 3.5rem);
+  }
+
+  .sc-calendar-note {
+    border-top: 1px solid var(--color-rule);
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .sc-home-quote {
+    gap: 0.5rem;
+  }
+
+  .sc-home-quote-content {
+    font-size: 0.9rem;
+  }
 }

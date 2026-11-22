@@ -1,5 +1,6 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import PageHero from '@/components/editorial/PageHero.astro';
 import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 
 export const prerender = false;
@@ -9,24 +10,15 @@ const canonicalUrl = absoluteSiteUrl('/search');
 <SiteLayout title="搜索 | Sakura Cactus" description="搜索公开文章。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page" data-site-search="page">
     <div class="sc-page-shell">
-      <div class="sc-paper-public-shell sc-public-page-paper">
-      <nav class="sc-breadcrumb" aria-label="面包屑">
-        <a href="/">首页</a>
-        <span>»</span>
-        <span>搜索</span>
-      </nav>
-
-      <header class="sc-page-header">
-        <h1>搜索</h1>
-      </header>
+      <PageHero label="Search" title="搜索" subtitle="按标题、摘要、标签或日期查找公开文章。" />
 
       <div class="sc-search">
         <input id="search-input" class="sc-search-input" type="search" placeholder="请输入关键字" autocomplete="off" aria-label="搜索公开文章" aria-controls="search-results" data-search-input />
-        <p id="search-count" class="sc-search-count" role="status" aria-live="polite" aria-atomic="true" data-search-status></p>
+        <p id="search-count" class="sc-search-count sc-label" role="status" aria-live="polite" aria-atomic="true" data-search-status></p>
         <button class="sc-button sc-button-secondary sc-button-small" type="button" data-search-retry hidden>重新搜索</button>
       </div>
 
-      <div id="search-results" class="sc-post-list" data-search-results></div>
+      <div id="search-results" class="sc-index" data-search-results></div>
 
       <template id="search-empty-template" data-search-empty>
         <div class="sc-empty">
@@ -38,7 +30,6 @@ const canonicalUrl = absoluteSiteUrl('/search');
         import { bindSiteSearch } from '@/lib/site-search';
         bindSiteSearch();
       </script>
-      </div>
     </div>
   </section>
 </SiteLayout>

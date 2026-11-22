@@ -1,0 +1,50 @@
+---
+import type { PublicPostSummary } from '@/features/posts/post.types';
+import { formatSiteDotDate } from '@/lib/site-time';
+
+// Magazine "index" list of posts: italic issue number, serif title, mono
+// date and tags, muted excerpt and an optional flat cover plate.
+interface Props {
+  posts: PublicPostSummary[];
+  startNumber?: number;
+  headingLevel?: 'h2' | 'h3';
+  showCovers?: boolean;
+}
+
+const { posts, startNumber = 1, headingLevel = 'h2', showCovers = true } = Astro.props;
+const Heading = headingLevel;
+
+function issueNumber(index: number): string {
+  return String(startNumber + index).padStart(2, '0');
+}
+---
+
+<div class="sc-index">
+  {posts.map((post, index) => {
+    const number = issueNumber(index);
+    const cover = showCovers ? post.coverImageUrl : null;
+    return (
+      <article class:list={['sc-index-entry', cover && 'sc-index-entry-with-cover']} style={`--sc-entry-index:${Math.min(index, 9)}`}>
+        <span class="sc-index-no" data-digits={number.length > 2 ? '3' : '2'} aria-hidden="true">No.{number}</span>
+        <div class="sc-index-body">
+          <Heading class="sc-index-title">
+            <a class="sc-draw-link" href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
+          </Heading>
+          <p class="sc-label sc-index-meta">
+            {post.publishedAt ? <time datetime={post.publishedAt}>{formatSiteDotDate(post.publishedAt)}</time> : null}
+            {post.pinnedAt ? <span class="sc-index-pin">置顶</span> : null}
+            {post.tags.map((tag) => (
+              <a class="sc-index-tag" href={`/tags/${tag.slug}`}>#{tag.name}</a>
+            ))}
+          </p>
+          {post.excerpt ? <p class="sc-index-excerpt">{post.excerpt}</p> : null}
+        </div>
+        {cover ? (
+          <a class="sc-index-plate" href={`/posts/${post.slug}`} tabindex="-1" aria-hidden="true" data-astro-prefetch>
+            <img src={cover} alt="" loading="lazy" decoding="async" />
+          </a>
+        ) : null}
+      </article>
+    );
+  })}
+</div>

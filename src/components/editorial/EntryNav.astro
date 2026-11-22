@@ -1,0 +1,43 @@
+---
+// Two-column "Newer / Older" reading nav shared by post pages and list
+// pagination. A missing side is left as an empty, hidden cell so the grid
+// stays balanced on the first and last page.
+export interface EntryNavItem {
+  href: string;
+  label: string;
+  title: string;
+  detail?: string | null;
+  ariaLabel?: string;
+}
+
+interface Props {
+  newer?: EntryNavItem | null;
+  older?: EntryNavItem | null;
+  ariaLabel: string;
+}
+
+const { newer, older, ariaLabel } = Astro.props;
+---
+
+{newer || older ? (
+  <nav class:list={['sc-entry-nav', newer && older && 'sc-entry-nav-both']} aria-label={ariaLabel}>
+    {newer ? (
+      <a class="sc-entry-nav-item sc-entry-nav-newer" href={newer.href} rel="prev" aria-label={newer.ariaLabel} data-astro-prefetch>
+        <span class="sc-label">← {newer.label}</span>
+        <strong class="sc-entry-nav-title"><span class="sc-draw-text">{newer.title}</span></strong>
+        {newer.detail ? <span class="sc-entry-nav-detail">{newer.detail}</span> : null}
+      </a>
+    ) : (
+      <span class="sc-entry-nav-item sc-entry-nav-empty" aria-hidden="true"></span>
+    )}
+    {older ? (
+      <a class="sc-entry-nav-item sc-entry-nav-older" href={older.href} rel="next" aria-label={older.ariaLabel} data-astro-prefetch>
+        <span class="sc-label">{older.label} →</span>
+        <strong class="sc-entry-nav-title"><span class="sc-draw-text">{older.title}</span></strong>
+        {older.detail ? <span class="sc-entry-nav-detail">{older.detail}</span> : null}
+      </a>
+    ) : (
+      <span class="sc-entry-nav-item sc-entry-nav-empty" aria-hidden="true"></span>
+    )}
+  </nav>
+) : null}

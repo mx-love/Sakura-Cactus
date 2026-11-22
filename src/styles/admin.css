@@ -3,6 +3,12 @@
   min-height: 100vh;
   background: transparent;
   color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+/* Admin keeps a functional sans UI; only headings adopt the editorial serif. */
+.sc-admin-page :is(h1, h2) {
+  font-family: var(--font-serif);
 }
 
 :root[data-theme="dark"] .sc-admin-page {

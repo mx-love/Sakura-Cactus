@@ -11,3 +11,5 @@ export const formatSiteDateTime = (value: SiteDateValue) => time.formatSiteDateT
 export const getSiteDateParts = (date: SiteDateValue = new Date()) => time.getSiteDateParts(date, getSiteTimeZone());
 export const getSiteMonthRange = (date: SiteDateValue = new Date()) => time.getSiteMonthRange(date, getSiteTimeZone());
 export const getSiteCalendar = (date: SiteDateValue = new Date()) => time.getSiteCalendar(date, getSiteTimeZone());
+/** Editorial date label such as 2026.06.08, used by masthead-style metadata. */
+export const formatSiteDotDate = (value: SiteDateValue) => formatSiteDate(value).replaceAll('/', '.');

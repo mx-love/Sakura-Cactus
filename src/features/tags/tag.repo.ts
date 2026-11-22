@@ -12,6 +12,14 @@ const POST_SELECT = `SELECT posts.id, posts.slug, posts.title, posts.excerpt, po
   posts.pinned_at, posts.created_at, posts.updated_at,
   cover_assets.token AS cover_asset_token`;
 
+// Shared filter for every public tag aggregate: only published, public,
+// already-live posts count, and the about page never does.
+const PUBLIC_TAGGED_POST_CONDITIONS = `posts.status = 'published'
+         AND posts.visibility = 'public'
+         AND posts.published_at IS NOT NULL
+         AND posts.published_at <= ?
+         AND posts.slug != 'about'`;
+
 export async function findTagByName(db: D1Database, name: string): Promise<TagRow | null> {
   return db
     .prepare('SELECT id, name, slug, color, created_at, updated_at FROM tags WHERE name = ? LIMIT 1')
@@ -84,11 +92,7 @@ export async function listPublicTags(db: D1Database, now: string): Promise<Publi
        FROM tags
        INNER JOIN post_tags ON post_tags.tag_id = tags.id
        INNER JOIN posts ON posts.id = post_tags.post_id
-       WHERE posts.status = 'published'
-         AND posts.visibility = 'public'
-         AND posts.published_at IS NOT NULL
-         AND posts.published_at <= ?
-         AND posts.slug != 'about'
+       WHERE ${PUBLIC_TAGGED_POST_CONDITIONS}
        GROUP BY tags.id
        ORDER BY tags.name ASC`
     )
@@ -121,5 +125,78 @@ export async function listPublicPostsByTagSlug(db: D1Database, slug: string, now
     .bind(slug, now)
     .all<PostRow>();
 
+  return result.results ?? [];
+}
+
+export interface PublicTagYearCountRow {
+  tag_id: string;
+  year: number;
+  post_count: number;
+}
+
+export interface PublicTagLatestPostRow {
+  tag_id: string;
+  slug: string;
+  title: string;
+  published_at: string;
+}
+
+/** Earliest publication instant among public posts, used as the start of yearly series. */
+export async function findFirstPublicPostDate(db: D1Database, now: string): Promise<string | null> {
+  const row = await db
+    .prepare(`SELECT MIN(posts.published_at) AS first_published_at FROM posts WHERE ${PUBLIC_TAGGED_POST_CONDITIONS}`)
+    .bind(now)
+    .first<{ first_published_at: string | null }>();
+  return row?.first_published_at ?? null;
+}
+
+/**
+ * Post counts per tag and site-local year in one aggregate query. Years are
+ * bucketed with precomputed UTC instants for each local January 1st, newest
+ * first, so the SQL stays independent of the configured time zone.
+ */
+export async function listPublicTagYearCounts(
+  db: D1Database,
+  tagIds: string[],
+  yearStarts: Array<{ year: number; start: string }>,
+  now: string
+): Promise<PublicTagYearCountRow[]> {
+  if (tagIds.length === 0 || yearStarts.length === 0) return [];
+  const ordered = [...yearStarts].sort((a, b) => b.year - a.year);
+  const bucket = `CASE ${ordered.map(() => 'WHEN posts.published_at >= ? THEN ?').join(' ')} ELSE NULL END`;
+  const result = await db
+    .prepare(
+      `SELECT post_tags.tag_id AS tag_id, ${bucket} AS year, COUNT(*) AS post_count
+       FROM post_tags
+       INNER JOIN posts ON posts.id = post_tags.post_id
+       WHERE post_tags.tag_id IN (${tagIds.map(() => '?').join(', ')})
+         AND ${PUBLIC_TAGGED_POST_CONDITIONS}
+       GROUP BY post_tags.tag_id, year`
+    )
+    .bind(...ordered.flatMap(({ year, start }) => [start, year]), ...tagIds, now)
+    .all<PublicTagYearCountRow>();
+  return (result.results ?? []).filter((row) => row.year !== null);
+}
+
+/** The newest public post for each of the given tags, in one windowed query. */
+export async function listLatestPublicPostsForTags(
+  db: D1Database,
+  tagIds: string[],
+  now: string
+): Promise<PublicTagLatestPostRow[]> {
+  if (tagIds.length === 0) return [];
+  const result = await db
+    .prepare(
+      `SELECT tag_id, slug, title, published_at FROM (
+         SELECT post_tags.tag_id AS tag_id, posts.slug AS slug, posts.title AS title, posts.published_at AS published_at,
+           ROW_NUMBER() OVER (PARTITION BY post_tags.tag_id ORDER BY posts.published_at DESC, posts.updated_at DESC) AS position
+         FROM post_tags
+         INNER JOIN posts ON posts.id = post_tags.post_id
+         WHERE post_tags.tag_id IN (${tagIds.map(() => '?').join(', ')})
+           AND ${PUBLIC_TAGGED_POST_CONDITIONS}
+       ) WHERE position = 1`
+    )
+    .bind(...tagIds, now)
+    .all<PublicTagLatestPostRow>();
   return result.results ?? [];
 }

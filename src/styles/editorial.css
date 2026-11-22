@@ -1,0 +1,1114 @@
+/*
+ * Editorial ("printed magazine") system shared by every public page:
+ * mono labels, index-page hero, post index, pagination, year table,
+ * subject index, empty states and restrained motion.
+ */
+
+/* Small uppercase letter-spaced label (JetBrains Mono). */
+.sc-label {
+  color: var(--color-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+/* Underline that draws left-to-right on hover (static underline color fallback). */
+.sc-draw-link,
+.sc-draw-text {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
+  text-decoration: none;
+}
+
+a.sc-draw-link:is(:hover, :focus-visible),
+a:is(:hover, :focus-visible) .sc-draw-text {
+  background-size: 100% 1px;
+}
+
+/* ---------- Page frame ---------- */
+
+.sc-page {
+  min-height: 70vh;
+  color: var(--color-text);
+}
+
+.sc-page-shell {
+  width: min(100% - 2.5rem, var(--sc-content-width));
+  min-width: 0;
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 4vw, 3rem) clamp(3rem, 7vw, 5rem);
+}
+
+/* ---------- Index-page hero ---------- */
+
+.sc-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 1.5rem 2.5rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.sc-hero-with-count {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sc-hero-label {
+  margin: 0;
+}
+
+.sc-hero-label a {
+  color: var(--color-muted);
+}
+
+.sc-hero-title {
+  margin: 0.85rem 0 0;
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 6.5vw, 4rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.sc-hero-subtitle {
+  max-width: 36rem;
+  margin: 1rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.sc-hero-copy > .sc-button {
+  margin-top: 1.25rem;
+}
+
+/*
+ * The count keeps Cormorant's default oldstyle figures. Its line box is tall
+ * enough for descenders (3, 4, 5, 7, 9) and nothing is placed beneath it.
+ */
+.sc-hero-count {
+  margin: 0;
+  padding-bottom: 0.08em;
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 10vw, 6rem);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.05;
+  opacity: 0.92;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sc-hero-count[data-digits="3"] {
+  font-size: clamp(3.5rem, 8.5vw, 5.25rem);
+}
+
+.sc-hero-count[data-digits="4"] {
+  font-size: clamp(3rem, 7vw, 4.5rem);
+}
+
+/* ---------- Post index ---------- */
+
+.sc-index {
+  display: grid;
+  min-width: 0;
+}
+
+.sc-index-entry {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: 1.75rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 1.875rem;
+}
+
+.sc-index-entry-with-cover {
+  grid-template-columns: 5.5rem minmax(0, 1fr) 10.5rem;
+}
+
+.sc-index-no {
+  color: var(--color-subtle);
+  font-family: var(--font-display);
+  font-size: 2.125rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sc-index-no[data-digits="3"] {
+  font-size: 1.75rem;
+}
+
+.sc-index-body {
+  min-width: 0;
+}
+
+.sc-index-title,
+.sc-lead-title {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sc-index-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.9rem;
+  margin: 0.6rem 0 0;
+}
+
+.sc-index-meta time {
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-index-tag {
+  max-width: 100%;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+a.sc-index-tag:is(:hover, :focus-visible) {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.sc-index-pin {
+  color: var(--color-text);
+}
+
+.sc-index-excerpt {
+  max-width: var(--sc-reading-width);
+  margin: 0.6rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.sc-index-plate,
+.sc-lead-plate {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--color-rule);
+  background:
+    linear-gradient(135deg, var(--color-primary-soft), transparent),
+    var(--color-bg-soft);
+}
+
+.sc-index-plate {
+  aspect-ratio: 3 / 2;
+}
+
+.sc-index-plate img,
+.sc-lead-plate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: var(--sc-content-image-filter);
+}
+
+.sc-index-note {
+  margin: 1.5rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.sc-index-note a,
+.sc-inline-link {
+  color: var(--color-primary);
+}
+
+/* ---------- End mark + Newer / Older nav (posts and list pagination) ---------- */
+
+.sc-endmark {
+  margin: 2.5rem 0 0;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  letter-spacing: 0.6em;
+  text-align: center;
+  text-indent: 0.6em;
+}
+
+.sc-entry-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--color-rule-strong);
+}
+
+.sc-entry-nav-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.5rem 1.75rem 1.65rem 0;
+  color: var(--color-text);
+}
+
+.sc-entry-nav-older {
+  grid-column: 2;
+  align-items: flex-end;
+  padding: 1.5rem 0 1.65rem 1.75rem;
+  text-align: right;
+}
+
+.sc-entry-nav-both .sc-entry-nav-older {
+  border-left: 1px solid var(--color-rule);
+}
+
+.sc-entry-nav-title {
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sc-entry-nav-detail {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+a.sc-entry-nav-item:is(:hover, :focus-visible) .sc-entry-nav-title {
+  color: var(--color-primary);
+}
+
+.sc-pagination-all {
+  margin: 1.4rem 0 0;
+  text-align: center;
+}
+
+.sc-pagination-all a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+/* ---------- Chronology (timeline) ---------- */
+
+.sc-year-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.75rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 1rem;
+  color: var(--color-muted);
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.sc-year-jump a {
+  white-space: nowrap;
+}
+
+.sc-year-jump a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-year-jump-count {
+  margin-left: 0.3em;
+  color: var(--color-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-style: normal;
+  letter-spacing: 0.05em;
+  line-height: 0;
+  vertical-align: 0.75em;
+}
+
+.sc-year {
+  margin-top: clamp(3rem, 7vw, 4.5rem);
+  scroll-margin-top: 5.5rem;
+}
+
+.sc-year-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1rem 2rem;
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding-bottom: 0.875rem;
+}
+
+/* Oldstyle figures descend (3, 4, 5, 7, 9); the line box leaves room above the heavy rule. */
+.sc-year-title {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 11vw, 7.5rem);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 0.8;
+  padding-bottom: 0.16em;
+}
+
+.sc-year-side {
+  display: grid;
+  justify-items: end;
+  gap: 0.6rem;
+}
+
+.sc-month-bars {
+  display: grid;
+  grid-template-columns: repeat(12, 0.875rem);
+  gap: 0.3125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-month-bar {
+  display: grid;
+  grid-template-rows: 2.375rem auto;
+  justify-items: center;
+  gap: 0.375rem;
+}
+
+.sc-month-bar-fill {
+  align-self: end;
+  width: 100%;
+  height: 3px;
+  background: color-mix(in srgb, var(--color-subtle) 45%, transparent);
+}
+
+.sc-month-bar-filled .sc-month-bar-fill {
+  height: max(0.375rem, calc(var(--sc-bar, 0) * 2.375rem));
+  background: var(--color-primary);
+  opacity: 0.75;
+}
+
+.sc-month-bar-label {
+  color: var(--color-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  line-height: 1;
+}
+
+.sc-year-count {
+  margin: 0;
+}
+
+.sc-month {
+  display: grid;
+  grid-template-columns: 9.375rem minmax(0, 1fr);
+  gap: 1.75rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 1.875rem 2rem;
+  scroll-margin-top: 5.5rem;
+}
+
+.sc-month-head {
+  align-self: start;
+}
+
+.sc-month-no {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sc-month-name {
+  margin: 0.55rem 0 0;
+}
+
+.sc-month-count {
+  margin: 0.3rem 0 0;
+  color: var(--color-primary);
+}
+
+.sc-month-list {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-month-entry {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  grid-template-areas: "day body tag";
+  align-items: baseline;
+  gap: 0 1.125rem;
+  padding-block: 0.6rem;
+}
+
+.sc-month-entry + .sc-month-entry {
+  border-top: 1px dotted var(--color-rule);
+}
+
+.sc-month-day {
+  grid-area: day;
+  color: var(--color-subtle);
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sc-month-body {
+  grid-area: body;
+  min-width: 0;
+}
+
+.sc-month-title {
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.sc-month-title:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-month-excerpt {
+  margin: 0.15rem 0 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.84375rem;
+  line-height: 1.7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One short line: long tag names truncate instead of squeezing the title. */
+.sc-month-entry .sc-month-tag {
+  grid-area: tag;
+  max-width: 8rem;
+  margin: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.sc-month-tag:is(:hover, :focus-visible) {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+/* ---------- Subject index (tags) ---------- */
+
+.sc-subjects {
+  margin-top: clamp(2.25rem, 5vw, 2.75rem);
+}
+
+.sc-subjects-az {
+  margin-top: clamp(3rem, 6vw, 4rem);
+}
+
+.sc-subjects-heading {
+  margin: 0;
+}
+
+.sc-subject-table {
+  width: 100%;
+  margin-top: 1.25rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.sc-subject-table thead th {
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding: 0 1.5rem 0.65rem 0;
+  font-weight: 500;
+  text-align: left;
+}
+
+.sc-subject-col-name {
+  width: 27%;
+}
+
+.sc-subject-col-count {
+  width: 4.5rem;
+}
+
+.sc-subject-col-years {
+  width: 30%;
+}
+
+.sc-subject-row > * {
+  border-bottom: 1px solid var(--color-rule);
+  padding: 1rem 1.5rem 1rem 0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.sc-subject-row > :last-child,
+.sc-subject-table thead th:last-child {
+  padding-right: 0;
+}
+
+.sc-subject-name {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sc-subject-name a {
+  color: var(--color-text);
+}
+
+.sc-subject-name a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-subject-count {
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sc-year-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  height: 1.625rem;
+}
+
+.sc-year-bar {
+  flex: 1 1 0;
+  max-width: 1.125rem;
+  height: 2px;
+  background: color-mix(in srgb, var(--color-subtle) 45%, transparent);
+}
+
+.sc-year-bar-filled {
+  height: max(0.3125rem, calc(var(--sc-bar, 0) * 1.625rem));
+  background: var(--color-primary);
+  opacity: 0.7;
+}
+
+.sc-subject-latest-title {
+  display: block;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.sc-subject-latest-title:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-subject-latest-date {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+}
+
+.sc-az {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--color-rule-strong);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.sc-az-letter {
+  flex: 1 0 1.75rem;
+  padding-block: 0.6rem;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+}
+
+a.sc-az-letter:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+/* Letters without tags stay readable as a faint printed alphabet in both themes. */
+.sc-az-letter-empty {
+  color: var(--color-subtle);
+  opacity: 0.4;
+}
+
+/* A book-style index: columns of letter groups with "name ······ count" rows. */
+.sc-az-columns {
+  columns: 3;
+  column-gap: 2.75rem;
+  column-rule: 1px solid var(--color-rule);
+  margin-top: 1.875rem;
+}
+
+.sc-az-group {
+  break-inside: avoid;
+  margin-bottom: 1.625rem;
+  scroll-margin-top: 5.5rem;
+}
+
+.sc-az-group-letter {
+  margin: 0 0 0.5rem;
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding-bottom: 0.375rem;
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sc-tag-index {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-tag-index-link {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-block: 0.2rem;
+  color: var(--color-text);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.sc-tag-index-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sc-tag-index-leader {
+  flex: 1 1 1.5rem;
+  min-width: 1.5rem;
+  border-bottom: 1px dotted var(--color-subtle);
+  opacity: 0.55;
+  transform: translateY(-0.3em);
+}
+
+.sc-tag-index-count {
+  flex: none;
+  color: var(--color-muted);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-style: italic;
+}
+
+.sc-tag-index-link:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-tag-index-link:is(:hover, :focus-visible) .sc-tag-index-leader {
+  border-bottom-color: var(--color-primary);
+  opacity: 1;
+}
+
+@media (max-width: 960px) {
+  .sc-az-columns {
+    columns: 2;
+    column-gap: 2rem;
+  }
+}
+
+/* Small inline tag links (post header, search overlay). */
+.sc-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-top: 0.8rem;
+}
+
+.sc-tag-link {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+}
+
+.sc-tag-link::before {
+  content: "#";
+}
+
+/* ---------- Empty states ---------- */
+
+.sc-empty,
+.sc-empty-state {
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 2rem;
+  color: var(--color-muted);
+  font-size: 0.975rem;
+  line-height: 1.8;
+}
+
+.sc-empty p,
+.sc-empty-state {
+  margin: 0;
+}
+
+.sc-empty p + p {
+  margin-top: 0.25rem;
+}
+
+.sc-empty .sc-button,
+.sc-empty .sc-inline-link {
+  margin-top: 0.85rem;
+}
+
+.sc-empty-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  font-size: 1rem;
+}
+
+.sc-empty-links a {
+  color: var(--color-text);
+}
+
+.sc-empty-links a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 760px) {
+  .sc-page-shell {
+    width: min(100% - 2.5rem, var(--sc-content-width));
+  }
+
+  .sc-hero-title {
+    font-size: clamp(2.25rem, 11vw, 2.75rem);
+  }
+
+  .sc-hero-with-count {
+    gap: 1rem;
+  }
+
+  .sc-hero-count {
+    font-size: 4rem;
+  }
+
+  .sc-hero-count[data-digits="3"] {
+    font-size: 3.25rem;
+  }
+
+  .sc-hero-count[data-digits="4"] {
+    font-size: 2.625rem;
+  }
+
+  .sc-index-entry,
+  .sc-index-entry-with-cover {
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-block: 1.5rem;
+  }
+
+  .sc-index-no {
+    padding-top: 0.2rem;
+    font-size: 1.3rem;
+  }
+
+  .sc-index-no[data-digits="3"] {
+    font-size: 1.05rem;
+  }
+
+  .sc-index-plate {
+    display: none;
+  }
+
+  .sc-entry-nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-entry-nav-empty {
+    display: none;
+  }
+
+  .sc-entry-nav-item,
+  .sc-entry-nav-older {
+    grid-column: auto;
+    align-items: flex-start;
+    padding: 1.25rem 0;
+    text-align: left;
+  }
+
+  .sc-entry-nav-both .sc-entry-nav-older {
+    border-top: 1px solid var(--color-rule);
+    border-left: 0;
+  }
+
+  .sc-entry-nav-title {
+    font-size: 1.1875rem;
+  }
+
+  .sc-index-title,
+  .sc-lead-title {
+    font-size: 1.1875rem;
+  }
+
+  .sc-index-excerpt {
+    font-size: 0.9rem;
+  }
+
+  /* Chronology: month numeral sits above its list; the bar chart drops under the year. */
+  .sc-year-head {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .sc-year-title {
+    font-size: 4.5rem;
+  }
+
+  .sc-year-side {
+    justify-items: start;
+  }
+
+  .sc-month-bars {
+    grid-template-columns: repeat(12, minmax(0, 0.875rem));
+    gap: 0.25rem;
+  }
+
+  .sc-month {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-block: 1.5rem;
+  }
+
+  .sc-month-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.9rem;
+  }
+
+  .sc-month-no {
+    font-size: 2.75rem;
+  }
+
+  .sc-month-name,
+  .sc-month-count {
+    margin: 0;
+  }
+
+  .sc-month-entry {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    grid-template-areas:
+      "day body"
+      ". tag";
+    gap: 0 0.75rem;
+  }
+
+  .sc-month-title {
+    font-size: 1rem;
+  }
+
+  .sc-month-entry .sc-month-tag {
+    max-width: 100%;
+    margin-top: 0.2rem;
+    text-align: left;
+  }
+
+  /* Most Written: each row stacks into name + count, the yearly bars, then the latest post. */
+  .sc-subject-table,
+  .sc-subject-table tbody {
+    display: block;
+  }
+
+  .sc-subject-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .sc-subject-table tbody {
+    border-top: 1px solid var(--color-rule-strong);
+  }
+
+  .sc-subject-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem 1rem;
+    border-bottom: 1px solid var(--color-rule);
+    padding-block: 1.1rem;
+  }
+
+  .sc-subject-row > * {
+    display: block;
+    border: 0;
+    padding: 0;
+  }
+
+  .sc-subject-name {
+    align-self: baseline;
+    font-size: 1.125rem;
+  }
+
+  .sc-subject-count {
+    align-self: baseline;
+    font-size: 1.5rem;
+  }
+
+  .sc-subject-years,
+  .sc-subject-latest {
+    grid-column: 1 / -1;
+  }
+
+  .sc-year-bars {
+    height: 1.25rem;
+  }
+
+  .sc-year-bar-filled {
+    height: max(0.25rem, calc(var(--sc-bar, 0) * 1.25rem));
+  }
+
+  .sc-az-letter {
+    flex-basis: 1.6rem;
+    font-size: 1.125rem;
+  }
+
+  .sc-az-group-letter {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .sc-az-columns {
+    columns: 1;
+  }
+}
+
+/* ---------- Motion (all behind prefers-reduced-motion) ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 220ms;
+  }
+
+  .sc-site-header {
+    view-transition-name: sc-masthead;
+  }
+
+  .sc-draw-link,
+  .sc-draw-text {
+    transition:
+      background-size 260ms ease,
+      color 140ms ease;
+  }
+
+  .sc-index-entry,
+  .sc-hero,
+  .sc-lead,
+  .sc-year,
+  .sc-subject-row,
+  .sc-az-columns {
+    animation: sc-fade-up 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--sc-entry-index, 0) * 45ms);
+  }
+
+  .sc-search-overlay:not([hidden]) {
+    animation: sc-search-fade-in 160ms ease both;
+  }
+
+  .sc-search-overlay:not([hidden]) .sc-search-box {
+    animation: sc-search-box-in 180ms ease both;
+  }
+
+  .sc-image-fade {
+    opacity: 0;
+    transition: opacity 220ms ease;
+  }
+
+  .sc-image-fade.sc-image-ready {
+    opacity: 1;
+  }
+
+  .sc-reading-progress-bar {
+    transition: transform 90ms linear;
+  }
+}
+
+@keyframes sc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sc-search-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sc-search-box-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

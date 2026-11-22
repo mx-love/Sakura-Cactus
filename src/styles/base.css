@@ -11,7 +11,9 @@ html {
 body {
   margin: 0;
   min-height: 100%;
-  font-family: var(--font-sans);
+  font-family: var(--font-serif);
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
   color: var(--color-text);
   background:
     var(--sc-page-gradient),

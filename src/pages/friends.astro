@@ -1,5 +1,6 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
+import PageHero from '@/components/editorial/PageHero.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { getAdminFriendLinks, getApprovedFriendLinks } from '@/features/friends/friend.service';
 import { getSiteSettings } from '@/features/settings/settings.service';
@@ -60,24 +61,13 @@ function formatCheckedAt(value: string | null): string {
 <SiteLayout siteSettings={settings} title="友人帐 | Sakura Cactus" description="枯叶落处各异，百花各自争鸣。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-page-shell sc-friends-shell">
-      <div class="sc-paper-public-shell sc-public-page-paper sc-friends-paper-shell">
-      <nav class="sc-breadcrumb" aria-label="Breadcrumb">
-        <a href="/">首页</a>
-        <span>»</span>
-        <span>友人帐</span>
-      </nav>
-
-      <header class="sc-friends-header">
-        <div>
-          <h1>友人帐</h1>
-          <p>枯叶落处各异，百花各自争鸣。</p>
-        </div>
+      <PageHero label="The Correspondents" title="友人帐" subtitle="枯叶落处各异，百花各自争鸣。" count={friends.length} countLabel="位友人">
         {isAdmin ? (
           <button class="sc-button sc-button-primary sc-friend-add-button" id="friend-add-button" type="button">添加友人</button>
         ) : canApply ? (
           <button class="sc-button sc-button-secondary sc-friend-add-button" id="friend-apply-button" data-friend-apply type="button">申请友链</button>
         ) : null}
-      </header>
+      </PageHero>
 
       <div id="friend-grid-root">
         {friends.length === 0 ? (
@@ -121,7 +111,6 @@ function formatCheckedAt(value: string | null): string {
             ))}
           </div>
         )}
-      </div>
       </div>
     </div>
   </section>

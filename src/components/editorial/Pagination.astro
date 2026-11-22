@@ -1,0 +1,43 @@
+---
+import EntryNav from './EntryNav.astro';
+import type { PublicPageNeighbor } from '@/features/posts/post.service';
+import { formatSiteDotDate } from '@/lib/site-time';
+
+// List pagination without page numbers: the masthead strip carries
+// "Page 06 / 42"; here an end mark, the Newer/Older neighbours (labelled by
+// the first post on that page) and a link to the year-grouped full index.
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  basePath: string;
+  newer: PublicPageNeighbor | null;
+  older: PublicPageNeighbor | null;
+  label?: string;
+}
+
+const { currentPage, totalPages, basePath, newer, older, label = '文章分页' } = Astro.props;
+const pageHref = (page: number) => (page <= 1 ? basePath : `${basePath}?page=${page}`);
+const detail = (item: PublicPageNeighbor) =>
+  [`No.${String(item.firstNumber).padStart(2, '0')} 起`, item.publishedAt ? formatSiteDotDate(item.publishedAt) : null]
+    .filter(Boolean)
+    .join(' · ');
+const toItem = (item: PublicPageNeighbor | null, labelText: string) =>
+  item
+    ? {
+        href: pageHref(item.page),
+        label: labelText,
+        title: item.title,
+        detail: detail(item),
+        ariaLabel: `${labelText}：第 ${item.page} 页，共 ${totalPages} 页，从《${item.title}》开始`
+      }
+    : null;
+---
+
+<div class="sc-pagination">
+  <p class="sc-endmark" aria-hidden="true">◆ ◆ ◆</p>
+  <p class="sr-only">第 {currentPage} 页，共 {totalPages} 页</p>
+  <EntryNav ariaLabel={label} newer={toItem(newer, 'Newer · 较新的一页')} older={toItem(older, 'Older · 较早的一页')} />
+  <p class="sc-pagination-all">
+    <a class="sc-label sc-draw-link" href="/timeline">All Entries · 按年份浏览全部 →</a>
+  </p>
+</div>

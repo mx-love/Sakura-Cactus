@@ -3,46 +3,25 @@
   max-width: var(--sc-content-width);
 }
 
-.sc-friends-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 0 1rem;
-}
-
-.sc-friends-header p {
-  margin: 0.7rem 0 0;
-  color: var(--color-secondary-text);
-  line-height: 1.75;
-}
-
 .sc-friend-add-button {
   flex: 0 0 auto;
 }
 
+/* Correspondents list: two ruled columns, no cards. */
 .sc-friend-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.95rem;
-  margin-top: 2rem;
+  column-gap: 2.5rem;
 }
 
 .sc-friend-card {
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: var(--color-surface);
-  padding: 0.95rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 1.25rem;
   color: inherit;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    box-shadow 140ms ease;
 }
 
-.sc-friend-card:hover {
-  border-color: var(--color-primary-muted);
-  background: var(--color-floating-surface);
+.sc-friend-card:is(:hover, :focus-within) strong {
+  color: var(--color-primary);
 }
 
 .sc-friend-card-hidden {
@@ -71,6 +50,7 @@
   width: 3.15rem;
   height: 3.15rem;
   place-items: center;
+  border: 1px solid var(--color-rule);
   border-radius: 999px;
   object-fit: cover;
 }
@@ -94,7 +74,7 @@
 .sc-friend-body strong {
   min-width: 0;
   color: var(--color-text);
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -103,10 +83,10 @@
 
 .sc-friend-body .sc-friend-number {
   color: var(--color-subtle);
-  font-size: 0.72rem;
-  font-weight: 820;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 500;
 }
 
 .sc-friend-body span {
@@ -344,4 +324,20 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.45rem;
+}
+
+@media (max-width: 760px) {
+  .sc-friend-grid,
+  .sc-friend-form,
+  .sc-friend-admin-item {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-friend-card-actions {
+    padding-left: 0;
+  }
+
+  .sc-friend-admin-actions {
+    justify-content: flex-start;
+  }
 }
