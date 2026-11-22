@@ -148,8 +148,21 @@ a:is(:hover, :focus-visible) .sc-draw-text {
   white-space: nowrap;
 }
 
+.sc-index-no {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.sc-index-no-prefix {
+  margin-right: 0.08em;
+  font-size: 0.62em;
+}
+
 .sc-index-no[data-digits="3"] {
   font-size: 1.75rem;
+}
+
+.sc-index-no[data-digits="4"] {
+  font-size: 1.45rem;
 }
 
 .sc-index-body {
@@ -722,6 +735,10 @@ a.sc-month-tag:is(:hover, :focus-visible) {
 
   .sc-index-no[data-digits="3"] {
     font-size: 1.05rem;
+  }
+
+  .sc-index-no[data-digits="4"] {
+    font-size: 0.9rem;
   }
 
   .sc-index-plate {

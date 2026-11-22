@@ -51,7 +51,7 @@
   --shadow-float: 0 12px 34px rgba(102, 66, 82, 0.07);
   /* Share the public frame while keeping long-form reading lines narrower. */
   --sc-content-width: clamp(53.75rem, calc(75vw - 1.5rem), 67.5rem);
-  --sc-reading-width: 45rem;
+  --sc-reading-width: 50rem;
   --sc-article-action-background: var(--color-control-muted);
   --sc-settings-container-background: var(--color-floating-bg);
   --sc-settings-panel-background: var(--color-card-translucent);

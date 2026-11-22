@@ -241,7 +241,7 @@ function getExternalOrigin(value: string | null | undefined): string | null {
                     <span class="sc-home-archive-tag">{post.tags[0]?.name ?? 'Essay'}</span>
                   )}
                 </a>
-                <p class="sc-home-archive-no">No.{String(number).padStart(2, '0')}</p>
+                <p class="sc-home-archive-no"><span class="sc-index-no-prefix">No.</span>{String(number).padStart(2, '0')}</p>
                 <p class="sc-label sc-index-meta">
                   {post.publishedAt ? <time datetime={post.publishedAt}>{formatSiteDotDate(post.publishedAt)}</time> : null}
                   {post.tags.slice(0, 2).map((tag) => (

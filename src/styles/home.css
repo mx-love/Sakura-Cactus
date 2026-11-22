@@ -477,6 +477,7 @@
   font-size: 1.5rem;
   font-style: italic;
   line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .sc-home-archive-card .sc-index-meta {

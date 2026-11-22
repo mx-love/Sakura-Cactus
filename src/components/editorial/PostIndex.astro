@@ -25,7 +25,7 @@ function issueNumber(index: number): string {
     const cover = showCovers ? post.coverImageUrl : null;
     return (
       <article class:list={['sc-index-entry', cover && 'sc-index-entry-with-cover']} style={`--sc-entry-index:${Math.min(index, 9)}`}>
-        <span class="sc-index-no" data-digits={number.length > 2 ? '3' : '2'} aria-hidden="true">No.{number}</span>
+        <span class="sc-index-no" data-digits={String(Math.min(number.length, 4))} aria-hidden="true"><span class="sc-index-no-prefix">No.</span>{number}</span>
         <div class="sc-index-body">
           <Heading class="sc-index-title">
             <a class="sc-draw-link" href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
