@@ -72,3 +72,47 @@
     transition: none;
   }
 }
+
+/* Mobile TOC trigger the reader dragged to their own spot (saved per device). */
+@media (max-width: 1535px) {
+  .sc-mobile-toc-trigger {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-placed {
+    bottom: auto;
+  }
+
+  .sc-mobile-toc-trigger.is-dragging {
+    opacity: 1;
+    transform: translateX(0);
+    transition: none;
+  }
+
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-left {
+    right: auto;
+    left: 0;
+    justify-content: flex-end;
+    border-right-color: var(--color-border-strong);
+    border-left-color: transparent;
+    border-radius: 0 16px 16px 0;
+    padding: 0 7px 0 0;
+    transform: translateX(calc(-100% + 28px));
+  }
+
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-left:not([hidden]).sc-mobile-toc-trigger-visible {
+    transform: translateX(calc(-100% + 28px));
+  }
+
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-left:hover,
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-left:focus-visible,
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-left:active,
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-left[aria-expanded="true"],
+  .sc-mobile-toc-trigger.sc-mobile-toc-trigger-left.is-dragging {
+    border-right-color: color-mix(in srgb, var(--color-primary) 34%, transparent);
+    border-left-color: transparent;
+    transform: translateX(0);
+  }
+}
