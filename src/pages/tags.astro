@@ -2,19 +2,16 @@
 import SiteLayout from '@/components/layout/SiteLayout.astro';
 import PageHero from '@/components/editorial/PageHero.astro';
 import { getPublicTagIndex } from '@/features/tags/tag.service';
-import { TAG_INDEX_LETTERS, TAG_INDEX_OTHER } from '@/features/tags/tag-index';
 import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
 import { formatSiteDotDate } from '@/lib/site-time';
 
 export const prerender = false;
 
-// Only tags with at least one public, published post are part of the index.
+// One table of every tag with at least one public, published post, busiest first.
 const index = await getPublicTagIndex();
 const firstYear = index.years[0];
 const lastYear = index.years[index.years.length - 1];
-const groupLetters = new Set(index.groups.map((group) => group.letter));
-const letterId = (letter: string) => (letter === TAG_INDEX_OTHER ? 'letter-other' : `letter-${letter}`);
-const rows = index.mostWritten.map((tag) => {
+const rows = index.subjects.map((tag) => {
   const peak = Math.max(1, ...tag.years.map((bar) => bar.count));
   return {
     ...tag,
@@ -22,6 +19,10 @@ const rows = index.mostWritten.map((tag) => {
     barsLabel: tag.years.map((bar) => `${bar.year} 年 ${bar.count} 篇`).join('，')
   };
 });
+// The bars column hugs its content: one 1.125rem bar plus a 0.25rem gap per
+// year, never narrower than its header label, plus the cell's 1.5rem gutter.
+const yearCount = index.years.length;
+const yearsWidth = Math.max(yearCount * 1.375 - 0.25, yearCount > 1 ? 7.5 : 3.5) + 1.5;
 const canonicalUrl = absoluteSiteUrl('/tags');
 ---
 
@@ -35,83 +36,48 @@ const canonicalUrl = absoluteSiteUrl('/tags');
           <p>暂无公开标签。</p>
         </div>
       ) : (
-        <>
-          <section class="sc-subjects" aria-labelledby="tag-lead-heading">
-            <h2 class="sc-label sc-subjects-heading" id="tag-lead-heading">Most Written · 常写的主题</h2>
-            <table class="sc-subject-table">
-              <thead>
-                <tr class="sc-label">
-                  <th scope="col" class="sc-subject-col-name">Subject</th>
-                  <th scope="col" class="sc-subject-col-count">篇</th>
-                  <th scope="col" class="sc-subject-col-years">{firstYear === lastYear ? firstYear : `${firstYear} → ${lastYear}`}</th>
-                  <th scope="col" class="sc-subject-col-latest">Latest · 最近一篇</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((tag, rowIndex) => (
-                  <tr class="sc-subject-row" style={`--sc-entry-index:${Math.min(rowIndex, 9)}`}>
-                    <th scope="row" class="sc-subject-name">
-                      <a href={`/tags/${tag.slug}`}><span class="sc-draw-text">{tag.name}</span></a>
-                    </th>
-                    <td class="sc-subject-count">{tag.postCount}<span class="sr-only"> 篇</span></td>
-                    <td class="sc-subject-years">
-                      <span class="sc-year-bars" role="img" aria-label={tag.barsLabel}>
-                        {tag.bars.map((bar) => (
-                          <span class:list={['sc-year-bar', bar.count > 0 && 'sc-year-bar-filled']} style={`--sc-bar:${bar.scale}`}></span>
-                        ))}
-                      </span>
-                    </td>
-                    <td class="sc-subject-latest">
-                      {tag.latest ? (
-                        <>
-                          <a class="sc-subject-latest-title" href={`/posts/${tag.latest.slug}`} data-astro-prefetch>
-                            <span class="sc-draw-text">{tag.latest.title}</span>
-                          </a>
-                          <span class="sc-label sc-subject-latest-date">
-                            最近 · <time datetime={tag.latest.publishedAt}>{formatSiteDotDate(tag.latest.publishedAt)}</time>
-                          </span>
-                        </>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          {index.showAlphabet ? (
-            <section class="sc-subjects sc-subjects-az" aria-labelledby="tag-az-heading">
-              <h2 class="sc-label sc-subjects-heading" id="tag-az-heading">All Subjects · 全部标签 A–Z</h2>
-              <nav class="sc-az" aria-label="按首字母跳转">
-                {[...TAG_INDEX_LETTERS, ...(groupLetters.has(TAG_INDEX_OTHER) ? [TAG_INDEX_OTHER] : [])].map((letter) =>
-                  groupLetters.has(letter) ? (
-                    <a class="sc-az-letter" href={`#${letterId(letter)}`}>{letter}</a>
-                  ) : (
-                    <span class="sc-az-letter sc-az-letter-empty" aria-hidden="true">{letter}</span>
-                  )
-                )}
-              </nav>
-              <div class="sc-az-columns">
-                {index.groups.map((group) => (
-                  <section class="sc-az-group" id={letterId(group.letter)} aria-labelledby={`${letterId(group.letter)}-heading`}>
-                    <h3 class="sc-az-group-letter" id={`${letterId(group.letter)}-heading`}>{group.letter}</h3>
-                    <ul class="sc-tag-index">
-                      {group.tags.map((tag) => (
-                        <li>
-                          <a class="sc-tag-index-link" href={`/tags/${tag.slug}`}>
-                            <span class="sc-tag-index-name">{tag.name}</span>
-                            <span class="sc-tag-index-leader" aria-hidden="true"></span>
-                            <span class="sc-tag-index-count">{tag.postCount}<span class="sr-only"> 篇</span></span>
-                          </a>
-                        </li>
+        <section class="sc-subjects" aria-labelledby="tag-subjects-heading">
+          <h2 class="sc-label sc-subjects-heading" id="tag-subjects-heading">All Subjects · 全部标签</h2>
+          <table class="sc-subject-table" style={`--sc-years-width:${yearsWidth}rem`}>
+            <thead>
+              <tr class="sc-label">
+                <th scope="col" class="sc-subject-col-name">Subject</th>
+                <th scope="col" class="sc-subject-col-count">篇</th>
+                <th scope="col" class="sc-subject-col-years">{firstYear === lastYear ? firstYear : `${firstYear} → ${lastYear}`}</th>
+                <th scope="col" class="sc-subject-col-latest">Latest · 最近一篇</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((tag, rowIndex) => (
+                <tr class="sc-subject-row" style={`--sc-entry-index:${Math.min(rowIndex, 9)}`}>
+                  <th scope="row" class="sc-subject-name">
+                    <a href={`/tags/${tag.slug}`}><span class="sc-draw-text">{tag.name}</span></a>
+                  </th>
+                  <td class="sc-subject-count">{tag.postCount}<span class="sr-only"> 篇</span></td>
+                  <td class="sc-subject-years">
+                    <span class="sc-year-bars" role="img" aria-label={tag.barsLabel}>
+                      {tag.bars.map((bar) => (
+                        <span class:list={['sc-year-bar', bar.count > 0 && 'sc-year-bar-filled']} style={`--sc-bar:${bar.scale}`}></span>
                       ))}
-                    </ul>
-                  </section>
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </>
+                    </span>
+                  </td>
+                  <td class="sc-subject-latest">
+                    {tag.latest ? (
+                      <>
+                        <a class="sc-subject-latest-title" href={`/posts/${tag.latest.slug}`} data-astro-prefetch>
+                          <span class="sc-draw-text">{tag.latest.title}</span>
+                        </a>
+                        <span class="sc-label sc-subject-latest-date">
+                          最近 · <time datetime={tag.latest.publishedAt}>{formatSiteDotDate(tag.latest.publishedAt)}</time>
+                        </span>
+                      </>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
     </div>
   </section>

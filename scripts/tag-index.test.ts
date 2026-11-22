@@ -1,15 +1,7 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import {
-  TAG_INDEX_OTHER,
-  buildMostWritten,
-  groupTagsByInitial,
-  selectVisibleTags,
-  tagIndexInitial,
-  tagSeriesYears,
-  type TagIndexEntry
-} from '../src/features/tags/tag-index.ts';
+import { buildSubjectRows, selectVisibleTags, tagSeriesYears, type TagIndexEntry } from '../src/features/tags/tag-index.ts';
 import { getPublicTagIndex } from '../src/features/tags/tag.service.ts';
 import { listPublicArchivePosts } from '../src/features/posts/post.repo.ts';
 
@@ -73,24 +65,6 @@ function addPost(db: DatabaseSync, id: string, publishedAt: string | null, tagId
 const NOW = '2026-11-22T04:00:00.000Z';
 const entry = (name: string, postCount = 1): TagIndexEntry => ({ id: name, name, slug: name, postCount });
 
-test('Chinese tags group by pinyin initial, ASCII by first letter, the rest under #', () => {
-  assert.equal(tagIndexInitial('读书'), 'D');
-  assert.equal(tagIndexInitial('银发经济'), 'Y');
-  assert.equal(tagIndexInitial('绿'), 'L');
-  assert.equal(tagIndexInitial('astro'), 'A');
-  assert.equal(tagIndexInitial('  Linux'), 'L');
-  assert.equal(tagIndexInitial('2026'), TAG_INDEX_OTHER);
-  assert.equal(tagIndexInitial('ねこ'), TAG_INDEX_OTHER);
-  assert.equal(tagIndexInitial('#tag'), TAG_INDEX_OTHER);
-
-  const groups = groupTagsByInitial(['旅行', 'Linux', '老电脑', '历史', 'astro', '安静', '9 号', '读书', 'Ｚ'].map((name) => entry(name)));
-  assert.deepEqual(groups.map((group) => group.letter), ['A', 'D', 'L', '#']);
-  assert.deepEqual(groups.find((group) => group.letter === 'A')!.tags.map((tag) => tag.name), ['安静', 'astro']);
-  // Within a group Chinese and ASCII share one pinyin order: lao < li < linux < lü.
-  assert.deepEqual(groups.find((group) => group.letter === 'L')!.tags.map((tag) => tag.name), ['老电脑', '历史', 'Linux', '旅行']);
-  assert.deepEqual(groups.at(-1)!.tags.map((tag) => tag.name).sort(), ['9 号', 'Ｚ'].sort());
-});
-
 test('visible tags need a positive public post count and sort by count then name', () => {
   const visible = selectVisibleTags([
     { id: 'a', name: '随笔', slug: 'a', post_count: 3 },
@@ -105,7 +79,7 @@ test('yearly series run from the first public year to now, capped, with zero yea
   assert.deepEqual(tagSeriesYears(2019, 2026), [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]);
   assert.deepEqual(tagSeriesYears(null, 2026), [2026]);
   assert.deepEqual(tagSeriesYears(2001, 2026, 4), [2023, 2024, 2025, 2026]);
-  const [row] = buildMostWritten([entry('t', 3)], [2024, 2025, 2026], [{ tag_id: 't', year: 2024, post_count: 1 }, { tag_id: 't', year: 2026, post_count: 2 }], []);
+  const [row] = buildSubjectRows([entry('t', 3)], [2024, 2025, 2026], [{ tag_id: 't', year: 2024, post_count: 1 }, { tag_id: 't', year: 2026, post_count: 2 }], []);
   assert.deepEqual(row.years, [{ year: 2024, count: 1 }, { year: 2025, count: 0 }, { year: 2026, count: 2 }]);
   assert.equal(row.latest, null);
 });
@@ -131,39 +105,42 @@ test('/tags shows only tags with public published posts and counts only those', 
   const d1 = new SqliteD1Database(db);
   const index = await getPublicTagIndex(d1 as unknown as D1Database, NOW);
   assert.equal(index.total, 2);
-  assert.equal(index.showAlphabet, false);
-  assert.deepEqual(index.groups, []);
-  assert.deepEqual(index.mostWritten.map((tag) => [tag.name, tag.postCount]), [['随笔', 2], ['读书', 1]]);
+  assert.deepEqual(index.subjects.map((tag) => [tag.name, tag.postCount]), [['随笔', 2], ['读书', 1]]);
   assert.deepEqual(index.years, [2024, 2025, 2026]);
-  assert.deepEqual(index.mostWritten[0].years.map((bar) => bar.count), [1, 0, 1]);
-  assert.deepEqual(index.mostWritten.map((tag) => tag.latest?.slug), ['post-p2', 'post-p1']);
+  assert.deepEqual(index.subjects[0].years.map((bar) => bar.count), [1, 0, 1]);
+  assert.deepEqual(index.subjects.map((tag) => tag.latest?.slug), ['post-p2', 'post-p1']);
   // Four aggregate queries regardless of how many tags there are.
   assert.equal(d1.queries.length, 4);
 });
 
-test('large indexes group every visible tag A–Z and chart only the top eight', async () => {
+test('large indexes list every visible tag in one table with bars and latest posts', async () => {
   const db = createDb();
-  const names = ['安静', '北京', '茶', '读书', '耳机', '方法', '工作', '海边', '家', '咖啡', '旅行', '猫', '年', '跑步', '秋天', 'Astro'];
+  // More tags than D1's 100 bound parameters, so no query may bind a tag id list.
+  const names = Array.from({ length: 120 }, (_, index) => (index % 3 === 0 ? `Tag ${index}` : `标签${index}`));
   names.forEach((name, index) => addTag(db, `t${index}`, name));
   addTag(db, 'hidden', '草稿');
   names.forEach((_, index) => {
-    for (let count = 0; count <= index; count += 1) addPost(db, `p${index}-${count}`, `202${count % 7}-06-0${(count % 9) + 1}T00:00:00.000Z`, [`t${index}`]);
+    for (let count = 0; count <= index % 7; count += 1) {
+      addPost(db, `p${index}-${count}`, `202${count % 7}-06-0${(count % 9) + 1}T00:00:00.000Z`, [`t${index}`]);
+    }
   });
   addPost(db, 'draft', '2026-01-01T00:00:00.000Z', ['hidden'], { status: 'draft' });
 
-  const index = await getPublicTagIndex(new SqliteD1Database(db) as unknown as D1Database, NOW);
+  const d1 = new SqliteD1Database(db);
+  const index = await getPublicTagIndex(d1 as unknown as D1Database, NOW);
   assert.equal(index.total, names.length);
-  assert.equal(index.showAlphabet, true);
-  assert.equal(index.mostWritten.length, 8);
-  assert.equal(index.mostWritten[0].name, 'Astro');
-  const grouped = index.groups.flatMap((group) => group.tags.map((tag) => tag.name));
-  assert.equal(grouped.length, names.length);
-  assert.ok(!grouped.includes('草稿'));
-  assert.ok(!index.groups.some((group) => group.letter === 'C' && group.tags.some((tag) => tag.name === '草稿')));
-  assert.deepEqual(index.groups.find((group) => group.letter === 'A')!.tags.map((tag) => tag.name), ['安静', 'Astro']);
-  for (const tag of index.mostWritten) {
-    assert.equal(tag.years.reduce((sum, bar) => sum + bar.count, 0), tag.postCount);
+  assert.equal(index.subjects.length, names.length);
+  assert.ok(!index.subjects.some((tag) => tag.name === '草稿'));
+  for (let i = 1; i < index.subjects.length; i += 1) {
+    const [prev, next] = [index.subjects[i - 1], index.subjects[i]];
+    assert.ok(prev.postCount > next.postCount || (prev.postCount === next.postCount && prev.name.localeCompare(next.name, 'zh-CN') <= 0));
   }
+  for (const tag of index.subjects) {
+    assert.equal(tag.years.reduce((sum, bar) => sum + bar.count, 0), tag.postCount);
+    assert.ok(tag.latest, `${tag.name} has a latest post`);
+  }
+  assert.equal(d1.queries.length, 4);
+  assert.ok(d1.queries.every((query) => !/\bIN \(/.test(query)), 'aggregate queries bind no tag id list');
 });
 
 test('archive rows carry the excerpt and the first tag by name', async () => {

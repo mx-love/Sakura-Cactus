@@ -16,16 +16,7 @@ import {
 } from './tag.repo';
 import { decodeHtmlEntities } from '@/features/posts/post.renderer';
 import { getSiteDateParts, getSiteMonthRange } from '@/lib/site-time';
-import {
-  TAG_ALPHABET_THRESHOLD,
-  TAG_MOST_WRITTEN_LIMIT,
-  buildMostWritten,
-  groupTagsByInitial,
-  selectVisibleTags,
-  tagSeriesYears,
-  type MostWrittenTag,
-  type TagIndexGroup
-} from './tag-index';
+import { buildSubjectRows, selectVisibleTags, tagSeriesYears, type SubjectRow } from './tag-index';
 import { toPublicPostSummary, type PublicPostSummary } from '@/features/posts/post.types';
 
 const TAG_SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -126,40 +117,33 @@ export async function getPublicPostsByTagSlug(slug: string): Promise<PublicPostS
 export interface PublicTagIndex {
   total: number;
   years: number[];
-  mostWritten: MostWrittenTag[];
-  groups: TagIndexGroup[];
-  showAlphabet: boolean;
+  subjects: SubjectRow[];
 }
 
 /**
- * Everything /tags renders, from four aggregate queries: visible tag counts,
- * the first public post date, and per-year counts plus the latest post for the
- * Most Written tags only. Small indexes skip the A–Z section and list every tag.
+ * Everything /tags renders, from four aggregate queries whatever the number of
+ * tags: visible tag counts, the first public post date, per-tag yearly counts
+ * and the latest post per tag. Every visible tag gets a row, busiest first.
  */
 export async function getPublicTagIndex(db: D1Database = getDb(), now = nowIso()): Promise<PublicTagIndex> {
   const tags = selectVisibleTags(await listPublicTags(db, now));
-  if (tags.length === 0) return { total: 0, years: [], mostWritten: [], groups: [], showAlphabet: false };
+  if (tags.length === 0) return { total: 0, years: [], subjects: [] };
 
-  const showAlphabet = tags.length >= TAG_ALPHABET_THRESHOLD;
-  const lead = showAlphabet ? tags.slice(0, TAG_MOST_WRITTEN_LIMIT) : tags;
-  const leadIds = lead.map((tag) => tag.id);
   const firstPublished = await findFirstPublicPostDate(db, now);
   const years = tagSeriesYears(firstPublished ? getSiteDateParts(firstPublished).year : null, getSiteDateParts(now).year);
   // Each local year starts at the site-time-zone January 1st, expressed as a UTC instant.
   const yearStarts = years.map((year) => ({ year, start: getSiteMonthRange(Date.UTC(year, 0, 15)).monthStart }));
   const [yearCounts, latestPosts] = await Promise.all([
-    listPublicTagYearCounts(db, leadIds, yearStarts, now),
-    listLatestPublicPostsForTags(db, leadIds, now)
+    listPublicTagYearCounts(db, yearStarts, now),
+    listLatestPublicPostsForTags(db, now)
   ]);
 
   return {
     total: tags.length,
     years,
-    mostWritten: buildMostWritten(lead, years, yearCounts, latestPosts).map((tag) => ({
+    subjects: buildSubjectRows(tags, years, yearCounts, latestPosts).map((tag) => ({
       ...tag,
       latest: tag.latest ? { ...tag.latest, title: decodeHtmlEntities(tag.latest.title) } : null
-    })),
-    groups: showAlphabet ? groupTagsByInitial(tags) : [],
-    showAlphabet
+    }))
   };
 }

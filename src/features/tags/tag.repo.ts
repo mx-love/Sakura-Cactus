@@ -151,17 +151,18 @@ export async function findFirstPublicPostDate(db: D1Database, now: string): Prom
 }
 
 /**
- * Post counts per tag and site-local year in one aggregate query. Years are
- * bucketed with precomputed UTC instants for each local January 1st, newest
- * first, so the SQL stays independent of the configured time zone.
+ * Post counts per tag and site-local year for every tag, in one aggregate
+ * query. Years are bucketed with precomputed UTC instants for each local
+ * January 1st, newest first, so the SQL stays independent of the configured
+ * time zone. No tag id list is bound, which keeps the query under D1's bound
+ * parameter limit however many tags exist.
  */
 export async function listPublicTagYearCounts(
   db: D1Database,
-  tagIds: string[],
   yearStarts: Array<{ year: number; start: string }>,
   now: string
 ): Promise<PublicTagYearCountRow[]> {
-  if (tagIds.length === 0 || yearStarts.length === 0) return [];
+  if (yearStarts.length === 0) return [];
   const ordered = [...yearStarts].sort((a, b) => b.year - a.year);
   const bucket = `CASE ${ordered.map(() => 'WHEN posts.published_at >= ? THEN ?').join(' ')} ELSE NULL END`;
   const result = await db
@@ -169,22 +170,16 @@ export async function listPublicTagYearCounts(
       `SELECT post_tags.tag_id AS tag_id, ${bucket} AS year, COUNT(*) AS post_count
        FROM post_tags
        INNER JOIN posts ON posts.id = post_tags.post_id
-       WHERE post_tags.tag_id IN (${tagIds.map(() => '?').join(', ')})
-         AND ${PUBLIC_TAGGED_POST_CONDITIONS}
+       WHERE ${PUBLIC_TAGGED_POST_CONDITIONS}
        GROUP BY post_tags.tag_id, year`
     )
-    .bind(...ordered.flatMap(({ year, start }) => [start, year]), ...tagIds, now)
+    .bind(...ordered.flatMap(({ year, start }) => [start, year]), now)
     .all<PublicTagYearCountRow>();
   return (result.results ?? []).filter((row) => row.year !== null);
 }
 
-/** The newest public post for each of the given tags, in one windowed query. */
-export async function listLatestPublicPostsForTags(
-  db: D1Database,
-  tagIds: string[],
-  now: string
-): Promise<PublicTagLatestPostRow[]> {
-  if (tagIds.length === 0) return [];
+/** The newest public post for every tag, in one windowed query. */
+export async function listLatestPublicPostsForTags(db: D1Database, now: string): Promise<PublicTagLatestPostRow[]> {
   const result = await db
     .prepare(
       `SELECT tag_id, slug, title, published_at FROM (
@@ -192,11 +187,10 @@ export async function listLatestPublicPostsForTags(
            ROW_NUMBER() OVER (PARTITION BY post_tags.tag_id ORDER BY posts.published_at DESC, posts.updated_at DESC) AS position
          FROM post_tags
          INNER JOIN posts ON posts.id = post_tags.post_id
-         WHERE post_tags.tag_id IN (${tagIds.map(() => '?').join(', ')})
-           AND ${PUBLIC_TAGGED_POST_CONDITIONS}
+         WHERE ${PUBLIC_TAGGED_POST_CONDITIONS}
        ) WHERE position = 1`
     )
-    .bind(...tagIds, now)
+    .bind(now)
     .all<PublicTagLatestPostRow>();
   return result.results ?? [];
 }
