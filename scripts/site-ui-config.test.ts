@@ -17,8 +17,8 @@ test('list pagination keeps prev/next semantics and accessible page position wit
   assert.match(nav, /aria-hidden="true"><\/span>/, 'a missing side is an empty, hidden cell');
   assert.match(pagination, /class="sr-only">第 \{currentPage\} 页，共 \{totalPages\} 页/);
   assert.match(pagination, /ariaLabel: `\$\{labelText\}：第 \$\{item\.page\} 页，共 \$\{totalPages\} 页/);
-  assert.doesNotMatch(pagination, /All Entries|href="\/timeline"/, 'the year index is reached from the 时间轴 nav item, not from pagination');
-  assert.match(pagination, /class="sc-endmark" aria-hidden="true">◆ ◆ ◆</);
+  assert.doesNotMatch(pagination, /href="\/timeline"/, 'the year index lives in the nav, not under every list page');
+  assert.doesNotMatch(pagination, /◆/, 'no ornamental end mark on list pages');
   assert.match(header, /`Page \$\{pad\(folio\.current\)\} \/ \$\{pad\(folio\.total\)\}`/);
   assert.match(header, /const pad = \(value: number\) => String\(value\)\.padStart\(2, '0'\)/);
 });

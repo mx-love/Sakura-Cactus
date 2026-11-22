@@ -243,16 +243,7 @@ a.sc-index-tag:is(:hover, :focus-visible) {
   color: var(--color-primary);
 }
 
-/* ---------- End mark + Newer / Older nav (posts and list pagination) ---------- */
-
-.sc-endmark {
-  margin: 2.5rem 0 0;
-  color: var(--color-primary);
-  font-size: 0.875rem;
-  letter-spacing: 0.6em;
-  text-align: center;
-  text-indent: 0.6em;
-}
+/* ---------- Newer / Older nav (posts and list pagination) ---------- */
 
 .sc-entry-nav {
   display: grid;

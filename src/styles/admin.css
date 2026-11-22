@@ -497,3 +497,224 @@
     padding: 0.34rem 0.62rem;
   }
 }
+
+/* ---------- Write page · paper language (matches the public magazine pages) ---------- */
+
+.sc-writer-page {
+  --sc-writer-page-background: var(--color-page-bg);
+  --sc-writer-canvas-background: transparent;
+  --sc-writer-panel-background: transparent;
+  --sc-writer-control-background: transparent;
+  --sc-writer-control-focus-background: transparent;
+}
+
+.sc-writer-page .sc-writer {
+  width: min(100% - 2rem, 1320px);
+}
+
+.sc-writer-page .sc-writer-topbar {
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--color-rule-strong);
+  background: color-mix(in srgb, var(--color-page-bg) 90%, transparent);
+}
+
+.sc-writer-page .sc-writer-back {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sc-writer-page .sc-writer-heading {
+  margin: 0;
+  padding: 2rem 0 1.25rem;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.sc-writer-eyebrow {
+  margin: 0 0 0.55rem;
+  color: var(--color-primary);
+}
+
+.sc-writer-page .sc-writer-heading h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.sc-writer-page .sc-writer-grid {
+  gap: 0;
+}
+
+.sc-writer-page .sc-writer-canvas,
+.sc-writer-page .sc-writer-card,
+.sc-writer-page .sc-writer-danger {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.sc-writer-page .sc-writer-main {
+  padding-right: clamp(1.25rem, 3vw, 2.5rem);
+  border-right: 1px solid var(--color-rule);
+}
+
+.sc-writer-page .sc-writer-tabs {
+  padding: 0.9rem 0 0;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.sc-writer-page .sc-writer-tab-list {
+  gap: 1.6rem;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.sc-writer-page .sc-writer-tab {
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0 0 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+}
+
+.sc-writer-page .sc-writer-tab-active {
+  border-bottom-color: var(--color-primary);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.sc-writer-page .sc-writer-textarea,
+.sc-writer-page .sc-writer-preview {
+  padding: 1.6rem 0;
+}
+
+.sc-writer-page .sc-writer-split .sc-writer-preview {
+  padding-left: 1.5rem;
+  border-left-color: var(--color-rule);
+}
+
+.sc-writer-page .sc-writer-split .sc-writer-textarea {
+  padding-right: 1.5rem;
+}
+
+.sc-writer-page .sc-writer-side {
+  gap: 0;
+  padding-left: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+.sc-writer-page .sc-writer-card,
+.sc-writer-page .sc-writer-danger {
+  padding: 1.4rem 0;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.sc-writer-page .sc-writer-danger {
+  border-bottom: 0;
+}
+
+.sc-writer-page .sc-writer-card-title,
+.sc-writer-page .sc-writer-danger h2 {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.sc-writer-page .sc-writer-card-title span,
+.sc-writer-page .sc-writer-danger h2 span {
+  margin-left: 0.5rem;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+
+.sc-writer-page .sc-writer-control {
+  border: 0;
+  border-bottom: 1px solid var(--color-rule-strong);
+  border-radius: 0;
+  font-family: var(--font-serif);
+}
+
+.sc-writer-page .sc-writer-field-plain .sc-writer-control {
+  min-height: 2.6rem;
+  padding-inline: 0;
+}
+
+.sc-writer-page .sc-writer-control:focus {
+  border-bottom-color: var(--color-primary);
+  box-shadow: none;
+}
+
+.sc-writer-page .sc-button {
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+
+.sc-writer-page .sc-button-primary {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-page-bg);
+}
+
+.sc-writer-page .sc-button-primary:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.sc-writer-page .sc-button-secondary {
+  border-color: var(--color-text);
+  background: transparent;
+}
+
+.sc-writer-page .sc-button-danger {
+  border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
+  background: transparent;
+}
+
+.sc-writer-page .sc-temporary-paper {
+  margin: 1rem 0 0;
+  border-width: 0 0 0 2px;
+  border-color: var(--color-primary);
+  border-radius: 0;
+  background: transparent;
+  font-weight: 400;
+}
+
+.sc-writer-page .sc-preview-top-button {
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+
+.sc-writer-page .sc-writer-message,
+.sc-writer-page .sc-writer-note {
+  font-weight: 400;
+}
+
+@media (max-width: 1024px) {
+  .sc-writer-page .sc-writer-main {
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .sc-writer-page .sc-writer-side {
+    padding-left: 0;
+    border-top: 1px solid var(--color-rule-strong);
+  }
+}

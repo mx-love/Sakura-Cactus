@@ -1039,6 +1039,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
       </div>
 
       <header className="sc-writer-heading">
+        <p className="sc-label sc-writer-eyebrow">{aboutMode ? 'About · 关于页' : isExisting ? 'Manuscript · 修订稿' : 'Manuscript · 新稿件'}</p>
         <h1>{aboutMode ? '关于' : '写作'}</h1>
       </header>
 
@@ -1128,7 +1129,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
       <aside className="sc-writer-side">
         <div className="sc-writer-card">
-          <h2 className="sc-writer-card-title">文章设置</h2>
+          <h2 className="sc-writer-card-title">Settings<span>文章设置</span></h2>
           <div className="sc-writer-fields">
             <label className="sc-writer-field sc-writer-field-plain">
               <input
@@ -1169,7 +1170,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
         </div>
 
         <div className="sc-writer-card">
-          <h2 className="sc-writer-card-title">收录</h2>
+          <h2 className="sc-writer-card-title">Publish<span>收录</span></h2>
           <div className="sc-writer-fields">
             <div className="sc-writer-publish-actions">
               {!isExisting ? (
@@ -1207,7 +1208,7 @@ export function PostEditor({ post, aboutMode = false }: PostEditorProps) {
 
         {isExisting ? (
           <div className="sc-writer-danger">
-            <h2>纸页整理</h2>
+            <h2>Housekeeping<span>纸页整理</span></h2>
             <button
               className="sc-button sc-button-danger sc-writer-secondary-action disabled:opacity-60"
               disabled={isSubmitting}
