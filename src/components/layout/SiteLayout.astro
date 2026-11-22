@@ -257,6 +257,25 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
           image.classList.add('sc-image-ready');
         }
 
+        // An article image whose host is down or blocks us becomes a quiet note with a link to the original.
+        function showImageFallback(image) {
+          if (!image.closest('.sc-prose, .prose-content') || image.dataset.imageFallback === 'true') return;
+          image.dataset.imageFallback = 'true';
+          const src = image.currentSrc || image.getAttribute('src') || '';
+          const note = document.createElement(src ? 'a' : 'span');
+          note.className = 'sc-image-fallback';
+          note.textContent = image.alt ? `图片暂时无法加载 · ${image.alt}` : '图片暂时无法加载';
+          if (src) {
+            note.href = src;
+            note.target = '_blank';
+            note.rel = 'noopener noreferrer';
+            note.referrerPolicy = 'no-referrer';
+            note.textContent += ' · 打开原图';
+          }
+          image.hidden = true;
+          image.after(note);
+        }
+
         function enhanceImage(image) {
           if (!(image instanceof HTMLImageElement) || image.dataset.imageFadeEnhanced === 'true') {
             return;
@@ -267,11 +286,15 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
 
           if (image.complete) {
             markReady(image);
+            if (image.getAttribute('src') && image.naturalWidth === 0) showImageFallback(image);
             return;
           }
 
           image.addEventListener('load', () => markReady(image), { once: true });
-          image.addEventListener('error', () => markReady(image), { once: true });
+          image.addEventListener('error', () => {
+            markReady(image);
+            showImageFallback(image);
+          }, { once: true });
         }
 
         function enhanceImages(root = document) {

@@ -275,6 +275,9 @@ function rehypeHardenLinksAndImages() {
         }
 
         node.properties.loading = 'lazy';
+        node.properties.decoding = 'async';
+        // Many image hosts refuse hotlinks that carry a Referer; sending none keeps them loading.
+        node.properties.referrerPolicy = 'no-referrer';
       }
     });
   };
