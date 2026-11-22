@@ -619,3 +619,55 @@
 .sc-article-prose .sc-prose-image-paragraph + .sc-prose-image-caption {
   text-align: center;
 }
+
+/*
+ * Images from an image host arrive in every size. They keep their own ratio,
+ * are never enlarged past their real size, and hold a slot while loading so
+ * the page does not jump.
+ */
+.sc-article-prose img:not(.sc-image-ready) {
+  min-width: min(100%, 18rem);
+  min-height: 12rem;
+}
+
+.sc-prose .sc-image-fallback,
+.prose-content .sc-image-fallback {
+  display: block;
+  margin: 1.7rem auto;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 14px;
+  padding: 1.6rem 1rem;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  text-align: center;
+  text-decoration: none;
+}
+
+a.sc-image-fallback:hover {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+/* Article end: a hairline either side of a small italic Fin. */
+.sc-article-endmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  margin-top: 3rem;
+  margin-bottom: 2.4rem;
+  color: var(--color-subtle);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-style: italic;
+  letter-spacing: 0.06em;
+}
+
+.sc-article-endmark::before,
+.sc-article-endmark::after {
+  content: "";
+  width: 3.5rem;
+  height: 1px;
+  background: var(--color-border-strong);
+}

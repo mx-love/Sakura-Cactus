@@ -46,7 +46,13 @@ const shouldShowUpdatedAt = publishedAt ? updatedAt.getTime() - publishedAt.getT
 const { previous: olderPost, next: newerPost } = publicPost
   ? await getAdjacentPublicPosts(publicPost)
   : { previous: null, next: null };
-const renderedContent = addHeadingIdsToHtml(post.contentHtml);
+// Saved posts keep their rendered HTML, so image hints are added at view time too:
+// no Referer (many image hosts block hotlinks that send one) and async decoding.
+const renderedContent = addHeadingIdsToHtml(withImageHostHints(post.contentHtml));
+
+function withImageHostHints(html: string): string {
+  return html.replace(/<img\b(?![^>]*\breferrerpolicy=)/gi, '<img referrerpolicy="no-referrer" decoding="async"');
+}
 const tocHeadings = renderedContent.headings.filter((heading) => heading.depth === 2);
 const showToc = tocHeadings.length >= 2;
 const commentsServerURL = env.PUBLIC_COMMENTS_SERVER_URL?.trim() || '';
@@ -165,6 +171,7 @@ function formatDate(date: Date | null) {
           data-article-image-viewer-root={publicPost ? true : undefined}
           set:html={renderedContent.html}
         />
+        <p class="sc-article-endmark sc-article-inner" aria-hidden="true"><span>Fin</span></p>
         {publicPost ? <ArticleImageViewer /> : null}
         {publicPost ? (
           <div class="sc-article-inner">
