@@ -177,9 +177,9 @@ function formatDate(date: Date | null) {
         {publicPost ? <ArticleImageViewer /> : null}
         <CommentSlot enabled={siteSettings.commentEnabled} serverURL={commentsServerURL} path={`/posts/${post.slug}`} />
         {publicPost ? (
-          <footer class="sc-article-nav sc-article-inner" aria-label="文章导航">
+          <nav class="sc-article-nav sc-article-inner" aria-label="文章导航">
             {newerPost ? (
-              <a class="sc-article-nav-card sc-article-nav-prev" href={`/posts/${newerPost.slug}`} data-astro-prefetch>
+              <a class="sc-article-nav-card sc-article-nav-prev" href={`/posts/${newerPost.slug}`} rel="prev" data-astro-prefetch>
                 <span>更新的一篇</span>
                 <strong>{newerPost.title}</strong>
                 {newerPost.publishedAt ? <time datetime={newerPost.publishedAt}>{formatDate(new Date(newerPost.publishedAt))}</time> : null}
@@ -192,7 +192,7 @@ function formatDate(date: Date | null) {
             )}
 
             {olderPost ? (
-              <a class="sc-article-nav-card sc-article-nav-next" href={`/posts/${olderPost.slug}`} data-astro-prefetch>
+              <a class="sc-article-nav-card sc-article-nav-next" href={`/posts/${olderPost.slug}`} rel="next" data-astro-prefetch>
                 <span>更早的一篇</span>
                 <strong>{olderPost.title}</strong>
                 {olderPost.publishedAt ? <time datetime={olderPost.publishedAt}>{formatDate(new Date(olderPost.publishedAt))}</time> : null}
@@ -203,7 +203,7 @@ function formatDate(date: Date | null) {
                 <strong>已是最早</strong>
               </div>
             )}
-          </footer>
+          </nav>
         ) : null}
         {siteSettings.viewCountEnabled && publicPost ? (
           <script define:vars={{ postId: post.id }} is:inline>
