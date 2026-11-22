@@ -21,6 +21,18 @@ test('editorial pagination preserves navigation semantics and full-length page n
   assert.match(styles, /font-variant-numeric:\s*lining-nums tabular-nums/);
 });
 
+test('pagination emphasis stays text-only and the tighter paper spacing is article-list scoped', () => {
+  const styles = readFileSync(new URL('../src/styles/public-pages.css', import.meta.url), 'utf8');
+  assert.match(styles, /\.sc-list-shell > \.sc-public-page-paper\s*\{\s*padding-bottom:\s*clamp\(1\.5rem, 3vw, 2rem\)/);
+  const activeLink = styles.match(/\.sc-article-pagination a\s*\{([^}]+)\}/)?.[1];
+  assert.ok(activeLink);
+  assert.match(activeLink, /color:\s*var\(--color-text\)/);
+  assert.match(activeLink, /font-weight:\s*550/);
+  assert.doesNotMatch(activeLink, /background|border|shadow/);
+  assert.match(styles, /\.sc-pagination-disabled\s*\{\s*color:\s*var\(--color-subtle\)/);
+  assert.match(styles, /span:not\(\[aria-hidden\]\)\s*\{[^}]*text-decoration:\s*underline/);
+});
+
 test('footer keeps three icon links with safe platform defaults and optional profile overrides', () => {
   const template = readFileSync(new URL('../src/components/layout/SiteLayout.astro', import.meta.url), 'utf8');
   assert.match(template, /<nav class="sc-footer-links sc-footer-social" aria-label="外部链接">/);

@@ -13,6 +13,10 @@
   padding-block: clamp(1.5rem, 5vw, 4rem);
 }
 
+.sc-list-shell > .sc-public-page-paper {
+  padding-bottom: clamp(1.5rem, 3vw, 2rem);
+}
+
 .sc-archive-month[id] {
   scroll-margin-top: 6rem;
 }
@@ -100,7 +104,7 @@
   gap: clamp(0.5rem, 2vw, 1rem);
   margin-top: 1.4rem;
   border-top: 1px solid var(--color-border);
-  padding-top: 0.85rem;
+  padding-top: clamp(1.1rem, 2vw, 1.5rem);
   color: var(--color-muted);
   font-size: 0.92rem;
   font-weight: 500;
@@ -116,6 +120,15 @@
   padding-block: 0.25rem;
   white-space: nowrap;
   transition: color 140ms ease;
+}
+
+.sc-article-pagination a {
+  color: var(--color-text);
+  font-weight: 550;
+}
+
+.sc-article-pagination a > [aria-hidden="true"] {
+  color: var(--color-muted);
 }
 
 .sc-pagination-prev {
@@ -150,6 +163,12 @@
 
 .sc-article-pagination a:is(:hover, :focus-visible) {
   color: var(--color-primary);
+}
+
+.sc-article-pagination a:is(:hover, :focus-visible) > span:not([aria-hidden]) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
 }
 
 .sc-pagination-disabled {
