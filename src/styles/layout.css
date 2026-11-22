@@ -16,16 +16,6 @@
   transform: none;
 }
 
-.sc-page {
-  min-height: 100vh;
-  background: var(--sc-layout-background);
-  color: var(--color-text);
-}
-
-.sc-ambient {
-  background: var(--sc-layout-background);
-}
-
 .sc-shell {
   width: min(100% - 2rem, var(--sc-content-width));
   min-width: 0;
@@ -56,6 +46,7 @@
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   padding: 0.5rem 0.85rem;
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.2;
@@ -66,8 +57,10 @@
     transform 140ms ease;
 }
 
-.sc-button:hover {
-  transform: translateY(-1px);
+@media (prefers-reduced-motion: no-preference) {
+  .sc-button:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .sc-button:disabled {
@@ -117,6 +110,7 @@
   border-radius: var(--radius-sm);
   background: var(--sc-form-control-background);
   color: var(--color-text);
+  font-family: var(--font-sans);
   transition:
     border-color 140ms ease,
     box-shadow 140ms ease;
@@ -354,49 +348,36 @@
   color: var(--color-danger);
 }
 
-.sc-post-list {
-  display: grid;
-  gap: 1.6rem;
-}
-
-.sc-post-item {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 1.35rem;
-}
-
-.sc-post-item:last-child {
-  border-bottom: 0;
-}
-
-.sc-soft-divider {
-  height: 1px;
-  background: var(--color-border);
-}
-
 .sc-site-header {
   position: sticky;
   top: 0;
   z-index: 30;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-header-surface);
-  backdrop-filter: blur(12px);
+  /* Same paper as the page so the sticky masthead reads as part of the sheet. */
+  background:
+    var(--sc-page-texture) 0 0 / var(--sc-page-texture-size) repeat,
+    var(--color-page-bg);
 }
 
+/* Masthead: italic serif name, plain-text nav, heavy rule beneath. */
 .sc-site-header-inner {
   display: grid;
-  width: min(100% - 2rem, var(--sc-content-width));
+  width: min(100% - 2.5rem, var(--sc-content-width));
   margin-inline: auto;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 1rem;
-  padding-block: 0.82rem;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding-block: 1rem 0.75rem;
 }
 
 .sc-site-title {
   color: var(--color-text);
-  font-size: 1rem;
-  font-weight: 850;
-  letter-spacing: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
   white-space: nowrap;
 }
 
@@ -404,39 +385,60 @@
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   justify-content: flex-end;
-  gap: 0.15rem;
-  width: fit-content;
   justify-self: end;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-card-subtle);
-  padding: 0.22rem;
+  gap: 0.25rem 1.75rem;
 }
 
 .sc-site-nav-link {
-  border-radius: 999px;
-  padding: 0.38rem 0.72rem;
+  border-bottom: 1px solid transparent;
+  padding-block: 0.2rem;
   color: var(--color-muted);
-  font-size: 0.9rem;
-  font-weight: 650;
-  line-height: 1.2;
-  transition:
-    background-color 140ms ease,
-    color 140ms ease;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  background-image: linear-gradient(var(--color-primary), var(--color-primary));
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
 }
 
-.sc-site-nav-link:hover,
+.sc-site-nav-link:is(:hover, :focus-visible) {
+  color: var(--color-text);
+  background-size: 100% 1px;
+}
+
 .sc-site-nav-link-active {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sc-site-nav-link {
+    transition:
+      background-size 260ms ease,
+      color 140ms ease;
+  }
 }
 
 .sc-site-actions {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.1rem;
+}
+
+/* Thin "Vol. · Issue … Page" strip under the masthead (not sticky). */
+.sc-issue-strip {
+  display: flex;
+  width: min(100% - 2.5rem, var(--sc-content-width));
+  margin-inline: auto;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 0.45rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .sc-mobile-menu {
@@ -444,42 +446,33 @@
   right: 0;
   width: 11rem;
   margin-top: 0.55rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-strong);
-  padding: 0.45rem;
+  border: 1px solid var(--color-rule);
+  background: var(--color-floating-surface);
+  padding: 0.35rem;
   box-shadow: var(--shadow-card);
 }
 
 .sc-mobile-menu-link {
   display: block;
-  border-radius: var(--radius-sm);
-  padding: 0.55rem 0.7rem;
+  padding: 0.6rem 0.75rem;
   color: var(--color-muted);
-  font-size: 0.9rem;
-  font-weight: 650;
+  font-size: 0.9375rem;
 }
 
-.sc-mobile-menu-link:hover {
-  background: var(--color-primary-soft);
+.sc-mobile-menu-link:hover,
+.sc-mobile-menu-link[aria-current="page"] {
   color: var(--color-primary);
 }
 
-.sc-mobile-menu-divider {
-  height: 1px;
-  margin: 0.35rem 0;
-  background: var(--color-border);
-}
-
 .sc-site-footer {
-  border-top: 1px solid var(--color-border);
-  background: var(--color-page-bg);
+  border-top: 1px solid var(--color-rule-strong);
+  background: transparent;
   padding-block: 1.5rem 1.75rem;
   padding-bottom: max(1.75rem, calc(env(safe-area-inset-bottom) + 1rem));
 }
 
 .sc-footer-inner {
-  width: min(calc(100% - 2rem), var(--sc-content-width));
+  width: min(calc(100% - 2.5rem), var(--sc-content-width));
   min-width: 0;
   margin-inline: auto;
   color: var(--color-muted);
@@ -567,6 +560,9 @@
 
 .sc-footer-copyright {
   min-width: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-style: italic;
   align-self: center;
   justify-self: start;
   text-align: center;
@@ -617,13 +613,54 @@
   flex: none;
 }
 
-.sc-page-shell {
-  width: min(100% - 2rem, var(--sc-content-width));
-  min-width: 0;
-  margin-inline: auto;
-  padding-block: clamp(2rem, 5vw, 4rem);
-}
+@media (max-width: 760px) {
+  .sc-site-header-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    padding-block: 0.75rem 0.6rem;
+  }
 
-.sc-list-shell {
-  max-width: var(--sc-content-width);
+  .sc-site-nav {
+    display: none;
+  }
+
+  .sc-site-title {
+    overflow: hidden;
+    font-size: 1.5rem;
+    text-overflow: ellipsis;
+  }
+
+  .sc-issue-strip {
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+  }
+
+  .sc-issue-strip-middle {
+    display: none;
+  }
+
+  .sc-footer-meta-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .sc-theme-switcher {
+    order: 1;
+  }
+
+  .sc-footer-copyright {
+    order: 2;
+  }
+
+  .sc-footer-social {
+    order: 3;
+  }
+
+  .sc-footer-links {
+    justify-content: center;
+  }
 }

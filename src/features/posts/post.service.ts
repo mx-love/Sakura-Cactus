@@ -18,6 +18,8 @@ import {
   listPublicFeedPosts,
   listAdminPosts,
   listPublicPosts,
+  listPublicArchivePosts,
+  findPublicPostHeadlineAt,
   listPublicSearchPosts,
   listPublicSitemapPosts,
   listAssetsForPost,
@@ -312,23 +314,61 @@ export async function getPublicMonthlyPostStats(range: MonthlyPostStatsRange): P
   return getMonthlyPublicPostStats(getDb(), range);
 }
 
-export async function getPublicPostsPage(page: number, pageSize: number): Promise<{ posts: PublicPostSummary[]; totalCount: number }> {
+export interface PublicPageNeighbor {
+  page: number;
+  firstNumber: number;
+  title: string;
+  slug: string;
+  publishedAt: string | null;
+}
+
+export interface PublicPostsPage {
+  posts: PublicPostSummary[];
+  totalCount: number;
+  newer: PublicPageNeighbor | null;
+  older: PublicPageNeighbor | null;
+}
+
+export async function getPublicPostsPage(
+  page: number,
+  pageSize: number,
+  filters: { tagSlug?: string } = {}
+): Promise<PublicPostsPage> {
   const db = getDb();
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const safePageSize = Math.min(Math.max(pageSize, 1), 50);
   const offset = (safePage - 1) * safePageSize;
   const options = {
     excludeAbout: true,
-    pinnedFirst: true
+    pinnedFirst: true,
+    ...(filters.tagSlug ? { tagSlug: filters.tagSlug } : {})
   };
   const [posts, totalCount] = await Promise.all([
     listPublicPosts(db, { ...options, limit: safePageSize, offset }),
     countPublicPosts(db, options)
   ]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+
+  // Each neighbor is labelled by the first post of that page: one single-row lookup per side.
+  async function neighbor(targetPage: number): Promise<PublicPageNeighbor | null> {
+    if (targetPage < 1 || targetPage > totalPages || targetPage === safePage) return null;
+    const firstOffset = (targetPage - 1) * safePageSize;
+    const row = await findPublicPostHeadlineAt(db, options, firstOffset);
+    return row
+      ? { page: targetPage, firstNumber: firstOffset + 1, title: decodeHtmlEntities(row.title), slug: row.slug, publishedAt: row.published_at }
+      : null;
+  }
+
+  const inRange = safePage <= totalPages;
+  const [newer, older] = inRange
+    ? await Promise.all([neighbor(safePage - 1), neighbor(safePage + 1)])
+    : [null, null];
 
   return {
     posts: await toPublicPostSummaries(db, posts),
-    totalCount
+    totalCount,
+    newer,
+    older
   };
 }
 
@@ -338,6 +378,15 @@ export async function getPublicFeedPosts(limit = 50) {
 
 export async function getPublicSitemapPosts() {
   return listPublicSitemapPosts(getDb());
+}
+
+export async function getPublicArchivePosts(): Promise<Array<{ slug: string; title: string; publishedAt: string }>> {
+  const posts = await listPublicArchivePosts(getDb());
+  return posts.map((post) => ({
+    slug: post.slug,
+    title: decodeHtmlEntities(post.title),
+    publishedAt: post.published_at
+  }));
 }
 
 export async function getPublicSearchIndex(limit?: number) {

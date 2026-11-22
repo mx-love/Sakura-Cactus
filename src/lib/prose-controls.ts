@@ -16,6 +16,8 @@ async function copyText(value: string): Promise<void> {
   textarea.select();
 
   try {
+    // Intentional legacy fallback for browsers or insecure contexts without the
+    // async Clipboard API; the deprecation hint from astro check is expected.
     if (!document.execCommand('copy')) {
       throw new Error('Copy command failed.');
     }

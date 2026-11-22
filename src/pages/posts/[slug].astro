@@ -3,6 +3,7 @@ import SiteLayout from '@/components/layout/SiteLayout.astro';
 import '@/styles/prose.css';
 import { PostDetailAdminActions } from '@/components/admin/PostDetailAdminActions';
 import ArticleShare from '@/components/posts/ArticleShare.astro';
+import EntryNav from '@/components/editorial/EntryNav.astro';
 import CommentSlot from '@/components/comments/CommentSlot.astro';
 import ArticleImageViewer from '@/components/posts/ArticleImageViewer.astro';
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
@@ -10,7 +11,7 @@ import { getAdjacentPublicPosts, getAdminPostBySlug, getPublicPostBySlug } from 
 import { addHeadingIdsToHtml } from '@/features/posts/post.renderer';
 import { getPostViewCount, getSiteSettings } from '@/features/settings/settings.service';
 import { ROBOTS_INDEX_FOLLOW, ROBOTS_NOINDEX_NOFOLLOW, absoluteSiteUrl, summarizeHtml } from '@/lib/seo';
-import { formatSiteDate } from '@/lib/site-time';
+import { formatSiteDate, formatSiteDotDate } from '@/lib/site-time';
 import { env } from 'cloudflare:workers';
 
 export const prerender = false;
@@ -84,7 +85,7 @@ function formatDate(date: Date | null) {
       <span class="sc-reading-progress-bar" data-reading-progress></span>
     </div>
     <div class="sc-page-shell sc-article-shell">
-      <a class="sc-article-back" href="/articles" data-astro-prefetch>← 返回文章</a>
+      <a class="sc-article-back sc-label" href="/articles" data-astro-prefetch>← 返回文章</a>
       {showToc ? (
         <aside class="sc-article-toc" aria-label="文章目录">
           <p>纸页书签</p>
@@ -139,31 +140,21 @@ function formatDate(date: Date | null) {
         </div>
         <header class="sc-article-header">
           <div class="sc-article-inner">
-            <p class="sc-post-meta sc-article-meta">
+            <p class="sc-label sc-article-meta">
               {publishedAt ? (
-                <>
-                  <span class="sc-calendar-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M8 2v4" />
-                      <path d="M16 2v4" />
-                      <path d="M3 10h18" />
-                      <rect x="3" y="4" width="18" height="18" rx="2" />
-                    </svg>
-                  </span>
-                  <time datetime={post.publishedAt ?? undefined}>{formatDate(publishedAt)}</time>
-                </>
+                <time datetime={post.publishedAt ?? undefined} title={formatDate(publishedAt)}>{formatSiteDotDate(publishedAt)}</time>
               ) : (
-                <span>Published</span>
+                <span>Draft</span>
               )}
-              {shouldShowUpdatedAt ? <span> · 更新于 {formatDate(updatedAt)}</span> : null}
-              {viewCount !== null ? <span> · 阅读 {viewCount}</span> : null}
+              {shouldShowUpdatedAt ? <span>更新于 {formatSiteDotDate(updatedAt)}</span> : null}
+              {viewCount !== null ? <span>阅读 {viewCount}</span> : null}
             </p>
             <h1>{post.title}</h1>
             {post.excerpt ? <p class="sc-article-subtitle">{post.excerpt}</p> : null}
             {post.tags.length > 0 ? (
               <div class="sc-tag-list sc-article-tags">
                 {post.tags.map((tag) => (
-                  <a class="sc-tag-pill" href={`/tags/${tag.slug}`}>{tag.name}</a>
+                  <a class="sc-tag-link sc-draw-link" href={`/tags/${tag.slug}`}>{tag.name}</a>
                 ))}
               </div>
             ) : null}
@@ -174,37 +165,18 @@ function formatDate(date: Date | null) {
           data-article-image-viewer-root={publicPost ? true : undefined}
           set:html={renderedContent.html}
         />
+        <p class="sc-endmark sc-article-inner" aria-hidden="true">◆ ◆ ◆</p>
         {publicPost ? <ArticleImageViewer /> : null}
-        <CommentSlot enabled={siteSettings.commentEnabled} serverURL={commentsServerURL} path={`/posts/${post.slug}`} />
         {publicPost ? (
-          <footer class="sc-article-nav sc-article-inner" aria-label="文章导航">
-            {newerPost ? (
-              <a class="sc-article-nav-card sc-article-nav-prev" href={`/posts/${newerPost.slug}`} data-astro-prefetch>
-                <span>更新的一篇</span>
-                <strong>{newerPost.title}</strong>
-                {newerPost.publishedAt ? <time datetime={newerPost.publishedAt}>{formatDate(new Date(newerPost.publishedAt))}</time> : null}
-              </a>
-            ) : (
-              <div class="sc-article-nav-card sc-article-nav-disabled">
-                <span>更新的一篇</span>
-                <strong>已是最新</strong>
-              </div>
-            )}
-
-            {olderPost ? (
-              <a class="sc-article-nav-card sc-article-nav-next" href={`/posts/${olderPost.slug}`} data-astro-prefetch>
-                <span>更早的一篇</span>
-                <strong>{olderPost.title}</strong>
-                {olderPost.publishedAt ? <time datetime={olderPost.publishedAt}>{formatDate(new Date(olderPost.publishedAt))}</time> : null}
-              </a>
-            ) : (
-              <div class="sc-article-nav-card sc-article-nav-disabled sc-article-nav-next">
-                <span>更早的一篇</span>
-                <strong>已是最早</strong>
-              </div>
-            )}
-          </footer>
+          <div class="sc-article-inner">
+            <EntryNav
+              ariaLabel="文章导航"
+              newer={newerPost ? { href: `/posts/${newerPost.slug}`, label: 'Newer · 更新的一篇', title: newerPost.title, detail: newerPost.publishedAt ? formatSiteDotDate(newerPost.publishedAt) : null } : null}
+              older={olderPost ? { href: `/posts/${olderPost.slug}`, label: 'Older · 更早的一篇', title: olderPost.title, detail: olderPost.publishedAt ? formatSiteDotDate(olderPost.publishedAt) : null } : null}
+            />
+          </div>
         ) : null}
+        <CommentSlot enabled={siteSettings.commentEnabled} serverURL={commentsServerURL} path={`/posts/${post.slug}`} />
         {siteSettings.viewCountEnabled && publicPost ? (
           <script define:vars={{ postId: post.id }} is:inline>
             const storageKey = `sakura:viewed:${postId}`;

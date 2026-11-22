@@ -1,82 +1,82 @@
 ---
 import SiteLayout from '@/components/layout/SiteLayout.astro';
-import { getPublicPosts } from '@/features/posts/post.service';
+import PageHero from '@/components/editorial/PageHero.astro';
+import { getPublicArchivePosts } from '@/features/posts/post.service';
 import { ROBOTS_NOINDEX_FOLLOW, absoluteSiteUrl } from '@/lib/seo';
-import { formatSiteDate as formatDate, getSiteDateParts } from '@/lib/site-time';
+import { getSiteDateParts } from '@/lib/site-time';
 
 export const prerender = false;
 
-const posts = await getPublicPosts({ limit: 200, excludeAbout: true });
+const posts = await getPublicArchivePosts();
+type ArchivePost = (typeof posts)[number] & { day: string };
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-const archive = posts.reduce<Record<string, Record<string, typeof posts>>>((acc, post) => {
-  if (!post.publishedAt) {
-    return acc;
-  }
-
+// Group the full public index into year -> month buckets in the site time zone.
+const archive = new Map<number, Map<number, ArchivePost[]>>();
+for (const post of posts) {
   const parts = getSiteDateParts(new Date(post.publishedAt));
-  const year = String(parts.year);
-  const month = String(parts.month).padStart(2, '0');
-  acc[year] = acc[year] ?? {};
-  acc[year][month] = acc[year][month] ?? [];
-  acc[year][month].push(post);
-  return acc;
-}, {});
+  const months = archive.get(parts.year) ?? new Map<number, ArchivePost[]>();
+  const entries = months.get(parts.month) ?? [];
+  entries.push({ ...post, day: `${String(parts.month).padStart(2, '0')}.${String(parts.day).padStart(2, '0')}` });
+  months.set(parts.month, entries);
+  archive.set(parts.year, months);
+}
 
-const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
+const years = [...archive.keys()].sort((a, b) => b - a).map((year) => {
+  const months = archive.get(year)!;
+  const monthKeys = [...months.keys()].sort((a, b) => b - a);
+  return {
+    year,
+    count: monthKeys.reduce((sum, month) => sum + months.get(month)!.length, 0),
+    months: monthKeys.map((month) => ({ month, posts: months.get(month)! }))
+  };
+});
 const canonicalUrl = absoluteSiteUrl('/timeline');
 ---
 
 <SiteLayout title="时间轴 | Sakura Cactus" description="公开文章按收录时间归档。" canonicalUrl={canonicalUrl} robots={ROBOTS_NOINDEX_FOLLOW}>
   <section class="sc-page">
     <div class="sc-page-shell">
-      <div class="sc-paper-public-shell sc-public-page-paper">
-      <nav class="sc-breadcrumb" aria-label="面包屑">
-        <a href="/">首页</a>
-        <span>»</span>
-        <span>时间轴</span>
-      </nav>
-
-      <header class="sc-page-header">
-        <h1>时间轴</h1>
-        <p>公开文章按收录时间归档。</p>
-      </header>
+      <PageHero label="The Chronology" title="时间轴" subtitle="公开文章按收录时间归档。" count={posts.length} />
 
       {years.length === 0 ? (
         <div class="sc-empty">
           <p>暂无可归档文章。</p>
         </div>
       ) : (
-        <div class="sc-archive sc-paper-archive">
-          {years.map((year) => (
-            <section class="sc-archive-year">
-              <h2>{year}</h2>
-              {Object.keys(archive[year]).sort((a, b) => Number(b) - Number(a)).map((month) => (
-                <section class="sc-archive-month" id={`y${year}-m${month}`}>
-                  <h3>{Number(month)}月</h3>
-                  <div class="sc-archive-list">
-                    {archive[year][month].map((post) => (
-                      <article class="sc-archive-entry">
-                        <div class="sc-archive-date" aria-label={post.publishedAt ? formatDate(post.publishedAt) : undefined}>
-                          {post.publishedAt ? (
-                            <time datetime={post.publishedAt}>{formatDate(post.publishedAt, 'month-day')}</time>
-                          ) : null}
-                        </div>
-                        <div class="sc-archive-content">
-                          <h4>
-                            <a href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
-                          </h4>
-                          {post.excerpt ? <p>{post.excerpt}</p> : null}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </section>
-          ))}
-        </div>
+        <>
+          {years.length > 1 ? (
+            <nav class="sc-year-jump" aria-label="按年份跳转">
+              {years.map(({ year }) => <a class="sc-draw-link" href={`#y${year}`}>{year}</a>)}
+            </nav>
+          ) : null}
+          <div class="sc-year-table">
+            {years.map(({ year, count, months }) => (
+              <section class="sc-year" id={`y${year}`} aria-labelledby={`y${year}-heading`}>
+                <header class="sc-year-head">
+                  <h2 id={`y${year}-heading`} class="sc-year-title">{year}</h2>
+                  <p class="sc-label sc-year-count">{count} 篇</p>
+                </header>
+                <div class="sc-year-body">
+                  {months.map(({ month, posts: monthPosts }) => (
+                    <section class="sc-year-month" id={`y${year}-m${String(month).padStart(2, '0')}`}>
+                      <h3 class="sc-label sc-year-month-title">{month} 月 · {monthNames[month - 1]}</h3>
+                      <ol class="sc-year-list">
+                        {monthPosts.map((post) => (
+                          <li class="sc-year-entry">
+                            <time class="sc-label" datetime={post.publishedAt}>{post.day}</time>
+                            <a class="sc-draw-link" href={`/posts/${post.slug}`} data-astro-prefetch>{post.title}</a>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </>
       )}
-      </div>
     </div>
   </section>
 </SiteLayout>

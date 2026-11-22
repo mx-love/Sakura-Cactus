@@ -9,7 +9,8 @@ export function createEditorLeaveGuard(target: EventTarget): EditorLeaveGuard {
   let disposed = false;
   const warnBeforeLeaving = (event: Event) => {
     event.preventDefault();
-    // Required by browsers which still use the legacy beforeunload contract.
+    // Intentional: required by browsers which still use the legacy beforeunload
+    // contract; the deprecation hint from astro check is expected.
     (event as BeforeUnloadEvent).returnValue = '';
   };
 

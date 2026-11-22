@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type SubmitEvent } from 'react';
 import { normalizeInternalRedirect } from '@/lib/security/request';
 
 interface LoginFormProps {
@@ -22,7 +22,7 @@ export function LoginForm({ next = '/write' }: LoginFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const redirectTo = useMemo(() => normalizeInternalRedirect(next, DEFAULT_REDIRECT), [next]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);

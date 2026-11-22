@@ -1,0 +1,38 @@
+---
+// Shared index-page hero: mono kicker, large serif title, optional subtitle and
+// an italic oldstyle count. The count's visible numeral is decorative; the
+// accessible text comes from the sr-only label.
+interface Props {
+  label: string;
+  title: string;
+  subtitle?: string | null;
+  count?: number | null;
+  countLabel?: string;
+  backHref?: string;
+  backLabel?: string;
+}
+
+const { label, title, subtitle, count, countLabel = '篇', backHref, backLabel } = Astro.props;
+const hasCount = typeof count === 'number' && Number.isFinite(count) && count >= 0;
+const digits = hasCount ? String(Math.trunc(count!)).length : 0;
+const formattedCount = hasCount ? new Intl.NumberFormat('en-US').format(Math.trunc(count!)) : '';
+---
+
+<header class:list={['sc-hero', hasCount && 'sc-hero-with-count']}>
+  <div class="sc-hero-copy">
+    <p class="sc-label sc-hero-label">
+      {backHref ? <a class="sc-draw-link" href={backHref}>{backLabel ?? label}</a> : null}
+      {backHref ? <span aria-hidden="true"> / </span> : null}
+      <span>{label}</span>
+    </p>
+    <h1 class="sc-hero-title">{title}</h1>
+    {subtitle ? <p class="sc-hero-subtitle">{subtitle}</p> : null}
+    <slot />
+  </div>
+  {hasCount ? (
+    <p class="sc-hero-count" data-digits={digits >= 4 ? '4' : digits >= 3 ? '3' : '2'} title={`共 ${formattedCount} ${countLabel}`}>
+      <span class="sr-only">共 {formattedCount} {countLabel}</span>
+      <span class="sc-hero-count-figure" aria-hidden="true">{formattedCount}</span>
+    </p>
+  ) : null}
+</header>

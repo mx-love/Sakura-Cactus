@@ -22,6 +22,8 @@ interface Props {
   preconnectOrigins?: string[];
   showHeader?: boolean;
   showFooter?: boolean;
+  /** Current list page, shown in the masthead issue strip as "Page 02 / 04". */
+  folio?: { current: number; total: number };
 }
 
 const {
@@ -37,7 +39,8 @@ const {
   jsonLd,
   preconnectOrigins = [],
   showHeader = true,
-  showFooter = showHeader
+  showFooter = showHeader,
+  folio
 } = Astro.props;
 
 const ogImage = providedOgImage || optionalPublicHttpsUrl(env.SITE_OG_IMAGE_URL);
@@ -168,15 +171,6 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
           }
         });
 
-        document.addEventListener('astro:before-swap', (event) => {
-          if (event.newDocument?.documentElement) {
-            const preference = normalizePreference(document.documentElement.dataset.themePreference);
-            event.newDocument.documentElement.dataset.themePreference = preference;
-            event.newDocument.documentElement.dataset.theme = resolveTheme(preference);
-          }
-        });
-        document.addEventListener('astro:page-load', initializeTheme);
-        document.addEventListener('astro:after-swap', syncThemeControls);
       })();
     </script>
     {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
@@ -202,7 +196,7 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
   </head>
   <body>
     <a class="sc-skip-link" href="#main-content">跳到正文</a>
-    {showHeader ? <SiteHeader /> : null}
+    {showHeader ? <SiteHeader folio={folio} /> : null}
     <main id="main-content" tabindex="-1">
       <slot />
     </main>
@@ -257,7 +251,7 @@ const safePreconnectOrigins = [...new Set(preconnectOrigins)]
     ) : null}
     <script is:inline>
       (() => {
-        const imageSelector = '.sc-prose img, .prose-content img, .sc-featured-cover img, .sc-article-card-cover img';
+        const imageSelector = '.sc-prose img, .prose-content img, .sc-lead-plate img, .sc-index-plate img';
 
         function markReady(image) {
           image.classList.add('sc-image-ready');

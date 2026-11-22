@@ -1,6 +1,13 @@
 ---
 import { getCurrentAdminUser } from '@/features/auth/auth.service';
 import { env } from 'cloudflare:workers';
+import { getSiteDateParts } from '@/lib/site-time';
+
+interface Props {
+  folio?: { current: number; total: number };
+}
+
+const { folio } = Astro.props;
 
 const leadingNavItems = [
   { href: '/articles', label: '文章' },
@@ -27,6 +34,13 @@ const shouldReloadAdminBfcache = Boolean(adminUser) && !(
   pathname.startsWith('/settings')
 );
 
+const today = getSiteDateParts();
+const pad = (value: number) => String(value).padStart(2, '0');
+const issueLabel = `Vol. ${today.year} · Issue ${pad(today.month)}`;
+const folioLabel = folio && folio.total > 0
+  ? `Page ${pad(folio.current)} / ${pad(folio.total)}`
+  : `${today.year}.${pad(today.month)}.${pad(today.day)}`;
+
 function isActive(href: string) {
   return pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
 }
@@ -37,17 +51,7 @@ function isActive(href: string) {
     <a class="sc-site-title" href="/" aria-current={pathname === '/' ? 'page' : undefined} data-astro-prefetch>{siteName}</a>
 
     <nav class="sc-site-nav" aria-label="主导航">
-      {leadingNavItems.map((item) => (
-        <a
-          class={`sc-site-nav-link ${isActive(item.href) ? 'sc-site-nav-link-active' : ''}`}
-          href={item.href}
-          aria-current={isActive(item.href) ? 'page' : undefined}
-          data-astro-prefetch
-        >
-          {item.label}
-        </a>
-      ))}
-      {trailingNavItems.map((item) => (
+      {publicNavItems.map((item) => (
         <a
           class={`sc-site-nav-link ${isActive(item.href) ? 'sc-site-nav-link-active' : ''}`}
           href={item.href}
@@ -130,6 +134,11 @@ function isActive(href: string) {
     </div>
   </div>
 </header>
+<div class="sc-issue-strip sc-label">
+  <span>{issueLabel}</span>
+  <span class="sc-issue-strip-middle">Essays &amp; Notes</span>
+  <span>{folioLabel}</span>
+</div>
 <!-- A fixed search layer must not inherit the header's backdrop-filter containing block. -->
   <div class="sc-search-overlay" hidden data-search-overlay data-site-search="overlay">
     <button class="sc-search-backdrop" type="button" aria-label="关闭搜索" data-search-close></button>

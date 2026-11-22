@@ -41,12 +41,7 @@ const canonicalUrl = absoluteSiteUrl('/about');
 >
   <section class="sc-page">
     <div class="sc-page-shell sc-article-shell">
-      <div class="sc-article-paper sc-paper-public-shell sc-public-page-paper">
-        <nav class="sc-breadcrumb sc-article-inner" aria-label="面包屑">
-          <a href="/">首页</a>
-          <span>»</span>
-          <span>关于</span>
-        </nav>
+      <div class="sc-article-paper sc-about-paper">
 
         {aboutPost ? (
           <article>
@@ -63,9 +58,10 @@ const canonicalUrl = absoluteSiteUrl('/about');
                 />
               </div>
             ) : null}
-            <header class="sc-page-header sc-article-inner">
+            <header class="sc-article-header sc-article-inner">
+              <p class="sc-label sc-article-meta">About · 关于</p>
               <h1>{aboutPost.title}</h1>
-              {aboutPost.excerpt ? <p>{aboutPost.excerpt}</p> : null}
+              {aboutPost.excerpt ? <p class="sc-article-subtitle">{aboutPost.excerpt}</p> : null}
               {adminStatusNote ? <p class="sc-about-admin-note">{adminStatusNote}</p> : null}
             </header>
             <div
@@ -73,11 +69,13 @@ const canonicalUrl = absoluteSiteUrl('/about');
               data-article-image-viewer-root={isPublicAbout ? true : undefined}
               set:html={aboutPost.contentHtml}
             />
+            <p class="sc-endmark sc-article-inner" aria-hidden="true">◆ ◆ ◆</p>
             {isPublicAbout ? <ArticleImageViewer /> : null}
           </article>
         ) : (
           <>
-            <header class="sc-page-header sc-article-inner">
+            <header class="sc-article-header sc-article-inner">
+              <p class="sc-label sc-article-meta">About · 关于</p>
               <h1>关于</h1>
             </header>
             <div class="sc-empty sc-about-empty sc-article-inner">

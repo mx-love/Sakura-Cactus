@@ -1,0 +1,780 @@
+/*
+ * Editorial ("printed magazine") system shared by every public page:
+ * mono labels, index-page hero, post index, pagination, year table,
+ * subject index, empty states and restrained motion.
+ */
+
+/* Small uppercase letter-spaced label (JetBrains Mono). */
+.sc-label {
+  color: var(--color-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+/* Underline that draws left-to-right on hover (static underline color fallback). */
+.sc-draw-link,
+.sc-draw-text {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
+  text-decoration: none;
+}
+
+a.sc-draw-link:is(:hover, :focus-visible),
+a:is(:hover, :focus-visible) .sc-draw-text {
+  background-size: 100% 1px;
+}
+
+/* ---------- Page frame ---------- */
+
+.sc-page {
+  min-height: 70vh;
+  color: var(--color-text);
+}
+
+.sc-page-shell {
+  width: min(100% - 2.5rem, var(--sc-content-width));
+  min-width: 0;
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 4vw, 3rem) clamp(3rem, 7vw, 5rem);
+}
+
+/* ---------- Index-page hero ---------- */
+
+.sc-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 1.5rem 2.5rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.sc-hero-with-count {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sc-hero-label {
+  margin: 0;
+}
+
+.sc-hero-label a {
+  color: var(--color-muted);
+}
+
+.sc-hero-title {
+  margin: 0.85rem 0 0;
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 6.5vw, 4rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.sc-hero-subtitle {
+  max-width: 36rem;
+  margin: 1rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.sc-hero-copy > .sc-button {
+  margin-top: 1.25rem;
+}
+
+/*
+ * The count keeps Cormorant's default oldstyle figures. Its line box is tall
+ * enough for descenders (3, 4, 5, 7, 9) and nothing is placed beneath it.
+ */
+.sc-hero-count {
+  margin: 0;
+  padding-bottom: 0.08em;
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 10vw, 6rem);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.05;
+  opacity: 0.92;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sc-hero-count[data-digits="3"] {
+  font-size: clamp(3.5rem, 8.5vw, 5.25rem);
+}
+
+.sc-hero-count[data-digits="4"] {
+  font-size: clamp(3rem, 7vw, 4.5rem);
+}
+
+/* ---------- Post index ---------- */
+
+.sc-index {
+  display: grid;
+  min-width: 0;
+}
+
+.sc-index-entry {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: 1.75rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 1.875rem;
+}
+
+.sc-index-entry-with-cover {
+  grid-template-columns: 5.5rem minmax(0, 1fr) 10.5rem;
+}
+
+.sc-index-no {
+  color: var(--color-subtle);
+  font-family: var(--font-display);
+  font-size: 2.125rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sc-index-no[data-digits="3"] {
+  font-size: 1.75rem;
+}
+
+.sc-index-body {
+  min-width: 0;
+}
+
+.sc-index-title,
+.sc-lead-title {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sc-index-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.9rem;
+  margin: 0.6rem 0 0;
+}
+
+.sc-index-meta time {
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-index-tag {
+  max-width: 100%;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+a.sc-index-tag:is(:hover, :focus-visible) {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.sc-index-pin {
+  color: var(--color-text);
+}
+
+.sc-index-excerpt {
+  max-width: var(--sc-reading-width);
+  margin: 0.6rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.sc-index-plate,
+.sc-lead-plate {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--color-rule);
+  background:
+    linear-gradient(135deg, var(--color-primary-soft), transparent),
+    var(--color-bg-soft);
+}
+
+.sc-index-plate {
+  aspect-ratio: 3 / 2;
+}
+
+.sc-index-plate img,
+.sc-lead-plate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: var(--sc-content-image-filter);
+}
+
+.sc-index-note {
+  margin: 1.5rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.sc-index-note a,
+.sc-inline-link {
+  color: var(--color-primary);
+}
+
+/* ---------- End mark + Newer / Older nav (posts and list pagination) ---------- */
+
+.sc-endmark {
+  margin: 2.5rem 0 0;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  letter-spacing: 0.6em;
+  text-align: center;
+  text-indent: 0.6em;
+}
+
+.sc-entry-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--color-rule-strong);
+}
+
+.sc-entry-nav-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.5rem 1.75rem 1.65rem 0;
+  color: var(--color-text);
+}
+
+.sc-entry-nav-older {
+  grid-column: 2;
+  align-items: flex-end;
+  padding: 1.5rem 0 1.65rem 1.75rem;
+  text-align: right;
+}
+
+.sc-entry-nav-both .sc-entry-nav-older {
+  border-left: 1px solid var(--color-rule);
+}
+
+.sc-entry-nav-title {
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sc-entry-nav-detail {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+a.sc-entry-nav-item:is(:hover, :focus-visible) .sc-entry-nav-title {
+  color: var(--color-primary);
+}
+
+.sc-pagination-all {
+  margin: 1.4rem 0 0;
+  text-align: center;
+}
+
+.sc-pagination-all a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+/* ---------- Year table (timeline / archive) ---------- */
+
+.sc-year-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 0.9rem;
+  color: var(--color-muted);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-style: italic;
+}
+
+.sc-year-jump a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-year {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 2rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 2rem;
+  scroll-margin-top: 6rem;
+}
+
+.sc-year-head {
+  align-self: start;
+  position: sticky;
+  top: 5.5rem;
+}
+
+.sc-year-title {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.05;
+}
+
+.sc-year-count {
+  margin: 0.35rem 0 0;
+}
+
+.sc-year-body {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.sc-year-month {
+  scroll-margin-top: 6rem;
+}
+
+.sc-year-month-title {
+  margin: 0 0 0.35rem;
+}
+
+.sc-year-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-year-entry {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 1rem;
+  border-top: 1px solid var(--color-rule);
+  padding-block: 0.55rem;
+}
+
+.sc-year-entry time {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.sc-year-entry a {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.sc-year-entry a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+/* ---------- Subject index (tags) ---------- */
+
+.sc-tag-lead {
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 1.75rem;
+}
+
+.sc-tag-lead h2,
+.sc-tag-index-heading {
+  margin: 0 0 1rem;
+}
+
+.sc-tag-index-heading {
+  margin-top: 1.75rem;
+}
+
+.sc-tag-lead-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-tag-lead-link {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.sc-tag-lead-link > :first-child {
+  align-self: flex-start;
+  overflow-wrap: anywhere;
+}
+
+.sc-tag-lead-count {
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.sc-tag-lead-link:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+/* A book-style index: columns of "name ······ count" rows that never form a wall. */
+.sc-tag-index {
+  columns: 3 13rem;
+  column-gap: 2.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-tag-index li {
+  break-inside: avoid;
+}
+
+.sc-tag-index-link {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-block: 0.4rem;
+  color: var(--color-text);
+  font-size: 0.975rem;
+  line-height: 1.5;
+}
+
+.sc-tag-index-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sc-tag-index-leader {
+  flex: 1 1 1.5rem;
+  min-width: 1.5rem;
+  border-bottom: 1px dotted var(--color-rule);
+  transform: translateY(-0.3em);
+}
+
+.sc-tag-index-count {
+  flex: none;
+  color: var(--color-subtle);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-style: italic;
+}
+
+.sc-tag-index-link:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+.sc-tag-index-link:is(:hover, :focus-visible) .sc-tag-index-leader {
+  border-bottom-color: var(--color-primary);
+}
+
+/* Small inline tag links (post header, search overlay). */
+.sc-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-top: 0.8rem;
+}
+
+.sc-tag-link {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+}
+
+.sc-tag-link::before {
+  content: "#";
+}
+
+/* ---------- Empty states ---------- */
+
+.sc-empty,
+.sc-empty-state {
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: 2rem;
+  color: var(--color-muted);
+  font-size: 0.975rem;
+  line-height: 1.8;
+}
+
+.sc-empty p,
+.sc-empty-state {
+  margin: 0;
+}
+
+.sc-empty p + p {
+  margin-top: 0.25rem;
+}
+
+.sc-empty .sc-button,
+.sc-empty .sc-inline-link {
+  margin-top: 0.85rem;
+}
+
+.sc-empty-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  font-size: 1rem;
+}
+
+.sc-empty-links a {
+  color: var(--color-text);
+}
+
+.sc-empty-links a:is(:hover, :focus-visible) {
+  color: var(--color-primary);
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 760px) {
+  .sc-page-shell {
+    width: min(100% - 2.5rem, var(--sc-content-width));
+  }
+
+  .sc-hero-title {
+    font-size: clamp(2.25rem, 11vw, 2.75rem);
+  }
+
+  .sc-hero-with-count {
+    gap: 1rem;
+  }
+
+  .sc-hero-count {
+    font-size: 4rem;
+  }
+
+  .sc-hero-count[data-digits="3"] {
+    font-size: 3.25rem;
+  }
+
+  .sc-hero-count[data-digits="4"] {
+    font-size: 2.625rem;
+  }
+
+  .sc-index-entry,
+  .sc-index-entry-with-cover {
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-block: 1.5rem;
+  }
+
+  .sc-index-no {
+    padding-top: 0.2rem;
+    font-size: 1.3rem;
+  }
+
+  .sc-index-no[data-digits="3"] {
+    font-size: 1.05rem;
+  }
+
+  .sc-index-plate {
+    display: none;
+  }
+
+  .sc-entry-nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-entry-nav-empty {
+    display: none;
+  }
+
+  .sc-entry-nav-item,
+  .sc-entry-nav-older {
+    grid-column: auto;
+    align-items: flex-start;
+    padding: 1.25rem 0;
+    text-align: left;
+  }
+
+  .sc-entry-nav-both .sc-entry-nav-older {
+    border-top: 1px solid var(--color-rule);
+    border-left: 0;
+  }
+
+  .sc-entry-nav-title {
+    font-size: 1.1875rem;
+  }
+
+  .sc-index-title,
+  .sc-lead-title {
+    font-size: 1.1875rem;
+  }
+
+  .sc-index-excerpt {
+    font-size: 0.9rem;
+  }
+
+  .sc-year {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 1.5rem;
+  }
+
+  .sc-year-head {
+    position: static;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .sc-year-title {
+    font-size: 2.5rem;
+  }
+
+  .sc-year-entry {
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .sc-year-entry a {
+    font-size: 1rem;
+  }
+
+  .sc-tag-lead-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-tag-lead-link {
+    font-size: 1.125rem;
+  }
+
+  .sc-tag-index {
+    columns: 2 9rem;
+    column-gap: 1.5rem;
+  }
+}
+
+/* ---------- Motion (all behind prefers-reduced-motion) ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 220ms;
+  }
+
+  .sc-site-header {
+    view-transition-name: sc-masthead;
+  }
+
+  .sc-draw-link,
+  .sc-draw-text {
+    transition:
+      background-size 260ms ease,
+      color 140ms ease;
+  }
+
+  .sc-index-entry,
+  .sc-hero,
+  .sc-lead,
+  .sc-year,
+  .sc-tag-index {
+    animation: sc-fade-up 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--sc-entry-index, 0) * 45ms);
+  }
+
+  .sc-search-overlay:not([hidden]) {
+    animation: sc-search-fade-in 160ms ease both;
+  }
+
+  .sc-search-overlay:not([hidden]) .sc-search-box {
+    animation: sc-search-box-in 180ms ease both;
+  }
+
+  .sc-image-fade {
+    opacity: 0;
+    transition: opacity 220ms ease;
+  }
+
+  .sc-image-fade.sc-image-ready {
+    opacity: 1;
+  }
+
+  .sc-reading-progress-bar {
+    transition: transform 90ms linear;
+  }
+}
+
+@keyframes sc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sc-search-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sc-search-box-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

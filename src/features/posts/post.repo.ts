@@ -34,6 +34,18 @@ export interface PublicPostSitemapRow {
   updated_at: string;
 }
 
+export interface PublicArchivePostRow {
+  slug: string;
+  title: string;
+  published_at: string;
+}
+
+export interface PublicPostHeadlineRow {
+  slug: string;
+  title: string;
+  published_at: string | null;
+}
+
 export interface PublicSearchPostRow {
   id: string;
   slug: string;
@@ -156,6 +168,27 @@ export async function listPublicPosts(db: D1Database, options: PublicPostQueryOp
   return result.results ?? [];
 }
 
+/** The post at a given position of a public listing; used to label adjacent list pages. */
+export async function findPublicPostHeadlineAt(
+  db: D1Database,
+  options: PublicPostQueryOptions,
+  offset: number
+): Promise<PublicPostHeadlineRow | null> {
+  if (!Number.isFinite(offset) || offset < 0) return null;
+  const { joins, conditions, values } = publicPostWhere(options);
+  return db
+    .prepare(
+      `SELECT posts.slug, posts.title, posts.published_at
+       FROM posts
+       ${joins.join('\n')}
+       WHERE ${conditions.join(' AND ')}
+       ${publicPostOrder(options)}
+       LIMIT 1 OFFSET ?`
+    )
+    .bind(...values, Math.floor(offset))
+    .first<PublicPostHeadlineRow>();
+}
+
 export async function countPublicPosts(db: D1Database, options: PublicPostQueryOptions = {}): Promise<number> {
   const { joins, conditions, values } = publicPostWhere(options);
   const row = await db
@@ -239,6 +272,22 @@ export async function listPublicSitemapPosts(db: D1Database): Promise<PublicPost
     )
     .bind(...values)
     .all<PublicPostSitemapRow>();
+
+  return result.results ?? [];
+}
+
+// The archive is the full index of public posts, so it reads only the columns it renders.
+export async function listPublicArchivePosts(db: D1Database): Promise<PublicArchivePostRow[]> {
+  const { conditions, values } = publicPostWhere({ excludeAbout: true });
+  const result = await db
+    .prepare(
+      `SELECT posts.slug, posts.title, posts.published_at
+       FROM posts
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY posts.published_at DESC, posts.updated_at DESC`
+    )
+    .bind(...values)
+    .all<PublicArchivePostRow>();
 
   return result.results ?? [];
 }

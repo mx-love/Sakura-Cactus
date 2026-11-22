@@ -1,7 +1,7 @@
 
 .sc-settings-page {
   min-height: 100vh;
-  background: var(--sc-settings-page-background);
+  background: transparent;
 }
 
 .sc-settings-content {
@@ -9,7 +9,26 @@
 }
 
 .sc-settings-header {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: clamp(1rem, 3vw, 2rem) 1.25rem;
+}
+
+.sc-settings-header h1 {
+  margin: 0.6rem 0 0;
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
+.sc-settings-header p.sc-label {
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: 0.6875rem;
+  line-height: 1.6;
 }
 
 .sc-settings-header p {
@@ -20,10 +39,10 @@
 }
 
 .sc-settings-container {
-  border: 1px solid var(--color-border);
-  border-radius: 26px;
+  border: 1px solid var(--color-rule);
+  border-top: 1px solid var(--color-rule-strong);
+  border-radius: 0;
   background: var(--sc-settings-container-background);
-  box-shadow: var(--shadow-soft);
   overflow: hidden;
 }
 
@@ -483,4 +502,56 @@
   margin-top: 1rem;
   border-top: 1px solid var(--color-border);
   padding-top: 1rem;
+}
+
+@media (max-width: 760px) {
+  .sc-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-data-page .sc-settings-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sc-data-stats,
+  .sc-data-result-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-data-selects {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-settings-compact-row {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .sc-settings-inline-actions {
+    justify-content: flex-start;
+  }
+
+  .sc-settings-provider-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-settings-control {
+    width: 100%;
+    min-width: 0;
+    justify-content: space-between;
+  }
+
+  .sc-settings-button {
+    min-width: 6rem;
+  }
+
+  .sc-settings-group-head {
+    flex-direction: column;
+  }
+
+  .sc-settings-entry {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

@@ -409,13 +409,39 @@ async function stopServer(child) {
   child.stderr.destroy();
 }
 
+const WRANGLER_RESTART_BODY = 'Your worker restarted mid-request';
+const WRANGLER_RESTART_ATTEMPTS = 3;
+const WRANGLER_RESTART_DELAY_MS = 300;
+
+// `wrangler dev` answers requests that were in flight while its worker reloaded
+// with a synthetic 503 and this exact body. Only that response is resent (up to
+// 3 times, 300ms apart); every other status, including real 403/503 answers
+// from the application, is returned untouched to the assertions.
+async function fetchRetryingWranglerRestart(url, init = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    const response = await fetch(url, init);
+
+    if (response.status !== 503 || attempt > WRANGLER_RESTART_ATTEMPTS) {
+      return response;
+    }
+
+    const body = await response.clone().text();
+
+    if (!body.includes(WRANGLER_RESTART_BODY)) {
+      return response;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, WRANGLER_RESTART_DELAY_MS));
+  }
+}
+
 async function request(pathname, init = {}) {
   const method = (init.method ?? 'GET').toUpperCase();
   const attempts = !init.signal && (method === 'GET' || method === 'HEAD') ? 2 : 1;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      return await fetch(`${testOrigin}${pathname}`, {
+      return await fetchRetryingWranglerRestart(`${testOrigin}${pathname}`, {
         ...init,
         signal: init.signal ?? AbortSignal.timeout(20_000)
       });
@@ -432,33 +458,20 @@ async function request(pathname, init = {}) {
 }
 
 async function login() {
-  let response;
+  const response = await request('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: testOrigin
+    },
+    body: JSON.stringify({
+      username: 'smoke-admin',
+      password: 'smoke-password'
+    })
+  });
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    response = await request('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: testOrigin
-      },
-      body: JSON.stringify({
-        username: 'smoke-admin',
-        password: 'smoke-password'
-      })
-    });
-
-    if (response.status === 200) {
-      break;
-    }
-
-    const body = await response.text();
-
-    if (attempt === 1 && response.status === 503 && body.includes('worker restarted mid-request')) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      continue;
-    }
-
-    throw new Error(`Login returned ${response.status}: ${body}`);
+  if (response.status !== 200) {
+    throw new Error(`Login returned ${response.status}: ${await response.text()}`);
   }
 
   assert.ok(response && response.status === 200);
@@ -806,7 +819,7 @@ async function runMissingAuthConfigurationSmoke(persistPath) {
 
   try {
     await waitForServer(child, output, origin);
-    const response = await fetch(`${origin}/api/auth/login`, {
+    const response = await fetchRetryingWranglerRestart(`${origin}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

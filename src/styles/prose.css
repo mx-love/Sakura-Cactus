@@ -1,8 +1,9 @@
 .sc-prose,
 .prose-content {
   color: var(--color-text);
-  font-size: 1.045rem;
-  line-height: 1.9;
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.95;
   overflow-wrap: break-word;
 }
 
@@ -588,4 +589,20 @@
     width: 0.82rem;
     height: 0.82rem;
   }
+}
+
+/*
+ * Drop cap on the opening paragraph of a published page. It only applies when
+ * the content starts with a text paragraph (not a heading, image, code or
+ * quote), and the paragraph must not itself start with an image or code.
+ * ::first-letter takes a single CJK character (plus leading punctuation).
+ */
+.sc-article-paper .sc-prose > p:first-child:not(:has(> :is(img, code, picture, a > img):first-child))::first-letter {
+  float: left;
+  margin: 0.2em 0.5rem 0 0;
+  color: var(--color-primary);
+  font-family: var(--font-serif);
+  font-size: 3.4em;
+  font-weight: 600;
+  line-height: 0.82;
 }
