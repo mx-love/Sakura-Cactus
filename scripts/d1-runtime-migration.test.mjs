@@ -409,13 +409,35 @@ async function stopServer(child) {
   child.stderr.destroy();
 }
 
+// Wrangler dev can reload the worker shortly after startup. It then answers
+// the in-flight request with its own 503 ("Your worker restarted mid-request")
+// and only retries GET/HEAD by itself. That 503 comes from the local dev
+// proxy, not from the blog, so resend the same request a few times.
+async function fetchRetryingWranglerRestart(url, init) {
+  for (let attempt = 1; ; attempt += 1) {
+    const response = await fetch(url, init);
+
+    if (response.status !== 503 || attempt >= 4) {
+      return response;
+    }
+
+    const body = await response.clone().text();
+
+    if (!body.includes('Your worker restarted mid-request')) {
+      return response;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+}
+
 async function request(pathname, init = {}) {
   const method = (init.method ?? 'GET').toUpperCase();
   const attempts = !init.signal && (method === 'GET' || method === 'HEAD') ? 2 : 1;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      return await fetch(`${testOrigin}${pathname}`, {
+      return await fetchRetryingWranglerRestart(`${testOrigin}${pathname}`, {
         ...init,
         signal: init.signal ?? AbortSignal.timeout(20_000)
       });
@@ -806,7 +828,7 @@ async function runMissingAuthConfigurationSmoke(persistPath) {
 
   try {
     await waitForServer(child, output, origin);
-    const response = await fetch(`${origin}/api/auth/login`, {
+    const response = await fetchRetryingWranglerRestart(`${origin}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
