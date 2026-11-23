@@ -61,6 +61,20 @@ function isActive(href: string) {
           {item.label}
         </a>
       ))}
+      {adminUser && (
+        <>
+          <span class="sc-site-nav-rule" aria-hidden="true"></span>
+          {[{ href: '/write', label: '写作' }, { href: '/settings', label: '设置' }].map((item) => (
+            <a
+              class={`sc-site-nav-link sc-site-nav-owner ${isActive(item.href) ? 'sc-site-nav-link-active' : ''}`}
+              href={item.href}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
+        </>
+      )}
     </nav>
 
     <div class="sc-site-actions">
@@ -78,34 +92,31 @@ function isActive(href: string) {
         </svg>
       </a>
       {adminUser ? (
-        <details class="sc-account-menu" data-account-menu data-header-menu>
-          <summary class="sc-icon-link sc-account-button list-none" aria-label="账号菜单" title="账号菜单" aria-expanded="false" aria-controls="site-account-panel" data-account-toggle data-header-menu-toggle>
-            <span class="sc-account-default" data-account-default>
-              {avatarUrl ? (
-                <>
-                  <img class="sc-account-avatar" src={avatarUrl} alt="" width="32" height="32" loading="eager" decoding="async" data-account-avatar />
-                  <span class="sc-account-fallback" data-account-fallback>
-                    <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M20 21a8 8 0 0 0-16 0" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                  </span>
-                </>
-              ) : (
-                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21a8 8 0 0 0-16 0" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              )}
-            </span>
-          </summary>
-          <nav class="sc-account-panel" id="site-account-panel" aria-label="账号操作">
-            <a class="sc-account-link" href="/write" aria-current={isActive('/write') ? 'page' : undefined}>写作</a>
-            <a class="sc-account-link" href="/settings" aria-current={isActive('/settings') ? 'page' : undefined}>设置</a>
-            <button class="sc-account-link sc-account-logout" type="button" data-account-logout>退出登录</button>
+        <>
+          <div class="sc-account" data-account>
+            <button class="sc-icon-link sc-account-button" type="button" aria-label="已登录，双击头像退出登录" title="双击退出登录" data-account-toggle>
+              <span class="sc-account-default" data-account-default>
+                {avatarUrl ? (
+                  <>
+                    <img class="sc-account-avatar" src={avatarUrl} alt="" width="32" height="32" loading="eager" decoding="async" data-account-avatar />
+                    <span class="sc-account-fallback" data-account-fallback>
+                      <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21a8 8 0 0 0-16 0" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </span>
+                  </>
+                ) : (
+                  <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21a8 8 0 0 0-16 0" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                )}
+              </span>
+            </button>
             <p class="sc-account-status" role="status" aria-live="polite" aria-atomic="true" data-account-status hidden></p>
-          </nav>
-        </details>
+          </div>
+        </>
       ) : (
         <a class="sc-icon-link" href={accountHref} aria-label="登录" title="登录">
           <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -129,6 +140,12 @@ function isActive(href: string) {
               {item.label}
             </a>
           ))}
+          {adminUser && (
+            <div class="sc-mobile-menu-owner">
+              <a class="sc-mobile-menu-link" href="/write" aria-current={isActive('/write') ? 'page' : undefined}>写作</a>
+              <a class="sc-mobile-menu-link" href="/settings" aria-current={isActive('/settings') ? 'page' : undefined}>设置</a>
+            </div>
+          )}
         </div>
       </details>
     </div>
