@@ -264,81 +264,46 @@
   opacity: 0;
 }
 
-.sc-account-menu {
+.sc-account {
   position: relative;
   flex: none;
 }
 
-.sc-account-menu > summary {
-  list-style: none;
-  cursor: pointer;
-}
-
-.sc-account-menu[open] > summary {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-
-.sc-account-panel {
-  position: absolute;
-  z-index: 1;
-  inset-block-start: calc(100% + 0.65rem);
-  inset-inline-end: 0;
-  width: 11rem;
-  max-width: calc(100vw - 2rem);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-floating-surface);
-  padding: 0.4rem;
-  box-shadow: var(--shadow-float);
-}
-
-.sc-account-link {
-  display: flex;
-  width: 100%;
-  min-height: 2.75rem;
-  align-items: center;
+.sc-account-button {
   border: 0;
-  border-radius: var(--radius-sm);
   background: transparent;
-  padding: 0.6rem 0.75rem;
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 550;
-  line-height: 1.4;
-  text-align: start;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.sc-account-link:hover,
-.sc-account-link:focus-visible,
-.sc-account-link[aria-current="page"] {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+.sc-account-button.sc-account-leaving {
+  opacity: 0.5;
+  cursor: wait;
 }
 
-.sc-account-logout {
+.sc-mobile-menu-owner {
   margin-top: 0.3rem;
   border-top: 1px solid var(--color-border);
-  border-start-start-radius: 0;
-  border-start-end-radius: 0;
-  color: var(--color-muted);
+  padding-top: 0.3rem;
 }
 
-.sc-account-logout.sc-account-armed {
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
-}
-
-.sc-account-link:disabled {
-  cursor: wait;
-  opacity: 0.65;
+.sc-icon-link[aria-current="page"] {
+  color: var(--color-primary);
 }
 
 .sc-account-status {
-  margin: 0.25rem 0 0;
-  padding: 0.25rem 0.75rem;
+  position: absolute;
+  z-index: 1;
+  inset-block-start: calc(100% + 0.5rem);
+  inset-inline-end: 0;
+  margin: 0;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-floating-surface);
+  white-space: nowrap;
   color: var(--color-muted);
   font-size: 0.76rem;
   line-height: 1.6;
@@ -406,6 +371,18 @@
 .sc-site-nav-link:is(:hover, :focus-visible) {
   color: var(--color-text);
   background-size: 100% 1px;
+}
+
+.sc-site-nav-rule {
+  align-self: center;
+  width: 1px;
+  height: 0.85rem;
+  margin-inline: -0.5rem;
+  background: var(--color-border);
+}
+
+.sc-site-nav-owner {
+  font-size: 0.875rem;
 }
 
 .sc-site-nav-link-active {

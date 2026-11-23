@@ -1,24 +1,19 @@
 const boundHeaders = new WeakSet<HTMLElement>();
 
-function bindAccount(menu: HTMLDetailsElement): void {
-  const toggle = menu.querySelector<HTMLElement>('[data-account-toggle]');
-  const button = menu.querySelector<HTMLButtonElement>('[data-account-logout]');
-  const status = menu.querySelector<HTMLElement>('[data-account-status]');
-  if (!(toggle instanceof HTMLElement) || !(button instanceof HTMLButtonElement) || !(status instanceof HTMLElement)) return;
+function bindAccount(account: HTMLElement): void {
+  const toggle = account.querySelector<HTMLButtonElement>('[data-account-toggle]');
+  const status = account.querySelector<HTMLElement>('[data-account-status]');
+  if (!(toggle instanceof HTMLButtonElement) || !(status instanceof HTMLElement)) return;
 
   const avatar = toggle.querySelector<HTMLImageElement>('[data-account-avatar]');
   const fallback = toggle.querySelector<HTMLElement>('[data-account-fallback]');
   if (avatar instanceof HTMLImageElement && fallback instanceof HTMLElement) {
-    function showAvatar() {
-      toggle!.classList.add('sc-account-avatar-ready');
-    }
-
-    function showFallback() {
-      avatar!.hidden = true;
-      fallback!.hidden = false;
-      toggle!.classList.remove('sc-account-avatar-ready');
-    }
-
+    const showAvatar = () => toggle.classList.add('sc-account-avatar-ready');
+    const showFallback = () => {
+      avatar.hidden = true;
+      fallback.hidden = false;
+      toggle.classList.remove('sc-account-avatar-ready');
+    };
     if (avatar.complete) {
       if (avatar.naturalWidth > 0) showAvatar();
       else showFallback();
@@ -27,67 +22,56 @@ function bindAccount(menu: HTMLDetailsElement): void {
     avatar.addEventListener('error', showFallback, { once: true });
   }
 
-  let armed = false;
   let loggingOut = false;
-  let timer = 0;
+  let lastTap = 0;
+  let hintTimer = 0;
 
   function setStatus(message: string, error = false): void {
+    window.clearTimeout(hintTimer);
     status!.textContent = message;
     status!.hidden = !message;
     status!.dataset.state = error ? 'error' : 'idle';
   }
 
-  function resetConfirmation(): void {
-    armed = false;
-    window.clearTimeout(timer);
-    timer = 0;
-    button!.classList.remove('sc-account-armed');
-    if (!loggingOut) {
-      button!.textContent = '退出登录';
-      setStatus('');
-    }
-  }
-
-  menu.addEventListener('toggle', () => {
-    if (!menu.open) resetConfirmation();
-  });
-  window.addEventListener('pagehide', resetConfirmation);
-
-  button.addEventListener('click', async () => {
+  async function logout(): Promise<void> {
     if (loggingOut) return;
-    if (!armed) {
-      armed = true;
-      button.textContent = '确认退出';
-      button.classList.add('sc-account-armed');
-      setStatus('再次点击“确认退出”即可退出登录。');
-      timer = window.setTimeout(resetConfirmation, 3000);
-      return;
-    }
-
-    resetConfirmation();
     loggingOut = true;
-    button.disabled = true;
-    button.textContent = '正在退出……';
-    setStatus('正在退出登录……');
+    toggle!.disabled = true;
+    toggle!.classList.add('sc-account-leaving');
+    setStatus('正在退出……');
     try {
       const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
       if (!response.ok) throw new Error('Logout failed.');
-      setStatus('已退出，正在返回首页。');
       window.location.assign('/');
     } catch {
-      setStatus('退出失败，请稍后重试。', true);
-    } finally {
+      setStatus('退出失败，请稍后重试', true);
+      hintTimer = window.setTimeout(() => setStatus(''), 2400);
       loggingOut = false;
-      button.disabled = false;
-      button.textContent = '退出登录';
+      toggle!.disabled = false;
+      toggle!.classList.remove('sc-account-leaving');
     }
+  }
+
+  // Two taps within 400 ms log out. Counted by hand so touch screens behave like a mouse double click.
+  toggle.addEventListener('click', (event) => {
+    event.preventDefault();
+    const now = event.timeStamp;
+    if (now - lastTap < 400) {
+      lastTap = 0;
+      void logout();
+      return;
+    }
+    lastTap = now;
   });
+
+  window.addEventListener('pagehide', () => setStatus(''));
 }
 
 export function bindHeaderMenus(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>('.sc-site-header').forEach((header) => {
     if (boundHeaders.has(header)) return;
     boundHeaders.add(header);
+    header.querySelectorAll<HTMLElement>('[data-account]').forEach(bindAccount);
     const menus = Array.from(header.querySelectorAll<HTMLDetailsElement>('[data-header-menu]'));
 
     function closeMenu(menu: HTMLDetailsElement, restoreFocus = false): void {
@@ -119,7 +103,6 @@ export function bindHeaderMenus(root: ParentNode = document): void {
       });
 
       toggle.setAttribute('aria-expanded', String(menu.open));
-      if (menu.hasAttribute('data-account-menu')) bindAccount(menu);
     }
 
     document.addEventListener('click', (event) => {
